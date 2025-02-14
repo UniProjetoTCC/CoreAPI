@@ -4,13 +4,13 @@ EXPOSE 80
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["CoreAPI.csproj", "."]
-RUN dotnet restore "CoreAPI.csproj"
+COPY ["CoreAPI/CoreAPI.csproj", "CoreAPI/"]
+RUN dotnet restore "CoreAPI/CoreAPI.csproj"
 COPY . .
-RUN dotnet build "CoreAPI.csproj" -c Release -o /app/build
+RUN dotnet build "CoreAPI/CoreAPI.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "CoreAPI.csproj" -c Release -o /app/publish
+RUN dotnet publish "CoreAPI/CoreAPI.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app

@@ -42,6 +42,8 @@ msbuild.wrn
 .docker/
 
 # generate folder
-
 bin/
 obj/
+
+# Sensitive files
+.env
