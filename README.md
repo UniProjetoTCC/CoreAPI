@@ -78,6 +78,7 @@ CoreAPI/
 ├── docker-compose.yml      # Docker Compose configuration
 ├── .env                    # Environment variables
 └── appsettings.json        # Application settings
+```
 
 ## Database Migrations
 
