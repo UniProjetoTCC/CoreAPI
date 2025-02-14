@@ -61,24 +61,23 @@ The application will be available at:
 
 ```
 CoreAPI/
-├── Controllers/          # API Controllers
-├── Data/                # Data access layer
-│   ├── Context/        # Database context
-│   ├── Models/         # Data models
-│   ├── Migrations/     # Database migrations
-│   └── Repository/     # Data repositories
-├── Business/           # Business logic layer
-│   ├── Models/        # Business models
-│   ├── Services/      # Business services
-│   └── DataRepository/# Data access interfaces
-├── Properties/         # Project settings
-├── CoreAPI.csproj     # .NET project file
-├── Program.cs         # Application entry point
-├── Dockerfile         # Container build instructions
-├── docker-compose.yml # Docker Compose configuration
-├── .env              # Environment variables
-└── appsettings.json  # Application settings
-```
+├── Controllers/            # API Controllers
+├── Data/                   # Data access layer
+│   ├── Context/            # Database context
+│   ├── Models/             # Data models
+│   ├── Migrations/         # Database migrations
+│   └── Repository/         # Data repositories
+├── Business/               # Business logic layer
+│   ├── Models/             # Business models
+│   ├── Services/           # Business services
+│   └── DataRepository/     # Data access interfaces
+├── Properties/             # Project settings
+├── CoreAPI.csproj          # .NET project file
+├── Program.cs              # Application entry point
+├── Dockerfile              # Container build instructions
+├── docker-compose.yml      # Docker Compose configuration
+├── .env                    # Environment variables
+└── appsettings.json        # Application settings
 
 ## Database Migrations
 
