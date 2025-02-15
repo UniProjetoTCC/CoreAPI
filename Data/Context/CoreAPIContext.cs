@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace Data.Context
 {
-    public class CoreAPIContext : DbContext
+    public class CoreAPIContext : IdentityDbContext<IdentityUser>
     {
         public CoreAPIContext(DbContextOptions<CoreAPIContext> options) : base(options)
         {

@@ -22,6 +22,53 @@ A Web API project using .NET 8.0 and Docker with PostgreSQL database.
 
 2. **Environment Configuration:**
    - Create a `.env` file in the root directory with the variables from `.env.example`
+   - Make sure to set a strong `JWT_SECRET` in your `.env` file for token signing
+
+## Authentication
+
+The API uses JWT (JSON Web Token) for authentication. Here's how to use it:
+
+1. **Register a new user:**
+   ```http
+   POST /User/Register
+   Content-Type: application/json
+
+   {
+     "username": "your_username",
+     "email": "your_email@example.com",
+     "password": "your_password"
+   }
+   ```
+
+2. **Login to get a token:**
+   ```http
+   POST /User/Login
+   Content-Type: application/json
+
+   {
+     "email": "your_email@example.com",
+     "password": "your_password"
+   }
+   ```
+   The response will include your JWT token.
+
+3. **Using the token:**
+   - Add the token to the Authorization header of your requests:
+   ```
+   Authorization: Bearer your_token_here
+   ```
+   - In Swagger UI:
+     1. Click the "Authorize" button at the top of the page
+     2. In the popup, enter your token in the format: `Bearer your_token_here`
+     3. Click "Authorize" to save
+     4. Now all your requests in Swagger will include the token
+
+   - Protected endpoints (with [Authorize] attribute) require this token
+
+4. **JWT Configuration:**
+   - The token issuer and audience are configured in `appsettings.json`
+   - The signing key (`JWT_SECRET`) must be set in your `.env` file
+   - Tokens expire after 3 hours
 
 ## Running the Application
 
@@ -39,8 +86,15 @@ docker compose down
 
 The application will be available at:
 - Swagger UI: http://localhost:5000/swagger
+  - Use this interface to test the API endpoints and view documentation
+  - All endpoints are documented with examples and response types
+  - Protected endpoints are marked with a lock icon 
 - Health Check: http://localhost:5000/healthcheck
+  - Basic health check endpoint (no auth required)
 - Database Check: http://localhost:5000/healthcheck/database
+  - Checks database connectivity (no auth required)
+- User Check: http://localhost:5000/healthcheck/user
+  - Protected endpoint to verify authentication
 
 ### IDE Setup
 
@@ -61,23 +115,34 @@ The application will be available at:
 
 ```
 CoreAPI/
-├── Controllers/            # API Controllers
-├── Data/                   # Data access layer
-│   ├── Context/            # Database context
-│   ├── Models/             # Data models
-│   ├── Migrations/         # Database migrations
-│   └── Repository/         # Data repositories
-├── Business/               # Business logic layer
-│   ├── Models/             # Business models
-│   ├── Services/           # Business services
-│   └── DataRepository/     # Data access interfaces
-├── Properties/             # Project settings
-├── CoreAPI.csproj          # .NET project file
-├── Program.cs              # Application entry point
-├── Dockerfile              # Container build instructions
-├── docker-compose.yml      # Docker Compose configuration
-├── .env                    # Environment variables
-└── appsettings.json        # Application settings
+├── AutoMapper/                # Automapper configuration
+│   └── AutoMapperProfile.cs   # Mapping configuration
+├── Controllers/               # API Controllers
+│   ├── HealthCheckController  # Health check endpoints
+│   └── UserController         # Authentication endpoints
+├── Models/                    # API Models
+│   ├── LoginModel             # Login request model
+│   └── UserModel              # User registration model
+├── Data/                      # Data access layer
+│   ├── Context/               # Database context
+│   │   └── CoreAPIContext     # EF Core DB context
+│   ├── Migrations/            # Database migrations
+│   ├── Models/                # Database models
+│   └── Repositories/          # Data repositories 
+├── Business/                  # Business layer
+│   ├── DataRepositories/      # Database repositories interfaces
+│   ├── Models/                # Business models
+│   └── Services/              # Business services
+│       └── Base/              # Service interfaces
+├── Properties/                # Project settings
+├── CoreAPI.csproj             # .NET project file
+├── Program.cs                 # Application entry point and DI configuration
+├── appsettings.json           # Application settings (including JWT config)
+├── appsettings.*.json         # Environment-specific settings
+├── Dockerfile                 # Container build instructions
+├── docker-compose.yml         # Docker Compose configuration
+├── .env                       # Environment variables (not in repo)
+└── .env.example               # Example environment variables
 ```
 
 ## Database Migrations

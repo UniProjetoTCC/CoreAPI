@@ -1,5 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Data.Context;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi.Models;
 
 namespace CoreAPI
 {
@@ -29,21 +35,87 @@ namespace CoreAPI
                 throw new InvalidOperationException("Connection string 'SqlConnection' not found in configuration.");
             }
 
+            // Set the context (database)
             builder.Services.AddDbContext<CoreAPIContext>(options =>
                 options.UseNpgsql(connectionString));
 
-            // Configuração do AutoMapper
+            // Add Identity, the user management
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>(config => 
+            {
+                config.Password.RequireDigit = true;
+                config.Password.RequireLowercase = true;
+                config.Password.RequireUppercase = true;
+                config.Password.RequireNonAlphanumeric = true;
+                config.Password.RequiredLength = 8;
+            })
+                .AddEntityFrameworkStores<CoreAPIContext>()
+                .AddDefaultTokenProviders();
+
+            // Add JWT Authentication
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["JWT:ValidAudience"],
+                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+                        Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+                        throw new InvalidOperationException("JWT_SECRET environment variable is not set!")
+                    ))
+                };
+            });
+
+            // Add Auto Mapper, the class mapper to database classes and vice versa
+            builder.Services.AddAutoMapper(typeof(Program));
             builder.Services.AddAutoMapper(typeof(Program));
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Core API", Version = "v1" });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            },
+                            Scheme = "oauth2",
+                            Name = "Bearer",
+                            In = ParameterLocation.Header,
+                        },
+                        new List<string>()
+                    }
+                });
+            });
 
             var app = builder.Build();
 
             // Get logger for application messages
             var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-            // Aplica as migrações automaticamente
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
@@ -54,11 +126,10 @@ namespace CoreAPI
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "A Error occurred while migrating the database.");
+                    logger.LogError(ex, "An error occurred while migrating the database.");
                 }
             }
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -77,7 +148,13 @@ namespace CoreAPI
                 app.UseExceptionHandler("/Error");
             }
 
+            app.UseHttpsRedirection();
+
+            app.UseRouting();
+
+            app.UseAuthentication();
             app.UseAuthorization();
+
             app.MapControllers();
 
             app.Run();
