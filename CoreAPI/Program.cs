@@ -1,14 +1,16 @@
-using Microsoft.EntityFrameworkCore;
-using Data.Context;
+using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using AspNetCoreRateLimit;
 using Business.Services;
 using Business.Services.Base;
+using Data.Context;
 
 namespace CoreAPI
 {
@@ -18,16 +20,26 @@ namespace CoreAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Configure rate limiting
-            builder.Services.AddMemoryCache();
+            // Configure Redis Cache
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                string redisConfig = builder.Configuration["Redis:Configuration"];
+                string redisInstanceName = builder.Configuration["Redis:InstanceName"];
+                options.Configuration = redisConfig ?? throw new InvalidOperationException("Redis configuration is not set!");
+                options.InstanceName = redisInstanceName ?? throw new InvalidOperationException("Redis instance name is not set!");
+            });
+
+            // Configure rate limiting with Redis
             builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
-            builder.Services.AddInMemoryRateLimiting();
+            builder.Services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
+            builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
             builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+            builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 
             // Add services to the container.
             builder.Services.AddControllers();
 
-            // Set the connection string with .env variabless
+            // Set the connection string with .env variables
             var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
 
             if (connectionString is not null)
@@ -49,16 +61,31 @@ namespace CoreAPI
                 options.UseNpgsql(connectionString));
 
             // Add Identity, the user management
-            builder.Services.AddIdentity<IdentityUser, IdentityRole>(config => 
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
             {
-                config.Password.RequireDigit = true;
-                config.Password.RequireLowercase = true;
-                config.Password.RequireUppercase = true;
-                config.Password.RequireNonAlphanumeric = true;
-                config.Password.RequiredLength = 8;
+                options.SignIn.RequireConfirmedAccount = false;
+                options.SignIn.RequireConfirmedEmail = false;
+                options.SignIn.RequireConfirmedPhoneNumber = false;
+                
+                // Configuração de senha
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequiredLength = 8;
+                
+                // Configurações de lockout
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.AllowedForNewUsers = true;
+
+                // Configuração 2FA
+                options.Tokens.AuthenticatorTokenProvider = TokenOptions.DefaultAuthenticatorProvider;
             })
                 .AddEntityFrameworkStores<CoreAPIContext>()
-                .AddDefaultTokenProviders();
+                .AddDefaultTokenProviders()
+                .AddTokenProvider<AuthenticatorTokenProvider<IdentityUser>>(TokenOptions.DefaultAuthenticatorProvider)
+                .AddPasswordValidator<CustomPasswordValidator>();
 
             // Add JWT Authentication
             builder.Services.AddAuthentication(options =>
@@ -89,6 +116,7 @@ namespace CoreAPI
 
             // Dependency Injections
             builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
+            builder.Services.AddScoped<ICustomPasswordValidator, CustomPasswordValidator>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>

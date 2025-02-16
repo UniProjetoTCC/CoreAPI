@@ -1,12 +1,17 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using CoreAPI.Models;
 using Microsoft.Extensions.Configuration;
 using Business.Services.Base;
+using QRCoder;
+using System.Drawing;
+using System.IO;
+using System;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CoreAPI.Controllers
 {
@@ -160,45 +165,49 @@ namespace CoreAPI.Controllers
                 });
             }
 
-            IdentityUser user = await _userManager.FindByEmailAsync(userLogin.Email);
-
-            if (user is { UserName: not null, Email: not null, Id: not null })
+            var user = await _userManager.FindByEmailAsync(userLogin.Email);
+            if (user == null)
             {
-                var result = await _signInManager.PasswordSignInAsync(user, userLogin.Password, false, false);
+                return Unauthorized(new { Status = "Error", Message = "Invalid email or password" });
+            }
 
-                if (result.Succeeded)
+            var result = await _signInManager.PasswordSignInAsync(user, userLogin.Password, false, true);
+
+            if (result.IsLockedOut)
+            {
+                return Unauthorized(new { Status = "Error", Message = "Account is locked out" });
+            }
+
+            if (!result.Succeeded)
+            {
+                if (result.RequiresTwoFactor)
                 {
-                    var userClaims = new List<Claim>
-                    {
-                        new(ClaimTypes.NameIdentifier, user.Id),
-                        new(ClaimTypes.Name, user.UserName ?? string.Empty),
-                        new(ClaimTypes.Email, user.Email ?? string.Empty)
-                    };
-
-                    var jwtToken = GetToken(userClaims);
-                    var refreshToken = await GenerateRefreshTokenAsync(user);
-
                     return Ok(new TokenModel
                     {
-                        AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                        RefreshToken = refreshToken
+                        RequiresTwoFactor = true,
+                        Email = user.Email
                     });
                 }
 
-                return Unauthorized(new 
-                {
-                    Status = "Error",
-                    Message = "Invalid credentials"
-                });
+                return Unauthorized(new { Status = "Error", Message = "Invalid email or password" });
             }
-            else
+
+            var userClaims = new List<Claim>
             {
-                return BadRequest(new 
-                {
-                    Status = "Error",
-                    Message = "User not found",
-                });
-            }
+                new(ClaimTypes.NameIdentifier, user.Id),
+                new(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new(ClaimTypes.Email, user.Email ?? string.Empty)
+            };
+
+            var jwtToken = GetToken(userClaims);
+            var refreshToken = await GenerateRefreshTokenAsync(user);
+
+            return Ok(new TokenModel
+            {
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                RefreshToken = refreshToken,
+                RequiresTwoFactor = false
+            });
         }
 
         [HttpPost("ForgotPassword")]
@@ -213,7 +222,7 @@ namespace CoreAPI.Controllers
             if (user == null)
             {
                 // Don't reveal that the user does not exist
-                return Ok(new { Message = "If your email is registered, you will receive a password reset link." });
+                return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
             }
 
             // Generate password reset token
@@ -238,12 +247,12 @@ namespace CoreAPI.Controllers
                     message: message
                 );
 
-                return Ok(new { Message = "If your email is registered, you will receive a password reset link." });
+                return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
             }
             catch (Exception ex)
             {
                 // Don't reveal the error to the user for security
-                return Ok(new { Message = "If your email is registered, you will receive a password reset link." });
+                return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
             }
         }
 
@@ -327,6 +336,108 @@ namespace CoreAPI.Controllers
             });
         }
 
+        [HttpGet("Setup2FA")]
+        [Authorize]
+        public async Task<IActionResult> Setup2FA()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // Generate the 2FA key
+            var unformattedKey = await _userManager.GetAuthenticatorKeyAsync(user);
+            if (string.IsNullOrEmpty(unformattedKey))
+            {
+                await _userManager.ResetAuthenticatorKeyAsync(user);
+                unformattedKey = await _userManager.GetAuthenticatorKeyAsync(user);
+            }
+
+            var email = await _userManager.GetEmailAsync(user);
+            var authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
+
+            // Generate QR code
+            using var qrGenerator = new QRCodeGenerator();
+            using var qrCodeData = qrGenerator.CreateQrCode(authenticatorUri, QRCodeGenerator.ECCLevel.Q);
+            using var qrCode = new PngByteQRCode(qrCodeData);
+            var qrCodeImage = Convert.ToBase64String(qrCode.GetGraphic(20));
+
+            return Ok(new TwoFactorResponse
+            {
+                QrCodeUrl = $"data:image/png;base64,{qrCodeImage}",
+                ManualEntryKey = unformattedKey
+            });
+        }
+
+        [HttpPost("Enable2FA")]
+        [Authorize]
+        public async Task<IActionResult> Enable2FA([FromBody] Enable2faModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+                user, _userManager.Options.Tokens.AuthenticatorTokenProvider, model.Code);
+
+            if (!isValid)
+            {
+                return BadRequest(new { Message = "Invalid verification code" });
+            }
+
+            await _userManager.SetTwoFactorEnabledAsync(user, true);
+            return Ok(new { Message = "2FA has been enabled successfully" });
+        }
+
+        [HttpPost("Verify2FA")]
+        public async Task<IActionResult> Verify2FA([FromBody] Verify2faModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found" });
+            }
+
+            var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+                user, _userManager.Options.Tokens.AuthenticatorTokenProvider, model.Code);
+
+            if (!isValid)
+            {
+                return BadRequest(new { Message = "Invalid verification code" });
+            }
+
+            var userClaims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, user.Id),
+                new(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new(ClaimTypes.Email, user.Email ?? string.Empty)
+            };
+
+            var jwtToken = GetToken(userClaims);
+            var refreshToken = await GenerateRefreshTokenAsync(user);
+
+            return Ok(new TokenModel
+            {
+                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                RefreshToken = refreshToken,
+                RequiresTwoFactor = false
+            });
+        }
+
+        private string GenerateQrCodeUri(string email, string unformattedKey)
+        {
+            const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
+            
+            return string.Format(
+                AuthenticatorUriFormat,
+                Uri.EscapeDataString("UniProjetoTCC"),
+                Uri.EscapeDataString(email),
+                unformattedKey);
+        }
+
         private async Task<string> GenerateRefreshTokenAsync(IdentityUser user)
         {
             var refreshToken = await _userManager.GenerateUserTokenAsync(
@@ -388,6 +499,29 @@ namespace CoreAPI.Controllers
             );
 
             return token;
+        }
+
+        private async Task<string> GenerateJwtToken(IdentityUser user)
+        {
+            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+                throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
+
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
+                expires: DateTime.Now.AddHours(3),
+                claims: new List<Claim>
+                {
+                    new(ClaimTypes.NameIdentifier, user.Id),
+                    new(ClaimTypes.Name, user.UserName ?? string.Empty),
+                    new(ClaimTypes.Email, user.Email ?? string.Empty)
+                },
+                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

@@ -131,6 +131,87 @@ A Web API project using .NET 8.0 and Docker with PostgreSQL database.
    Authorization: Bearer your_access_token
    ```
 
+### Two-Factor Authentication (2FA)
+
+The API supports Two-Factor Authentication using Time-based One-Time Password (TOTP). Compatible with authenticator apps like Google Authenticator, Microsoft Authenticator, or Authy.
+
+#### Setting up 2FA
+
+1. Get the QR code and setup key:
+```http
+GET /api/User/Setup2FA
+Authorization: Bearer {your_token}
+```
+
+Response:
+```json
+{
+    "qrCodeUrl": "data:image/png;base64,...",
+    "manualEntryKey": "YOUR_SECRET_KEY"
+}
+```
+
+2. Scan the QR code with your authenticator app or manually enter the key.
+
+3. Enable 2FA by verifying the code from your app:
+```http
+POST /api/User/Enable2FA
+Authorization: Bearer {your_token}
+Content-Type: application/json
+
+{
+    "code": "123456"
+}
+```
+
+#### Login Flow with 2FA
+
+1. Initial login with email/password:
+```http
+POST /api/User/Login
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "password": "your_password"
+}
+```
+
+If 2FA is enabled, you'll receive:
+```json
+{
+    "requiresTwoFactor": true,
+    "email": "user@example.com"
+}
+```
+
+2. Complete login by verifying the 2FA code:
+```http
+POST /api/User/Verify2FA
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "code": "123456"
+}
+```
+
+Success response:
+```json
+{
+    "accessToken": "jwt_token",
+    "refreshToken": "refresh_token",
+    "requiresTwoFactor": false
+}
+```
+
+#### Important Notes
+
+- The refresh token flow does not require 2FA verification
+- Account lockout applies to both password and 2FA code attempts (5 failed attempts = 15 minutes lockout)
+- Store the manual entry key securely as a backup
+- 2FA codes are time-based and change every 30 seconds
+
 ## Security Features
 
 - JWT authentication with refresh tokens
@@ -141,14 +222,106 @@ A Web API project using .NET 8.0 and Docker with PostgreSQL database.
 - Email notifications for security events
 - Environment-based configuration
 - Docker containerization
+- Two-Factor Authentication (2FA)
 
-### Rate Limiting
+### Caching and Rate Limiting
 
-The API implements IP-based rate limiting:
+The API implements a robust caching and rate limiting system using Redis as a distributed cache. This setup allows for improved performance and better control over API usage across multiple instances.
+
+#### Rate Limiting
 - 10 requests per second per IP
 - 100 requests per minute per IP
 - Returns HTTP 429 when limit exceeded
 - Configured in `appsettings.json`
+- Uses Redis for distributed rate limiting storage
+
+#### Redis Cache Configuration
+
+Redis is configured via Docker and starts automatically with the application. The configuration can be found in `appsettings.json`:
+
+```json
+"Redis": {
+  "Configuration": "redis:6379",
+  "InstanceName": "CoreAPI_Redis_Cache"
+}
+```
+
+#### Using the Cache
+
+To use caching in a controller, inject `IDistributedCache`:
+
+```csharp
+using Microsoft.Extensions.Caching.Distributed;
+
+public class ExampleController : ControllerBase
+{
+    private readonly IDistributedCache _cache;
+
+    public ExampleController(IDistributedCache cache)
+    {
+        _cache = cache;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        // Try to get from cache
+        string key = "example_key";
+        string? cachedValue = await _cache.GetStringAsync(key);
+
+        if (cachedValue != null)
+        {
+            return Ok(cachedValue);
+        }
+
+        // If not in cache, generate new value
+        string newValue = "New value generated at " + DateTime.Now;
+
+        // Save to cache for 10 minutes
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+        };
+
+        await _cache.SetStringAsync(key, newValue, options);
+        return Ok(newValue);
+    }
+}
+```
+
+#### Available Cache Methods
+
+`IDistributedCache` provides the following main methods:
+
+```csharp
+// Strings
+await _cache.GetStringAsync(key);
+await _cache.SetStringAsync(key, value, options);
+
+// Bytes
+await _cache.GetAsync(key);
+await _cache.SetAsync(key, byteArray, options);
+
+// Removal
+await _cache.RemoveAsync(key);
+```
+
+#### Cache Options
+
+Configure cache options using `DistributedCacheEntryOptions`:
+
+```csharp
+var options = new DistributedCacheEntryOptions
+{
+    // Absolute expiration time
+    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+    
+    // OR sliding expiration (renews on each access)
+    SlidingExpiration = TimeSpan.FromMinutes(2)
+};
+```
+
+This distributed caching system improves application performance by reducing database load and API response times, while the distributed rate limiting ensures fair API usage across all instances.
 
 ## Running the Application
 
