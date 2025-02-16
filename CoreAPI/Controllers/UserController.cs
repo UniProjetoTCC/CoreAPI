@@ -20,7 +20,7 @@ namespace CoreAPI.Controllers
     public class UserController : ControllerBase
     {
         private const string REFRESH_TOKEN_PURPOSE = "RefreshToken";
-        private const string PROJECT_NAME;
+        private readonly string PROJECT_NAME;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IConfiguration _configuration;
