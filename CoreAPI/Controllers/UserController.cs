@@ -20,6 +20,7 @@ namespace CoreAPI.Controllers
     public class UserController : ControllerBase
     {
         private const string REFRESH_TOKEN_PURPOSE = "RefreshToken";
+        private const string PROJECT_NAME;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IConfiguration _configuration;
@@ -35,8 +36,25 @@ namespace CoreAPI.Controllers
             _signInManager = signInManager;
             _configuration = configuration;
             _emailSender = emailSender;
+
+            PROJECT_NAME = configuration["ProjectName"] ??
+                throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
         }
 
+        /// <summary>
+        /// Registers a new user in the system
+        /// </summary>
+        /// <remarks>
+        /// Creates a new account with the provided credentials.
+        /// Password must meet the following requirements:
+        /// - Minimum 8 characters
+        /// - At least 1 number
+        /// - At least 1 special character
+        /// - At least 1 uppercase and 1 lowercase letter
+        /// </remarks>
+        /// <param name="model">New user data</param>
+        /// <response code="200">User created successfully</response>
+        /// <response code="400">Invalid data or password does not meet requirements</response>
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
@@ -69,7 +87,7 @@ namespace CoreAPI.Controllers
                 <p>If you didn't create an account, you can safely ignore this email.</p>
                 <br>
                 <p>Best regards,</p>
-                <p>UniProjeto TCC Team</p>";
+                <p>{PROJECT_NAME} Team</p>";
 
             try
             {
@@ -88,6 +106,15 @@ namespace CoreAPI.Controllers
             return Ok(new { Message = "User created successfully. Please check your email to confirm your account." });
         }
 
+        /// <summary>
+        /// Confirms the user's email address
+        /// </summary>
+        /// <remarks>
+        /// Verifies the email confirmation token and updates the user's confirmation status.
+        /// </remarks>
+        /// <param name="model">Email and confirmation token</param>
+        /// <response code="200">Email confirmed successfully</response>
+        /// <response code="400">Invalid token</response>
         [HttpPost("ConfirmEmail")]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailModel model)
         {
@@ -109,6 +136,15 @@ namespace CoreAPI.Controllers
             });
         }
 
+        /// <summary>
+        /// Resends the email confirmation link
+        /// </summary>
+        /// <remarks>
+        /// Generates a new confirmation token and sends a new email to the user.
+        /// </remarks>
+        /// <param name="model">User's email</param>
+        /// <response code="200">Confirmation email sent successfully</response>
+        /// <response code="400">Email not found</response>
         [HttpPost("ResendEmailConfirmation")]
         public async Task<IActionResult> ResendEmailConfirmation([FromBody] EmailModel model)
         {
@@ -132,7 +168,7 @@ namespace CoreAPI.Controllers
                 <p>If you didn't request this confirmation, you can safely ignore this email.</p>
                 <br>
                 <p>Best regards,</p>
-                <p>UniProjeto TCC Team</p>";
+                <p>{PROJECT_NAME} Team</p>";
 
             try
             {
@@ -150,6 +186,18 @@ namespace CoreAPI.Controllers
             return Ok(new { Message = "If your email is registered, you will receive a confirmation email." });
         }
 
+        /// <summary>
+        /// Authenticates a user with support for two-factor authentication (2FA)
+        /// </summary>
+        /// <remarks>
+        /// If 2FA is enabled, returns requiresTwoFactor=true and the email.
+        /// Otherwise, returns access tokens.
+        /// Account will be locked after 5 failed attempts for 15 minutes.
+        /// </remarks>
+        /// <param name="userLogin">User's email and password</param>
+        /// <response code="200">Login successful or 2FA required</response>
+        /// <response code="401">Invalid credentials or account locked</response>
+        /// <response code="400">Invalid data</response>
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginModel userLogin)
         {
@@ -210,6 +258,16 @@ namespace CoreAPI.Controllers
             });
         }
 
+        /// <summary>
+        /// Initiates the password recovery process
+        /// </summary>
+        /// <remarks>
+        /// Sends an email with a password reset link.
+        /// The link contains a token valid for 1 hour.
+        /// </remarks>
+        /// <param name="model">User's email</param>
+        /// <response code="200">Email sent successfully</response>
+        /// <response code="400">Email not found</response>
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordModel forgotPasswordModel)
         {
@@ -237,7 +295,7 @@ namespace CoreAPI.Controllers
                 <p>The token will expire in 24 hours.</p>
                 <br>
                 <p>Best regards,</p>
-                <p>UniProjeto TCC Team</p>";
+                <p>{PROJECT_NAME} Team</p>";
 
             try
             {
@@ -256,6 +314,16 @@ namespace CoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Resets the user's password
+        /// </summary>
+        /// <remarks>
+        /// Used after the password recovery process.
+        /// New password must meet the same requirements as registration.
+        /// </remarks>
+        /// <param name="model">Reset token and new password</param>
+        /// <response code="200">Password changed successfully</response>
+        /// <response code="400">Invalid token or password does not meet requirements</response>
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel resetPasswordModel)
         {
@@ -286,6 +354,16 @@ namespace CoreAPI.Controllers
             });
         }
 
+        /// <summary>
+        /// Refreshes the access token using a refresh token
+        /// </summary>
+        /// <remarks>
+        /// Generates a new pair of tokens (access + refresh) if the refresh token is valid.
+        /// Does not require re-authentication or 2FA verification.
+        /// </remarks>
+        /// <param name="model">Expired access token and refresh token</param>
+        /// <response code="200">New tokens generated</response>
+        /// <response code="400">Invalid or expired tokens</response>
         [HttpPost("RefreshToken")]
         public async Task<IActionResult> RefreshToken([FromBody] TokenModel tokenModel)
         {
@@ -336,6 +414,15 @@ namespace CoreAPI.Controllers
             });
         }
 
+        /// <summary>
+        /// Sets up two-factor authentication (2FA) for the user
+        /// </summary>
+        /// <remarks>
+        /// Returns a QR code to be scanned by an authenticator app (Google Authenticator, Microsoft Authenticator, etc.)
+        /// and a manual key for backup. 2FA is not active until Enable2FA is called.
+        /// </remarks>
+        /// <response code="200">QR code and manual key generated successfully</response>
+        /// <response code="401">User not authenticated</response>
         [HttpGet("Setup2FA")]
         [Authorize]
         public async Task<IActionResult> Setup2FA()
@@ -370,6 +457,17 @@ namespace CoreAPI.Controllers
             });
         }
 
+        /// <summary>
+        /// Enables two-factor authentication (2FA) for the user
+        /// </summary>
+        /// <remarks>
+        /// Verifies the code generated by the authenticator app and enables 2FA.
+        /// Once enabled, all future logins will require a 2FA code.
+        /// </remarks>
+        /// <param name="model">Authenticator code</param>
+        /// <response code="200">2FA enabled successfully</response>
+        /// <response code="400">Invalid code</response>
+        /// <response code="401">User not authenticated</response>
         [HttpPost("Enable2FA")]
         [Authorize]
         public async Task<IActionResult> Enable2FA([FromBody] Enable2faModel model)
@@ -392,6 +490,18 @@ namespace CoreAPI.Controllers
             return Ok(new { Message = "2FA has been enabled successfully" });
         }
 
+        /// <summary>
+        /// Verifies the 2FA code during login process
+        /// </summary>
+        /// <remarks>
+        /// Used after successful login when 2FA is enabled.
+        /// If code is correct, returns access tokens.
+        /// Account will be locked after 5 failed attempts for 15 minutes.
+        /// </remarks>
+        /// <param name="model">Email and authenticator code</param>
+        /// <response code="200">Valid code, tokens returned</response>
+        /// <response code="400">Invalid code</response>
+        /// <response code="401">User not found or account locked</response>
         [HttpPost("Verify2FA")]
         public async Task<IActionResult> Verify2FA([FromBody] Verify2faModel model)
         {
@@ -433,7 +543,7 @@ namespace CoreAPI.Controllers
             
             return string.Format(
                 AuthenticatorUriFormat,
-                Uri.EscapeDataString("UniProjetoTCC"),
+                Uri.EscapeDataString(PROJECT_NAME),
                 Uri.EscapeDataString(email),
                 unformattedKey);
         }

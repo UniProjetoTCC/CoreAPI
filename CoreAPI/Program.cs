@@ -1,5 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using System.Reflection;
+using System.IO;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -119,10 +121,27 @@ namespace CoreAPI
             builder.Services.AddScoped<ICustomPasswordValidator, CustomPasswordValidator>();
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(c =>
+            builder.Services.AddSwaggerGen(options =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Core API", Version = "v1" });
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Core API",
+                    Version = "v1",
+                    Description = "Core API - .NET Web API",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Change This Later",
+                        Email = "ChangeThisLater@Later.com"
+                    }
+                });
+
+                // Use XML comments in Swagger
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                options.IncludeXmlComments(xmlPath);
+
+                // Add JWT Authentication
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
                     Name = "Authorization",
@@ -131,7 +150,7 @@ namespace CoreAPI
                     Scheme = "Bearer"
                 });
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement()
                 {
                     {
                         new OpenApiSecurityScheme

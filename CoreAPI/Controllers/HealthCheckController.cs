@@ -6,6 +6,9 @@ using Data.Context;
 
 namespace CoreAPI.Controllers
 {
+    /// <summary>
+    /// Controller for monitoring system health and dependencies
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class HealthCheckController : ControllerBase
@@ -24,12 +27,29 @@ namespace CoreAPI.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Checks if the API is running and responding to requests
+        /// </summary>
+        /// <remarks>
+        /// Simple endpoint that returns OK if the API is up.
+        /// Used for monitoring and load balancer health checks.
+        /// Does not verify database or other dependencies.
+        /// </remarks>
+        /// <response code="200">API is up and running</response>
         [HttpGet]
         public IActionResult Get()
         {
             return Ok(new { Status = "healthy", Timestamp = DateTime.UtcNow });
         }
 
+        /// <summary>
+        /// Performs a database connection health check
+        /// </summary>
+        /// <remarks>
+        /// Verifies the health of the database connection.
+        /// </remarks>
+        /// <response code="200">Database connection is healthy</response>
+        /// <response code="500">Database connection is unhealthy</response>
         [HttpGet("Database")]
         public async Task<IActionResult> CheckDatabase()
         {
@@ -52,6 +72,16 @@ namespace CoreAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Checks the current user's information
+        /// </summary>
+        /// <remarks>
+        /// Returns the current user's email, username, and id.
+        /// Requires authentication.
+        /// </remarks>
+        /// <response code="200">User information retrieved successfully</response>
+        /// <response code="404">User not found</response>
+        /// <response code="500">Error retrieving user information</response>
         [Authorize]
         [HttpGet("User")]
         public async Task<IActionResult> CheckUser()
