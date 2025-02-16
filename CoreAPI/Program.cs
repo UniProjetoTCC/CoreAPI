@@ -6,6 +6,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
+using AspNetCoreRateLimit;
+using Business.Services;
+using Business.Services.Base;
 
 namespace CoreAPI
 {
@@ -14,6 +17,12 @@ namespace CoreAPI
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // Configure rate limiting
+            builder.Services.AddMemoryCache();
+            builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+            builder.Services.AddInMemoryRateLimiting();
+            builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
             // Add services to the container.
             builder.Services.AddControllers();
@@ -77,7 +86,9 @@ namespace CoreAPI
 
             // Add Auto Mapper, the class mapper to database classes and vice versa
             builder.Services.AddAutoMapper(typeof(Program));
-            builder.Services.AddAutoMapper(typeof(Program));
+
+            // Dependency Injections
+            builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -112,6 +123,9 @@ namespace CoreAPI
             });
 
             var app = builder.Build();
+
+            // Configure rate limiting middleware (have to be one of the first middlewares)
+            app.UseIpRateLimiting();
 
             // Get logger for application messages
             var logger = app.Services.GetRequiredService<ILogger<Program>>();

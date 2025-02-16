@@ -22,11 +22,14 @@ A Web API project using .NET 8.0 and Docker with PostgreSQL database.
 
 2. **Environment Configuration:**
    - Create a `.env` file in the root directory with the variables from `.env.example`
-   - Make sure to set a strong `JWT_SECRET` in your `.env` file for token signing
+   - Set a strong `JWT_SECRET` for token signing
+   - Configure email settings:
+     - `EMAIL_USER`: Your Gmail address
+     - `EMAIL_PASSWORD`: App password from Google (requires 2FA)
 
-## Authentication
+## Authentication & Security Features
 
-The API uses JWT (JSON Web Token) for authentication. Here's how to use it:
+### User Registration and Email Verification
 
 1. **Register a new user:**
    ```http
@@ -39,8 +42,58 @@ The API uses JWT (JSON Web Token) for authentication. Here's how to use it:
      "password": "your_password"
    }
    ```
+   - A confirmation email will be sent
+   - Password must be at least 8 characters with uppercase, lowercase, number, and special character
 
-2. **Login to get a token:**
+2. **Confirm Email:**
+   ```http
+   POST /User/ConfirmEmail
+   Content-Type: application/json
+
+   {
+     "email": "your_email@example.com",
+     "token": "token-from-email"
+   }
+   ```
+
+3. **Resend Confirmation Email:**
+   ```http
+   POST /User/ResendEmailConfirmation
+   Content-Type: application/json
+
+   {
+     "email": "your_email@example.com"
+   }
+   ```
+
+### Password Reset
+
+1. **Request Password Reset:**
+   ```http
+   POST /User/ForgotPassword
+   Content-Type: application/json
+
+   {
+     "email": "your_email@example.com"
+   }
+   ```
+   - Reset token will be sent via email
+
+2. **Reset Password:**
+   ```http
+   POST /User/ResetPassword
+   Content-Type: application/json
+
+   {
+     "email": "your_email@example.com",
+     "token": "token-from-email",
+     "newPassword": "your-new-password"
+   }
+   ```
+
+### JWT Authentication
+
+1. **Login to get tokens:**
    ```http
    POST /User/Login
    Content-Type: application/json
@@ -50,14 +103,23 @@ The API uses JWT (JSON Web Token) for authentication. Here's how to use it:
      "password": "your_password"
    }
    ```
-   The response will include your JWT token.
+   Response includes:
+   - `accessToken`: For API authentication
+   - `refreshToken`: To get new access tokens
 
-3. **Using the token:**
-   - Add the token to the Authorization header of your requests:
+2. **Refresh Token:**
+   ```http
+   POST /User/RefreshToken
+   Content-Type: application/json
+
+   {
+     "accessToken": "expired-access-token",
+     "refreshToken": "your-refresh-token"
+   }
    ```
-   Authorization: Bearer your_token_here
-   ```
-   - In Swagger UI:
+
+3. **Using Access Tokens:**
+- In Swagger UI:
      1. Click the "Authorize" button at the top of the page
      2. In the popup, enter your token in the format: `Bearer your_token_here`
      3. Click "Authorize" to save
@@ -65,10 +127,28 @@ The API uses JWT (JSON Web Token) for authentication. Here's how to use it:
 
    - Protected endpoints (with [Authorize] attribute) require this token
 
-4. **JWT Configuration:**
-   - The token issuer and audience are configured in `appsettings.json`
-   - The signing key (`JWT_SECRET`) must be set in your `.env` file
-   - Tokens expire after 3 hours
+   ```
+   Authorization: Bearer your_access_token
+   ```
+
+## Security Features
+
+- JWT authentication with refresh tokens
+- Email verification for new accounts
+- Secure password reset flow
+- Rate limiting to prevent abuse
+- Password complexity requirements
+- Email notifications for security events
+- Environment-based configuration
+- Docker containerization
+
+### Rate Limiting
+
+The API implements IP-based rate limiting:
+- 10 requests per second per IP
+- 100 requests per minute per IP
+- Returns HTTP 429 when limit exceeded
+- Configured in `appsettings.json`
 
 ## Running the Application
 
@@ -115,34 +195,37 @@ The application will be available at:
 
 ```
 CoreAPI/
-├── AutoMapper/                # Automapper configuration
-│   └── AutoMapperProfile.cs   # Mapping configuration
-├── Controllers/               # API Controllers
-│   ├── HealthCheckController  # Health check endpoints
-│   └── UserController         # Authentication endpoints
-├── Models/                    # API Models
-│   ├── LoginModel             # Login request model
-│   └── UserModel              # User registration model
-├── Data/                      # Data access layer
-│   ├── Context/               # Database context
-│   │   └── CoreAPIContext     # EF Core DB context
-│   ├── Migrations/            # Database migrations
-│   ├── Models/                # Database models
-│   └── Repositories/          # Data repositories 
-├── Business/                  # Business layer
-│   ├── DataRepositories/      # Database repositories interfaces
-│   ├── Models/                # Business models
-│   └── Services/              # Business services
-│       └── Base/              # Service interfaces
-├── Properties/                # Project settings
-├── CoreAPI.csproj             # .NET project file
-├── Program.cs                 # Application entry point and DI configuration
-├── appsettings.json           # Application settings (including JWT config)
-├── appsettings.*.json         # Environment-specific settings
-├── Dockerfile                 # Container build instructions
-├── docker-compose.yml         # Docker Compose configuration
-├── .env                       # Environment variables (not in repo)
-└── .env.example               # Example environment variables
+├── CoreAPI/                           # Main API project
+│   ├── AutoMapper/                    # Automapper configuration
+│   ├── Controllers/                   # API Controllers
+│   ├── Models/                        # API Models
+│   ├── Services/                      # Local services
+│   ├── appsettings.json               # Main configuration
+│   ├── appsettings.Development.json
+│   ├── Program.cs                     # Application setup
+│   └── CoreAPI.csproj
+│
+├── Business/                          # Business logic layer
+│   ├── DataRepositories/              # Repository interfaces
+│   │   └── Base/
+│   ├── Models/                        # Business models
+│   ├── Services/                      # Business services
+│   │   └── Base/                      # Service interfaces
+│   └── Business.csproj
+│
+├── Data/                              # Data access layer
+│   ├── Context/                       # Database context
+│   │   └── CoreAPIContext.cs
+│   ├── Migrations/                    # EF Core migrations
+│   ├── Models/                        # Database models
+│   ├── Repositories/                  # Repository implementations
+│   └── Data.csproj
+│
+├── docker-compose.yml                 # Docker configuration
+├── Dockerfile                         # Container build
+├── .env                               # Environment variables (not in repo)
+├── .env.example                       # Environment variables template
+└── README.md                          # Project documentation
 ```
 
 ## Database Migrations
@@ -171,7 +254,7 @@ CoreAPI/
 dotnet tool update --global dotnet-ef
 
 # Create a new migration after model changes
-dotnet ef migrations add AddNewFeature --project Data --startup-project CoreAPI
+dotnet ef migrations add MigrationName --project Data --startup-project CoreAPI
 
 # List all migrations and their status
 dotnet ef migrations list --project Data --startup-project CoreAPI

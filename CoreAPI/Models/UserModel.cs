@@ -2,21 +2,27 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CoreAPI.Models
 {
-    public class UserModel
+    public class RegisterModel
     {
         [Required(ErrorMessage = "Username is required")]
-        [MinLength(6, ErrorMessage = "Username must be at least 6 characters")]
-        public required string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
-        public required string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Password is required")]
         [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$",
             ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character")]
-        public required string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class EmailModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
     }
 
     public class LoginModel
@@ -27,5 +33,44 @@ namespace CoreAPI.Models
 
         [Required(ErrorMessage = "Password is required")]
         public required string Password { get; set; }
+    }
+
+    public class ForgotPasswordModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Token is required")]
+        public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$",
+            ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character")]
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class ConfirmEmailModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Token is required")]
+        public string Token { get; set; } = string.Empty;
+    }
+
+    public class TokenModel
+    {
+        public string? AccessToken { get; set; }
+        public string? RefreshToken { get; set; }
     }
 }
