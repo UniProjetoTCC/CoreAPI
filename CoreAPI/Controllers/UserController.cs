@@ -92,7 +92,7 @@ namespace CoreAPI.Controllers
             try
             {
                 await _emailSender.SendEmailAsync(
-                    email: user.Email,
+                    email: user.Email ?? throw new ArgumentNullException(nameof(user.Email)),
                     subject: "Confirm Your Email",
                     message: message
                 );
@@ -173,7 +173,7 @@ namespace CoreAPI.Controllers
             try
             {
                 await _emailSender.SendEmailAsync(
-                    email: user.Email,
+                    email: user.Email ?? throw new ArgumentNullException(nameof(user.Email)),
                     subject: "Confirm Your Email",
                     message: message
                 );
@@ -300,7 +300,7 @@ namespace CoreAPI.Controllers
             try
             {
                 await _emailSender.SendEmailAsync(
-                    email: user.Email,
+                    email: user.Email ?? throw new ArgumentNullException(nameof(user.Email)),
                     subject: "Reset Your Password",
                     message: message
                 );

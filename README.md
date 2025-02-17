@@ -212,6 +212,61 @@ Success response:
 - Store the manual entry key securely as a backup
 - 2FA codes are time-based and change every 30 seconds
 
+## Message Broker System
+
+The API uses Redis as a message broker for handling asynchronous operations. This allows for better scalability and reliability in processing operations like email sending and background tasks.
+
+### Using the Message Broker
+
+1. **Publishing Messages:**
+```csharp
+// Inject the service
+private readonly IMessageBrokerService _messageBroker;
+
+// Publish a message
+await _messageBroker.PublishAsync("channel_name", new MessageData 
+{
+    Property1 = "value",
+    Property2 = 123
+});
+```
+
+2. **Subscribing to Messages:**
+```csharp
+// Subscribe to a channel
+await _messageBroker.SubscribeAsync<MessageData>("channel_name", async message =>
+{
+    // Handle the message
+    await ProcessMessage(message);
+});
+```
+
+3. **Example with Email Service:**
+```csharp
+// Publishing an email
+var emailMessage = new EmailMessage
+{
+    To = "user@example.com",
+    Subject = "Welcome",
+    Body = "Welcome to our platform!"
+};
+await _messageBroker.PublishAsync("email_notifications", emailMessage);
+
+// Processing emails (in EmailSenderService)
+await _messageBroker.SubscribeAsync<EmailMessage>("email_notifications", async message =>
+{
+    await SendEmailAsync(message);
+});
+```
+
+### Benefits
+- Asynchronous processing
+- Improved scalability
+- Better error handling
+- Reduced system coupling
+- Real-time message delivery
+- Persistent message queue
+
 ## Security Features
 
 - JWT authentication with refresh tokens

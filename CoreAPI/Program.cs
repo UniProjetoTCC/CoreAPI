@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using AspNetCoreRateLimit;
+using StackExchange.Redis;
 using Business.Services;
 using Business.Services.Base;
 using Data.Context;
@@ -30,6 +31,12 @@ namespace CoreAPI
                 options.Configuration = redisConfig ?? throw new InvalidOperationException("Redis configuration is not set!");
                 options.InstanceName = redisInstanceName ?? throw new InvalidOperationException("Redis instance name is not set!");
             });
+
+            // Configure Redis as Message Broker
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+                ConnectionMultiplexer.Connect(builder.Configuration["Redis:Configuration"] ?? 
+                    throw new InvalidOperationException("Redis:Configuration not found in appsettings.json")));
+            builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
 
             // Configure rate limiting with Redis
             builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
