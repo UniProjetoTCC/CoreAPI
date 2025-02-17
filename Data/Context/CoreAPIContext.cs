@@ -4,12 +4,11 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Data.Context
 {
-    public class CoreAPIContext : IdentityDbContext<User>
+    public class CoreAPIContext : IdentityDbContext
     {
         public CoreAPIContext(DbContextOptions<CoreAPIContext> options) : base(options)
         {
         }
-
         // public DbSet<Customer> Customers { get; set; }
         // public DbSet<Product> Products { get; set; }
         // public DbSet<PriceHistory> PriceHistories { get; set; }
@@ -100,4 +99,3 @@ namespace Data.Context
         }
     }
 }
-
