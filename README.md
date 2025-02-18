@@ -467,7 +467,7 @@ CoreAPI/
 1. **Add Migration Files**
    ```powershell
    # Create a new migration
-   dotnet ef migrations add MigrationName --project Data --startup-project CoreAPI
+   dotnet ef migrations add MigrationName --project Data --startup-project CoreAPI --verbose
    ```
 
 2. **What This Creates**

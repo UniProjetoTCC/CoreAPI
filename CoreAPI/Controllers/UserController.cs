@@ -12,6 +12,7 @@ using System.Drawing;
 using System.IO;
 using System;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace CoreAPI.Controllers
 {
@@ -25,17 +26,20 @@ namespace CoreAPI.Controllers
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailSenderService _emailSender;
+        private readonly ILogger<UserController> _logger;
 
         public UserController(
             UserManager<IdentityUser> userManager, 
             SignInManager<IdentityUser> signInManager,
             IConfiguration configuration,
-            IEmailSenderService emailSender)
+            IEmailSenderService emailSender,
+            ILogger<UserController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _emailSender = emailSender;
+            _logger = logger;
 
             PROJECT_NAME = configuration["ProjectName"] ??
                 throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
@@ -97,7 +101,7 @@ namespace CoreAPI.Controllers
                     message: message
                 );
             }
-            catch (Exception ex)
+            catch
             {
                 await _userManager.DeleteAsync(user);
                 return Ok(new { Message = "User created successfully. Try later to confirm your email." });
@@ -178,7 +182,7 @@ namespace CoreAPI.Controllers
                     message: message
                 );
             }
-            catch (Exception ex)
+            catch
             {
                 return Ok(new { Message = "Something went wrong. Try later to confirm your email." });
             }
@@ -259,159 +263,168 @@ namespace CoreAPI.Controllers
         }
 
         /// <summary>
-        /// Initiates the password recovery process
+        /// Handles the forgot password request
         /// </summary>
-        /// <remarks>
-        /// Sends an email with a password reset link.
-        /// The link contains a token valid for 1 hour.
-        /// </remarks>
-        /// <param name="model">User's email</param>
-        /// <response code="200">Email sent successfully</response>
-        /// <response code="400">Email not found</response>
+        /// <param name="forgotPasswordModel">The forgot password model containing the email</param>
+        /// <returns>IActionResult indicating success or failure</returns>
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordModel forgotPasswordModel)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var user = await _userManager.FindByEmailAsync(forgotPasswordModel.Email);
-            if (user == null)
-            {
-                // Don't reveal that the user does not exist
-                return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
-            }
-
-            // Generate password reset token
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-            var message = $@"
-                <h2>Reset Your Password</h2>
-                <p>Hello,</p>
-                <p>We received a request to reset your password. Use the token below with the reset password endpoint:</p>
-                <p style='background-color: #f5f5f5; padding: 10px; font-family: monospace;'>{token}</p>
-                <p>If you didn't request this, you can safely ignore this email.</p>
-                <p>The token will expire in 24 hours.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>{PROJECT_NAME} Team</p>";
-
             try
             {
-                await _emailSender.SendEmailAsync(
-                    email: user.Email ?? throw new ArgumentNullException(nameof(user.Email)),
-                    subject: "Reset Your Password",
-                    message: message
-                );
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
 
-                return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                var user = await _userManager.FindByEmailAsync(forgotPasswordModel.Email);
+                if (user == null)
+                {
+                    // Don't reveal that the user does not exist
+                    return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                }
+
+                // Generate password reset token
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+                var message = $@"
+                    <h2>Reset Your Password</h2>
+                    <p>Hello,</p>
+                    <p>We received a request to reset your password. Use the token below with the reset password endpoint:</p>
+                    <p style='background-color: #f5f5f5; padding: 10px; font-family: monospace;'>{token}</p>
+                    <p>If you didn't request this, you can safely ignore this email.</p>
+                    <p>The token will expire in 24 hours.</p>
+                    <br>
+                    <p>Best regards,</p>
+                    <p>{PROJECT_NAME} Team</p>";
+
+                try
+                {
+                    await _emailSender.SendEmailAsync(
+                        email: user.Email ?? throw new ArgumentNullException(nameof(user.Email)),
+                        subject: "Reset Your Password",
+                        message: message
+                    );
+
+                    return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                }
+                catch
+                {
+                    // Don't reveal the error to the user for security
+                    return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                }
             }
             catch (Exception ex)
             {
-                // Don't reveal the error to the user for security
-                return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                _logger.LogError(ex, "Error in ForgotPassword");
+                return StatusCode(500, "An error occurred while processing your request.");
             }
         }
 
         /// <summary>
-        /// Resets the user's password
+        /// Resets the user's password using a reset token
         /// </summary>
-        /// <remarks>
-        /// Used after the password recovery process.
-        /// New password must meet the same requirements as registration.
-        /// </remarks>
-        /// <param name="model">Reset token and new password</param>
-        /// <response code="200">Password changed successfully</response>
-        /// <response code="400">Invalid token or password does not meet requirements</response>
+        /// <param name="resetPasswordModel">Model containing email, token and new password</param>
+        /// <returns>IActionResult indicating success or failure</returns>
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel resetPasswordModel)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var user = await _userManager.FindByEmailAsync(resetPasswordModel.Email);
+                if (user == null)
+                {
+                    return BadRequest("Invalid request");
+                }
+
+                var result = await _userManager.ResetPasswordAsync(user, 
+                    resetPasswordModel.Token, 
+                    resetPasswordModel.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    return Ok(new { Message = "Password has been reset successfully." });
+                }
+
+                return BadRequest(new
+                {
+                    Message = "Error resetting password",
+                    Errors = result.Errors.Select(e => e.Description)
+                });
             }
-
-            var user = await _userManager.FindByEmailAsync(resetPasswordModel.Email);
-            if (user == null)
+            catch (Exception ex)
             {
-                return BadRequest("Invalid request");
+                _logger.LogError(ex, "Error in ResetPassword: {Message}", ex.Message);
+                return StatusCode(500, "An error occurred while processing your request.");
             }
-
-            var result = await _userManager.ResetPasswordAsync(user, 
-                resetPasswordModel.Token, 
-                resetPasswordModel.NewPassword);
-
-            if (result.Succeeded)
-            {
-                return Ok(new { Message = "Password has been reset successfully." });
-            }
-
-            return BadRequest(new
-            {
-                Message = "Error resetting password",
-                Errors = result.Errors.Select(e => e.Description)
-            });
         }
 
         /// <summary>
-        /// Refreshes the access token using a refresh token
+        /// Refreshes the authentication token
         /// </summary>
-        /// <remarks>
-        /// Generates a new pair of tokens (access + refresh) if the refresh token is valid.
-        /// Does not require re-authentication or 2FA verification.
-        /// </remarks>
-        /// <param name="model">Expired access token and refresh token</param>
-        /// <response code="200">New tokens generated</response>
-        /// <response code="400">Invalid or expired tokens</response>
+        /// <param name="tokenModel">Model containing the current access and refresh tokens</param>
+        /// <returns>IActionResult with new tokens or error</returns>
         [HttpPost("RefreshToken")]
         public async Task<IActionResult> RefreshToken([FromBody] TokenModel tokenModel)
         {
-            if (tokenModel is null || string.IsNullOrEmpty(tokenModel.RefreshToken))
+            try
             {
-                return BadRequest("Invalid client request");
+                if (tokenModel is null || string.IsNullOrEmpty(tokenModel.RefreshToken))
+                {
+                    return BadRequest("Invalid client request");
+                }
+
+                // Extract the user claims from the token
+                var principal = GetPrincipalFromExpiredToken(tokenModel.AccessToken);
+                if (principal?.Identity?.Name == null)
+                {
+                    return BadRequest("Invalid access token");
+                }
+
+                var user = await _userManager.FindByNameAsync(principal.Identity.Name);
+                if (user == null)
+                {
+                    return BadRequest("User not found");
+                }
+
+                // Validate the refresh token
+                var isValid = await _userManager.VerifyUserTokenAsync(
+                    user,
+                    TokenOptions.DefaultProvider,
+                    REFRESH_TOKEN_PURPOSE,
+                    tokenModel.RefreshToken);
+
+                if (!isValid)
+                {
+                    return BadRequest("Invalid refresh token");
+                }
+
+                // Remove the old refresh token
+                await _userManager.RemoveAuthenticationTokenAsync(
+                    user,
+                    TokenOptions.DefaultProvider,
+                    REFRESH_TOKEN_PURPOSE);
+
+                // Generate new token and refresh token
+                var newAccessToken = GetToken(principal.Claims.ToList());
+                var newRefreshToken = await GenerateRefreshTokenAsync(user);
+
+                return Ok(new TokenModel
+                {
+                    AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
+                    RefreshToken = newRefreshToken
+                });
             }
-
-            // Extract the user claims from the token
-            var principal = GetPrincipalFromExpiredToken(tokenModel.AccessToken);
-            if (principal?.Identity?.Name == null)
+            catch (Exception ex)
             {
-                return BadRequest("Invalid access token");
+                _logger.LogError(ex, "Error in RefreshToken: {Message}", ex.Message);
+                return StatusCode(500, "An error occurred while processing your request.");
             }
-
-            var user = await _userManager.FindByNameAsync(principal.Identity.Name);
-            if (user == null)
-            {
-                return BadRequest("User not found");
-            }
-
-            // Validate the refresh token
-            var isValid = await _userManager.VerifyUserTokenAsync(
-                user,
-                TokenOptions.DefaultProvider,
-                REFRESH_TOKEN_PURPOSE,
-                tokenModel.RefreshToken);
-
-            if (!isValid)
-            {
-                return BadRequest("Invalid refresh token");
-            }
-
-            // Remove the old refresh token
-            await _userManager.RemoveAuthenticationTokenAsync(
-                user,
-                TokenOptions.DefaultProvider,
-                REFRESH_TOKEN_PURPOSE);
-
-            // Generate new token and refresh token
-            var newAccessToken = GetToken(principal.Claims.ToList());
-            var newRefreshToken = await GenerateRefreshTokenAsync(user);
-
-            return Ok(new TokenModel
-            {
-                AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
-                RefreshToken = newRefreshToken
-            });
         }
 
         /// <summary>
@@ -442,7 +455,17 @@ namespace CoreAPI.Controllers
             }
 
             var email = await _userManager.GetEmailAsync(user);
-            var authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
+            if (string.IsNullOrEmpty(email))
+            {
+                throw new InvalidOperationException("User email not found.");
+            }
+
+            if (string.IsNullOrEmpty(unformattedKey))
+            {
+                throw new InvalidOperationException("Authenticator key not found.");
+            }
+
+            var authenticatorUri = GenerateQrCodeUri(email, unformattedKey);
 
             // Generate QR code
             using var qrGenerator = new QRCodeGenerator();
@@ -595,10 +618,8 @@ namespace CoreAPI.Controllers
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
-                throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
-
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+                throw new InvalidOperationException("JWT_SECRET environment variable is not set!")));
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["JWT:ValidIssuer"],
@@ -611,7 +632,7 @@ namespace CoreAPI.Controllers
             return token;
         }
 
-        private async Task<string> GenerateJwtToken(IdentityUser user)
+        private string GenerateJwtToken(IdentityUser user)
         {
             var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
                 throw new InvalidOperationException("JWT_SECRET environment variable is not set!");

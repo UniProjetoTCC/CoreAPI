@@ -26,10 +26,13 @@ namespace CoreAPI
             // Configure Redis Cache
             builder.Services.AddStackExchangeRedisCache(options =>
             {
-                string redisConfig = builder.Configuration["Redis:Configuration"];
-                string redisInstanceName = builder.Configuration["Redis:InstanceName"];
-                options.Configuration = redisConfig ?? throw new InvalidOperationException("Redis configuration is not set!");
-                options.InstanceName = redisInstanceName ?? throw new InvalidOperationException("Redis instance name is not set!");
+                var redisConfig = builder.Configuration["Redis:Configuration"] ?? 
+                    throw new InvalidOperationException("Redis configuration is not set!");
+                var redisInstanceName = builder.Configuration["Redis:InstanceName"] ?? 
+                    throw new InvalidOperationException("Redis instance name is not set!");
+                
+                options.Configuration = redisConfig;
+                options.InstanceName = redisInstanceName;
             });
 
             // Configure Redis as Message Broker
@@ -49,7 +52,8 @@ namespace CoreAPI
             builder.Services.AddControllers();
 
             // Set the connection string with .env variables
-            var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
+            var connectionString = builder.Configuration.GetConnectionString("SqlConnection") ?? 
+            throw new InvalidOperationException("Connection string 'SqlConnection' not found in configuration.");
 
             if (connectionString is not null)
             {
@@ -111,8 +115,10 @@ namespace CoreAPI
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
-                    ValidAudience = builder.Configuration["JWT:ValidAudience"],
-                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+                    ValidAudience = builder.Configuration["JWT:ValidAudience"] ?? 
+                        throw new InvalidOperationException("JWT:ValidAudience not configured"),
+                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"] ?? 
+                        throw new InvalidOperationException("JWT:ValidIssuer not configured"),
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                         Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
                         throw new InvalidOperationException("JWT_SECRET environment variable is not set!")
