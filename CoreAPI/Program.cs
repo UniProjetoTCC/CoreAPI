@@ -14,6 +14,7 @@ using StackExchange.Redis;
 using Business.Services;
 using Business.Services.Base;
 using Data.Context;
+using Data.Extensions;
 
 namespace CoreAPI
 {
@@ -132,6 +133,9 @@ namespace CoreAPI
             // Dependency Injections
             builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
             builder.Services.AddScoped<ICustomPasswordValidator, CustomPasswordValidator>();
+            
+            // Register repositories
+            builder.Services.AddRepositories();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
