@@ -180,6 +180,30 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserPaymentCards",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    CardNumber = table.Column<string>(type: "text", nullable: false),
+                    CardholderName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    ExpirationDate = table.Column<string>(type: "text", nullable: false),
+                    CVV = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserPaymentCards", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserPaymentCards_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserGroups",
                 columns: table => new
                 {
@@ -1199,6 +1223,11 @@ namespace Data.Migrations
                 name: "IX_UserGroups_UserId",
                 table: "UserGroups",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserPaymentCards_UserId",
+                table: "UserPaymentCards",
+                column: "UserId");
         }
 
         /// <inheritdoc />
@@ -1245,6 +1274,9 @@ namespace Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "SupplierPrices");
+
+            migrationBuilder.DropTable(
+                name: "UserPaymentCards");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

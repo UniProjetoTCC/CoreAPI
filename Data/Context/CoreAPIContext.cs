@@ -49,6 +49,7 @@ namespace Data.Context
 
         // Payment-related entities
         public DbSet<PaymentMethodModel> PaymentMethods { get; set; }
+        public DbSet<UserPaymentCardModel> UserPaymentCards { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -517,6 +518,22 @@ namespace Data.Context
                 .HasIndex(lp => new { lp.GroupId, lp.Name })
                 .HasDatabaseName("IX_LoyaltyPrograms_GroupId_Name")
                 .IsUnique();
+
+            //=================================================================
+            // Payment Card relationships and indexes
+            //=================================================================
+            // Configure the relationship between PaymentCard and IdentityUser.
+            // Each PaymentCard is associated with one IdentityUser (owner of the card).
+            // Configuration of the relationship between UserPaymentCardModel and IdentityUser
+            modelBuilder.Entity<UserPaymentCardModel>()
+                .HasOne(upc => upc.User) // A card belongs to a single user
+                .WithMany() // Assuming you don't have a collection of cards in IdentityUser
+                .HasForeignKey(upc => upc.UserId) // Defines UserId as the foreign key
+                .OnDelete(DeleteBehavior.Cascade); // When a user is deleted, the associated cards are also deleted
+
+            // Index for UserId to improve query performance
+            modelBuilder.Entity<UserPaymentCardModel>()
+                .HasIndex(upc => upc.UserId); // Creates an index on UserId
         }
     }
 }
