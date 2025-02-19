@@ -12,372 +12,510 @@ namespace Data.Context
         }
 
         // DbSet properties for all entities
+
+        // User-related entities
         public DbSet<CustomerModel> Customers { get; set; }
+        public DbSet<LinkedUserModel> LinkedUsers { get; set; }
+        public DbSet<UserGroupModel> UserGroups { get; set; }
+        public DbSet<LoyaltyProgramModel> LoyaltyPrograms { get; set; }
+
+        // Product-related entities
+        public DbSet<CategoryModel> Categories { get; set; }
         public DbSet<ProductModel> Products { get; set; }
-        public DbSet<PriceHistoryModel> PriceHistories { get; set; }
-        public DbSet<StockModel> Stocks { get; set; }
-        public DbSet<StockMovementModel> StockMovements { get; set; }
-        public DbSet<SaleModel> Sales { get; set; }
-        public DbSet<SaleItemModel> SaleItems { get; set; }
-        public DbSet<PaymentMethodModel> PaymentMethods { get; set; }
+        public DbSet<ProductExpirationModel> ProductExpirations { get; set; }
+        public DbSet<ProductTaxModel> ProductTaxes { get; set; }
+        public DbSet<PromotionModel> Promotions { get; set; }
         public DbSet<SupplierModel> Suppliers { get; set; }
         public DbSet<SupplierPriceModel> SupplierPrices { get; set; }
+
+        // Sale-related entities
+        public DbSet<SaleModel> Sales { get; set; }
+        public DbSet<SaleItemModel> SaleItems { get; set; }
+
+        // Purchase order-related entities
         public DbSet<PurchaseOrderModel> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItemModel> PurchaseOrderItems { get; set; }
-        public DbSet<ProductExpirationModel> ProductExpirations { get; set; }
-        public DbSet<LoyaltyProgramModel> LoyaltyPrograms { get; set; }
-        public DbSet<PromotionModel> Promotions { get; set; }
+
+        // Stock-related entities
+        public DbSet<StockModel> Stocks { get; set; }
+        public DbSet<StockMovementModel> StockMovements { get; set; }
+
+        // Pricing and tax-related entities
+        public DbSet<PriceHistoryModel> PriceHistories { get; set; }
         public DbSet<TaxModel> Taxes { get; set; }
-        public DbSet<ProductTaxModel> ProductTaxes { get; set; }
-        public DbSet<UserHierarchyModel> UserHierarchies { get; set; }
+
+        // Subscription-related entities
         public DbSet<SubscriptionPlanModel> SubscriptionPlans { get; set; }
-        public DbSet<UserSubscriptionModel> UserSubscriptions { get; set; }
-        public DbSet<UserGroupModel> UserGroups { get; set; }
+
+        // Payment-related entities
+        public DbSet<PaymentMethodModel> PaymentMethods { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Call the base method to ensure any configurations defined in the base class are applied.
             base.OnModelCreating(modelBuilder);
 
-            // *** User and Authentication Related Configurations ***
+            //=================================================================
+            // Category relationships and indexes
+            //=================================================================
+            // Configure relationship between Category and UserGroup.
+            // Each category belongs to a specific user group.
+            modelBuilder.Entity<CategoryModel>()
+                .HasOne(c => c.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(c => c.UserGroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevents cascade delete to avoid accidental removal of categories.
 
-            // Relationship: UserHierarchy -> ParentUser
-            // Description: Represents the hierarchical relationship between users where ParentUser is the supervisor
-            // When ParentUser is deleted, all their hierarchical relationships are also deleted
-            modelBuilder.Entity<UserHierarchyModel>()
-                .HasOne(uh => uh.ParentUser)
-                .WithMany()
-                .HasForeignKey(uh => uh.ParentUserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Configure the one-to-many relationship between Category and Product.
+            // A category can have multiple products, and each product must belong to one category.
+            modelBuilder.Entity<CategoryModel>()
+                .HasMany(c => c.Products)
+                .WithOne(p => p.Category)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete of products when a category is deleted.
 
-            // Relationship: UserHierarchy -> LinkedUser
-            // Description: Represents the user being supervised in the hierarchy
-            // When LinkedUser is deleted, their hierarchical relationships are also deleted
-            modelBuilder.Entity<UserHierarchyModel>()
-                .HasOne(uh => uh.LinkedUser)
-                .WithMany()
-                .HasForeignKey(uh => uh.LinkedUserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Create an index to optimize queries filtering by UserGroupId and Category Name.
+            modelBuilder.Entity<CategoryModel>()
+                .HasIndex(c => new { c.UserGroupId, c.Name })
+                .HasDatabaseName("IX_Categories_GroupId_Name");
 
-            // Relationship: UserGroup -> User
-            // Description: Associates a user with their group for data isolation
-            // When User is deleted, their group association is preserved for audit purposes
-            modelBuilder.Entity<UserGroupModel>()
-                .HasOne(ug => ug.User)
-                .WithOne()
-                .HasForeignKey<UserGroupModel>(ug => ug.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+            //=================================================================
+            // Product relationships and indexes
+            //=================================================================
+            // Configure relationship between Product and UserGroup.
+            // Each product belongs to a specific user group.
+            modelBuilder.Entity<ProductModel>()
+                .HasOne(p => p.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(p => p.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: UserSubscription -> User
-            // Description: Tracks user's subscription plan history
-            // When User is deleted, their subscription history is preserved
-            modelBuilder.Entity<UserSubscriptionModel>()
-                .HasOne(us => us.User)
-                .WithMany()
-                .HasForeignKey(us => us.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // Configure the relationship between Product and Category.
+            // Each product must belong to one category.
+            modelBuilder.Entity<ProductModel>()
+                .HasOne(p => p.Category)
+                .WithMany() // Category does not require a navigation property for products here.
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: UserSubscription -> SubscriptionPlan
-            // Description: Links a user's subscription to the plan details
-            // When SubscriptionPlan is deleted, preserve user subscription records
-            modelBuilder.Entity<UserSubscriptionModel>()
-                .HasOne(us => us.SubscriptionPlan)
-                .WithMany(sp => sp.UserSubscriptions)
-                .HasForeignKey(us => us.SubscriptionPlanId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // Create a unique index to optimize searches by SKU within a user group.
+            modelBuilder.Entity<ProductModel>()
+                .HasIndex(p => new { p.GroupId, p.SKU })
+                .HasDatabaseName("IX_Products_GroupId_SKU")
+                .IsUnique();
 
-            // *** Sales Related Configurations ***
+            // Create a unique index to optimize barcode searches within a user group.
+            modelBuilder.Entity<ProductModel>()
+                .HasIndex(p => new { p.GroupId, p.BarCode })
+                .HasDatabaseName("IX_Products_GroupId_BarCode")
+                .IsUnique();
 
-            // Relationship: Sale -> User
-            // Description: Records which user processed the sale
-            // When User is deleted, sales records are preserved
-            modelBuilder.Entity<SaleModel>()
-                .HasOne(s => s.User)
-                .WithMany()
-                .HasForeignKey(s => s.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // Create an index for product searches by name within a user group.
+            modelBuilder.Entity<ProductModel>()
+                .HasIndex(p => new { p.GroupId, p.Name })
+                .HasDatabaseName("IX_Products_GroupId_Name");
 
-            // Relationship: Sale -> Customer
-            // Description: Optional link to the customer who made the purchase
-            // When Customer is deleted, their reference in sales becomes null
-            modelBuilder.Entity<SaleModel>()
-                .HasOne(s => s.Customer)
-                .WithMany()
-                .HasForeignKey(s => s.CustomerId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Relationship: Sale -> PaymentMethod
-            // Description: Records how the sale was paid
-            // When PaymentMethod is deleted, sales records are preserved
-            modelBuilder.Entity<SaleModel>()
-                .HasOne(s => s.PaymentMethod)
-                .WithMany()
-                .HasForeignKey(s => s.PaymentMethodId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Relationship: SaleItem -> Sale
-            // Description: Items included in a sale
-            // When Sale is deleted, all its items are also deleted
-            modelBuilder.Entity<SaleItemModel>()
-                .HasOne(si => si.Sale)
-                .WithMany(s => s.SaleItems)
-                .HasForeignKey(si => si.SaleId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Relationship: SaleItem -> Product
-            // Description: Links sale item to the product sold
-            // When Product is deleted, sale records are preserved
-            modelBuilder.Entity<SaleItemModel>()
-                .HasOne(si => si.Product)
-                .WithMany()
-                .HasForeignKey(si => si.ProductId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // *** Stock Related Configurations ***
-
-            // Relationship: Stock -> Product
-            // Description: Current stock level for a product
-            // When Product is deleted, its stock records are also deleted
+            //=================================================================
+            // Stock relationships and indexes
+            //=================================================================
+            // Configure the relationship between Stock and Product.
+            // Each stock record is associated with one product and a product can have multiple stock records.
             modelBuilder.Entity<StockModel>()
                 .HasOne(s => s.Product)
                 .WithMany(p => p.Stock)
                 .HasForeignKey(s => s.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: StockMovement -> Stock
-            // Description: Records changes in stock levels
-            // When Stock is deleted, all movement records are deleted
+            // Configure relationship between Stock and UserGroup.
+            // Each stock record belongs to a specific user group.
+            modelBuilder.Entity<StockModel>()
+                .HasOne(s => s.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(s => s.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create an index to optimize queries filtering by GroupId, ProductId, and Location.
+            modelBuilder.Entity<StockModel>()
+                .HasIndex(s => new { s.GroupId, s.ProductId, s.Location })
+                .HasDatabaseName("IX_Stock_GroupId_ProductId_Location");
+
+            //=================================================================
+            // Stock Movement relationships and indexes
+            //=================================================================
+            // Configure the relationship between StockMovement and Stock.
+            // Each stock movement is linked to one stock record, and a stock can have multiple movements.
             modelBuilder.Entity<StockMovementModel>()
                 .HasOne(sm => sm.Stock)
                 .WithMany(s => s.StockMovements)
                 .HasForeignKey(sm => sm.StockId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: StockMovement -> User
-            // Description: Tracks who made the stock movement
-            // When User is deleted, movement records are preserved
+            // Create an index to optimize queries by StockId and MovementDate.
             modelBuilder.Entity<StockMovementModel>()
-                .HasOne(sm => sm.User)
-                .WithMany()
-                .HasForeignKey(sm => sm.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasIndex(sm => new { sm.StockId, sm.MovementDate })
+                .HasDatabaseName("IX_StockMovements_StockId_Date");
 
-            // Relationship: ProductExpiration -> Product
-            // Description: Tracks expiration dates for product batches
-            // When Product is deleted, expiration records are deleted
+            //=================================================================
+            // Product Expiration relationships and indexes
+            //=================================================================
+            // Configure the relationship between ProductExpiration and Product.
+            // Each expiration record is linked to one product, and a product can have multiple expiration records.
             modelBuilder.Entity<ProductExpirationModel>()
                 .HasOne(pe => pe.Product)
-                .WithMany()
+                .WithMany(p => p.ProductExpirations)
                 .HasForeignKey(pe => pe.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: ProductExpiration -> Stock
-            // Description: Links expiration dates to specific stock entries
-            // When Stock is deleted, expiration records are deleted
+            // Configure the relationship between ProductExpiration and Stock.
+            // Each expiration record is linked to one stock record, and a stock can have multiple expiration records.
             modelBuilder.Entity<ProductExpirationModel>()
                 .HasOne(pe => pe.Stock)
-                .WithMany()
+                .WithMany(s => s.ProductExpirations)
                 .HasForeignKey(pe => pe.StockId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // *** Price History Related Configurations ***
+            // Create an index to optimize queries filtering by StockId and ExpirationDate.
+            modelBuilder.Entity<ProductExpirationModel>()
+                .HasIndex(pe => new { pe.StockId, pe.ExpirationDate })
+                .HasDatabaseName("IX_ProductExpirations_StockId_Date");
 
-            // Relationship: PriceHistory -> ChangedByUser (IdentityUser)
-            // Description: Links price changes to the user who made them
-            // When User is deleted, price history is preserved (Restrict)
-            modelBuilder.Entity<PriceHistoryModel>()
-                .HasOne(ph => ph.ChangedByUser)
-                .WithMany()
-                .HasForeignKey(ph => ph.ChangedByUserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Relationship: PriceHistory -> Product
-            // Description: Links price changes to the specific product
-            // When Product is deleted, all its price history is also deleted (Cascade)
+            //=================================================================
+            // Price History relationships and indexes
+            //=================================================================
+            // Configure the relationship between PriceHistory and Product.
+            // Each price history record is associated with one product to track price changes over time.
             modelBuilder.Entity<PriceHistoryModel>()
                 .HasOne(ph => ph.Product)
                 .WithMany(p => p.PriceHistories)
                 .HasForeignKey(ph => ph.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // *** Product Related Configurations ***
+            // Configure the relationship between PriceHistory and UserGroup.
+            // Each price history record belongs to a specific user group.
+            modelBuilder.Entity<PriceHistoryModel>()
+                .HasOne(ph => ph.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(ph => ph.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: SupplierPrice -> Supplier
-            // Description: Tracks supplier's prices for products
-            // When Supplier is deleted, their price records are deleted
-            modelBuilder.Entity<SupplierPriceModel>()
-                .HasOne(sp => sp.Supplier)
-                .WithMany(s => s.SupplierPrices)
-                .HasForeignKey(sp => sp.SupplierId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Configure the relationship to track which user made the price change.
+            modelBuilder.Entity<PriceHistoryModel>()
+                .HasOne(ph => ph.ChangedByUser)
+                .WithMany() // No navigation property on the User side.
+                .HasForeignKey(ph => ph.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: SupplierPrice -> Product
-            // Description: Links supplier prices to products
-            // When Product is deleted, supplier price records are deleted
-            modelBuilder.Entity<SupplierPriceModel>()
-                .HasOne(sp => sp.Product)
-                .WithMany()
-                .HasForeignKey(sp => sp.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Create an index to optimize queries filtering by GroupId, ProductId, and ChangeDate.
+            modelBuilder.Entity<PriceHistoryModel>()
+                .HasIndex(ph => new { ph.GroupId, ph.ProductId, ph.ChangeDate })
+                .HasDatabaseName("IX_PriceHistory_GroupId_ProductId_Date");
 
-            // Relationship: ProductTax -> Tax
-            // Description: Associates products with applicable taxes
-            // When Tax is deleted, product tax associations are deleted
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasOne(pt => pt.Tax)
-                .WithMany()
-                .HasForeignKey(pt => pt.TaxId)
-                .OnDelete(DeleteBehavior.Cascade);
+            //=================================================================
+            // Tax relationships and indexes
+            //=================================================================
+            // Configure the relationship between Tax and UserGroup.
+            // Each tax belongs to a specific user group.
+            modelBuilder.Entity<TaxModel>()
+                .HasOne(t => t.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(t => t.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: ProductTax -> Product
-            // Description: Links products to their tax configurations
-            // When Product is deleted, tax associations are deleted
+            // Create a unique index to optimize tax searches by Name within a user group.
+            modelBuilder.Entity<TaxModel>()
+                .HasIndex(t => new { t.GroupId, t.Name })
+                .HasDatabaseName("IX_Taxes_GroupId_Name")
+                .IsUnique();
+
+            //=================================================================
+            // Product Tax relationships and indexes
+            //=================================================================
+            // Configure the relationship between ProductTax and Product.
+            // Each product-tax association links one product with one tax rate.
             modelBuilder.Entity<ProductTaxModel>()
                 .HasOne(pt => pt.Product)
                 .WithMany(p => p.ProductTaxes)
                 .HasForeignKey(pt => pt.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // *** Purchase Related Configurations ***
-
-            // Relationship: PurchaseOrder -> Supplier
-            // Description: Links purchase orders to suppliers
-            // When Supplier is deleted, purchase orders are preserved
-            modelBuilder.Entity<PurchaseOrderModel>()
-                .HasOne(po => po.Supplier)
-                .WithMany()
-                .HasForeignKey(po => po.SupplierId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Relationship: PurchaseOrderItem -> PurchaseOrder
-            // Description: Items included in a purchase order
-            // When PurchaseOrder is deleted, all its items are deleted
-            modelBuilder.Entity<PurchaseOrderItemModel>()
-                .HasOne(poi => poi.Order)
-                .WithMany(po => po.Items)
-                .HasForeignKey(poi => poi.OrderId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Relationship: PurchaseOrderItem -> Product
-            // Description: Links purchase order items to products
-            // When Product is deleted, purchase order records are preserved
-            modelBuilder.Entity<PurchaseOrderItemModel>()
-                .HasOne(poi => poi.Product)
-                .WithMany()
-                .HasForeignKey(poi => poi.ProductId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // *** Customer Related Configurations ***
-
-            // Relationship: Customer -> LoyaltyProgram
-            // Description: Optional association with loyalty program
-            // When LoyaltyProgram is deleted, customer's program becomes null
-            modelBuilder.Entity<CustomerModel>()
-                .HasOne(c => c.LoyaltyProgram)
-                .WithMany()
-                .HasForeignKey(c => c.LoyaltyProgramId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // *** Supplier Related Configurations ***
-
-            // Relationship: SupplierPrice -> Supplier
-            // Description: Links supplier prices to the supplier
-            // When Supplier is deleted, all their prices are deleted
-            modelBuilder.Entity<SupplierPriceModel>()
-                .HasOne(sp => sp.Supplier)
-                .WithMany(s => s.SupplierPrices)
-                .HasForeignKey(sp => sp.SupplierId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Relationship: SupplierPrice -> Product
-            // Description: Links supplier prices to products
-            // When Product is deleted, supplier prices are preserved
-            modelBuilder.Entity<SupplierPriceModel>()
-                .HasOne(sp => sp.Product)
-                .WithMany()
-                .HasForeignKey(sp => sp.ProductId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // *** Tax Related Configurations ***
-
-            // Relationship: ProductTax -> Product
-            // Description: Links taxes to products
-            // When Product is deleted, tax associations are deleted
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasOne(pt => pt.Product)
-                .WithMany()
-                .HasForeignKey(pt => pt.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Relationship: ProductTax -> Tax
-            // Description: Links products to taxes
-            // When Tax is deleted, product associations are preserved
+            // Configure the relationship between ProductTax and Tax.
+            // Each product-tax association links one tax with one product.
             modelBuilder.Entity<ProductTaxModel>()
                 .HasOne(pt => pt.Tax)
                 .WithMany(t => t.ProductTaxes)
                 .HasForeignKey(pt => pt.TaxId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // *** Customer Related Configurations ***
+            // Configure the relationship between ProductTax and UserGroup.
+            // Each product-tax association belongs to a specific user group.
+            modelBuilder.Entity<ProductTaxModel>()
+                .HasOne(pt => pt.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(pt => pt.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Relationship: Customer -> LoyaltyProgram
-            // Description: Links customers to loyalty programs
-            // When LoyaltyProgram is deleted, customer associations are preserved
+            // Create a unique index to optimize queries filtering by GroupId, ProductId, and TaxId.
+            modelBuilder.Entity<ProductTaxModel>()
+                .HasIndex(pt => new { pt.GroupId, pt.ProductId, pt.TaxId })
+                .HasDatabaseName("IX_ProductTaxes_GroupId_ProductId_TaxId")
+                .IsUnique();
+
+            //=================================================================
+            // Payment Method relationships and indexes
+            //=================================================================
+            // Configure the relationship between PaymentMethod and UserGroup.
+            // Each payment method belongs to a specific user group.
+            modelBuilder.Entity<PaymentMethodModel>()
+                .HasOne(pm => pm.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(pm => pm.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between PaymentMethod and Sale.
+            // A payment method can be used in multiple sales.
+            modelBuilder.Entity<PaymentMethodModel>()
+                .HasMany(pm => pm.Sales)
+                .WithOne(s => s.PaymentMethod)
+                .HasForeignKey(s => s.PaymentMethodId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create a unique index to optimize payment method searches by Code within a user group.
+            modelBuilder.Entity<PaymentMethodModel>()
+                .HasIndex(pm => new { pm.GroupId, pm.Code })
+                .HasDatabaseName("IX_PaymentMethods_GroupId_Code")
+                .IsUnique();
+
+            //=================================================================
+            // Sale relationships and indexes
+            //=================================================================
+            // Configure an optional relationship between Sale and Customer.
+            // Each sale can be associated with one customer, but this is optional.
+            modelBuilder.Entity<SaleModel>()
+                .HasOne(s => s.Customer)
+                .WithMany() // No navigation property on the Customer side.
+                .HasForeignKey(s => s.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between Sale and UserGroup.
+            // Each sale belongs to a specific user group.
+            modelBuilder.Entity<SaleModel>()
+                .HasOne(s => s.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(s => s.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between Sale and PaymentMethod.
+            // Each sale must have one payment method.
+            modelBuilder.Entity<SaleModel>()
+                .HasOne(s => s.PaymentMethod)
+                .WithMany() // No navigation property on the PaymentMethod side.
+                .HasForeignKey(s => s.PaymentMethodId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create an index to optimize sale queries filtering by GroupId and SaleDate.
+            modelBuilder.Entity<SaleModel>()
+                .HasIndex(s => new { s.GroupId, s.SaleDate })
+                .HasDatabaseName("IX_Sales_GroupId_Date");
+
+            //=================================================================
+            // Sale Item relationships and indexes
+            //=================================================================
+            // Configure the relationship between SaleItem and Sale.
+            // Each sale item belongs to one sale, and a sale can have multiple items.
+            modelBuilder.Entity<SaleItemModel>()
+                .HasOne(si => si.Sale)
+                .WithMany(s => s.SaleItems)
+                .HasForeignKey(si => si.SaleId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between SaleItem and Product.
+            // Each sale item references one product.
+            modelBuilder.Entity<SaleItemModel>()
+                .HasOne(si => si.Product)
+                .WithMany(p => p.SaleItems)
+                .HasForeignKey(si => si.ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between SaleItem and UserGroup.
+            // Each sale item belongs to a specific user group.
+            modelBuilder.Entity<SaleItemModel>()
+                .HasOne(si => si.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(si => si.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create an index to optimize queries filtering by GroupId, SaleId, and ProductId.
+            modelBuilder.Entity<SaleItemModel>()
+                .HasIndex(si => new { si.GroupId, si.SaleId, si.ProductId })
+                .HasDatabaseName("IX_SaleItems_GroupId_SaleId_ProductId");
+
+            //=================================================================
+            // Purchase Order relationships and indexes
+            //=================================================================
+            // Configure the relationship between PurchaseOrder and Supplier.
+            // Each purchase order is associated with one supplier.
+            modelBuilder.Entity<PurchaseOrderModel>()
+                .HasOne(po => po.Supplier)
+                .WithMany() // No navigation property on the Supplier side.
+                .HasForeignKey(po => po.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between PurchaseOrder and UserGroup.
+            // Each purchase order belongs to a specific user group.
+            modelBuilder.Entity<PurchaseOrderModel>()
+                .HasOne(po => po.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(po => po.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create a unique index to optimize purchase order searches by OrderNumber within a user group.
+            modelBuilder.Entity<PurchaseOrderModel>()
+                .HasIndex(po => new { po.GroupId, po.OrderNumber })
+                .HasDatabaseName("IX_PurchaseOrders_GroupId_OrderNumber")
+                .IsUnique();
+
+            // Create an index to optimize purchase order searches by OrderDate within a user group.
+            modelBuilder.Entity<PurchaseOrderModel>()
+                .HasIndex(po => new { po.GroupId, po.OrderDate })
+                .HasDatabaseName("IX_PurchaseOrders_GroupId_Date");
+
+            //=================================================================
+            // Purchase Order Item relationships and indexes
+            //=================================================================
+            // Configure the relationship between PurchaseOrderItem and PurchaseOrder.
+            // Each purchase order item belongs to one purchase order.
+            modelBuilder.Entity<PurchaseOrderItemModel>()
+                .HasOne(poi => poi.Order)
+                .WithMany(po => po.Items)
+                .HasForeignKey(poi => poi.OrderId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between PurchaseOrderItem and Product.
+            // Each purchase order item references one product.
+            modelBuilder.Entity<PurchaseOrderItemModel>()
+                .HasOne(poi => poi.Product)
+                .WithMany(p => p.PurchaseOrderItems)
+                .HasForeignKey(poi => poi.ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between PurchaseOrderItem and UserGroup.
+            // Each purchase order item belongs to a specific user group.
+            modelBuilder.Entity<PurchaseOrderItemModel>()
+                .HasOne(poi => poi.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(poi => poi.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create an index to optimize queries filtering by GroupId, OrderId, and ProductId.
+            modelBuilder.Entity<PurchaseOrderItemModel>()
+                .HasIndex(poi => new { poi.GroupId, poi.OrderId, poi.ProductId })
+                .HasDatabaseName("IX_PurchaseOrderItems_GroupId_OrderId_ProductId");
+
+            //=================================================================
+            // Supplier relationships and indexes
+            //=================================================================
+            // Configure the relationship between Supplier and UserGroup.
+            // Each supplier belongs to a specific user group.
+            modelBuilder.Entity<SupplierModel>()
+                .HasOne(s => s.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(s => s.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create a unique index to optimize supplier searches by Document within a user group.
+            modelBuilder.Entity<SupplierModel>()
+                .HasIndex(s => new { s.GroupId, s.Document })
+                .HasDatabaseName("IX_Suppliers_GroupId_Document")
+                .IsUnique();
+
+            // Create an index to optimize supplier searches by Name within a user group.
+            modelBuilder.Entity<SupplierModel>()
+                .HasIndex(s => new { s.GroupId, s.Name })
+                .HasDatabaseName("IX_Suppliers_GroupId_Name");
+
+            //=================================================================
+            // Supplier Price relationships and indexes
+            //=================================================================
+            // Configure the relationship between SupplierPrice and Supplier.
+            // Each supplier price is associated with one supplier.
+            modelBuilder.Entity<SupplierPriceModel>()
+                .HasOne(sp => sp.Supplier)
+                .WithMany() // No navigation property on the Supplier side.
+                .HasForeignKey(sp => sp.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between SupplierPrice and Product.
+            // Each supplier price is associated with one product.
+            modelBuilder.Entity<SupplierPriceModel>()
+                .HasOne(sp => sp.Product)
+                .WithMany(p => p.SupplierPrices)
+                .HasForeignKey(sp => sp.ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the relationship between SupplierPrice and UserGroup.
+            // Each supplier price belongs to a specific user group.
+            modelBuilder.Entity<SupplierPriceModel>()
+                .HasOne(sp => sp.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(sp => sp.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Create an index to optimize queries filtering by GroupId, SupplierId, ProductId, and ValidFrom.
+            modelBuilder.Entity<SupplierPriceModel>()
+                .HasIndex(sp => new { sp.GroupId, sp.SupplierId, sp.ProductId, sp.ValidFrom })
+                .HasDatabaseName("IX_SupplierPrices_GroupId_SupplierId_ProductId_ValidFrom");
+
+            //=================================================================
+            // Customer relationships and indexes
+            //=================================================================
+            // Configure the relationship between Customer and UserGroup.
+            // Each customer belongs to a specific user group.
+            modelBuilder.Entity<CustomerModel>()
+                .HasOne(c => c.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(c => c.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
+
+            // Configure the optional relationship between Customer and LoyaltyProgram.
+            // Each customer can be enrolled in one loyalty program.
             modelBuilder.Entity<CustomerModel>()
                 .HasOne(c => c.LoyaltyProgram)
                 .WithMany(lp => lp.Customers)
                 .HasForeignKey(c => c.LoyaltyProgramId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // *** Unique Constraints Within Groups ***
-
-            // Ensures unique user per group
-            modelBuilder.Entity<UserGroupModel>()
-                .HasIndex(ug => ug.UserId)
-                .IsUnique();
-
-            // Ensures unique SKU within each group
-            modelBuilder.Entity<ProductModel>()
-                .HasIndex(p => new { p.UserGroupId, p.SKU })
-                .IsUnique();
-
-            // Ensures unique barcode within each group
-            modelBuilder.Entity<ProductModel>()
-                .HasIndex(p => new { p.UserGroupId, p.BarCode })
-                .IsUnique();
-
-            // Ensures unique supplier document within each group
-            modelBuilder.Entity<SupplierModel>()
-                .HasIndex(s => new { s.UserGroupId, s.Document })
-                .IsUnique();
-
-            // Ensures unique customer document within each group
+            // Create a unique index to optimize customer searches by Document within a user group.
             modelBuilder.Entity<CustomerModel>()
-                .HasIndex(c => new { c.UserGroupId, c.Document })
+                .HasIndex(c => new { c.GroupId, c.Document })
+                .HasDatabaseName("IX_Customers_GroupId_Document")
                 .IsUnique();
 
-            // Ensures unique payment method code within each group
-            modelBuilder.Entity<PaymentMethodModel>()
-                .HasIndex(pm => new { pm.UserGroupId, pm.Code })
+            // Create a unique index to optimize customer searches by Email within a user group.
+            modelBuilder.Entity<CustomerModel>()
+                .HasIndex(c => new { c.GroupId, c.Email })
+                .HasDatabaseName("IX_Customers_GroupId_Email")
                 .IsUnique();
 
-            // Ensures unique product-tax combination within each group
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasIndex(pt => new { pt.UserGroupId, pt.ProductId, pt.TaxId })
-                .IsUnique();
+            // Create an index to optimize customer searches by Name within a user group.
+            modelBuilder.Entity<CustomerModel>()
+                .HasIndex(c => new { c.GroupId, c.Name })
+                .HasDatabaseName("IX_Customers_GroupId_Name");
 
-            // Ensures unique supplier price for a product at a specific date within each group
-            modelBuilder.Entity<SupplierPriceModel>()
-                .HasIndex(sp => new { sp.UserGroupId, sp.SupplierId, sp.ProductId, sp.ValidFrom })
-                .IsUnique();
+            //=================================================================
+            // Loyalty Program relationships and indexes
+            //=================================================================
+            // Configure the relationship between LoyaltyProgram and UserGroup.
+            // Each loyalty program belongs to a specific user group.
+            modelBuilder.Entity<LoyaltyProgramModel>()
+                .HasOne(lp => lp.UserGroup)
+                .WithMany() // No navigation property on the UserGroup side.
+                .HasForeignKey(lp => lp.GroupId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete.
 
-            // Ensures unique user subscription for a plan at a specific date within each group
-            modelBuilder.Entity<UserSubscriptionModel>()
-                .HasIndex(us => new { us.UserGroupId, us.UserId, us.SubscriptionPlanId, us.StartDate })
-                .IsUnique();
-
-            // Ensures unique stock movement record within each group
-            modelBuilder.Entity<StockMovementModel>()
-                .HasIndex(sm => new { sm.UserGroupId, sm.StockId, sm.MovementType, sm.MovementDate })
+            // Create a unique index to optimize loyalty program searches by Name within a user group.
+            modelBuilder.Entity<LoyaltyProgramModel>()
+                .HasIndex(lp => new { lp.GroupId, lp.Name })
+                .HasDatabaseName("IX_LoyaltyPrograms_GroupId_Name")
                 .IsUnique();
         }
     }

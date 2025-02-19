@@ -20,14 +20,15 @@ namespace Data.Models
         public required int TaxId { get; set; }
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
         public virtual required ProductModel Product { get; set; }
         public virtual required TaxModel Tax { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
     }
 }

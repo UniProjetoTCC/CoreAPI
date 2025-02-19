@@ -22,6 +22,43 @@ namespace Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Data.Models.CategoryModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserGroupId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserGroupId", "Name")
+                        .HasDatabaseName("IX_Categories_GroupId_Name");
+
+                    b.ToTable("Categories");
+                });
+
             modelBuilder.Entity("Data.Models.CustomerModel", b =>
                 {
                     b.Property<int>("Id")
@@ -51,6 +88,9 @@ namespace Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("LoyaltyProgramId")
                         .HasColumnType("integer");
 
@@ -67,18 +107,73 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("LoyaltyProgramId");
 
-                    b.HasIndex("UserGroupId", "Document")
-                        .IsUnique();
+                    b.HasIndex("GroupId", "Document")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Customers_GroupId_Document");
+
+                    b.HasIndex("GroupId", "Email")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Customers_GroupId_Email");
+
+                    b.HasIndex("GroupId", "Name")
+                        .HasDatabaseName("IX_Customers_GroupId_Name");
 
                     b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("Data.Models.LinkedUserModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanAlterStock")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanGenerateReports")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageProducts")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManagePromotions")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanPerformTransactions")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LinkedUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ParentUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("LinkedUserId");
+
+                    b.HasIndex("ParentUserId");
+
+                    b.ToTable("LinkedUsers");
                 });
 
             modelBuilder.Entity("Data.Models.LoyaltyProgramModel", b =>
@@ -103,6 +198,9 @@ namespace Data.Migrations
                     b.Property<decimal>("DiscountPercentage")
                         .HasColumnType("numeric");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -120,11 +218,11 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_LoyaltyPrograms_GroupId_Name");
 
                     b.ToTable("LoyaltyPrograms");
                 });
@@ -153,6 +251,9 @@ namespace Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -161,14 +262,11 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserGroupId", "Code")
-                        .IsUnique();
+                    b.HasIndex("GroupId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PaymentMethods_GroupId_Code");
 
                     b.ToTable("PaymentMethods");
                 });
@@ -191,6 +289,9 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("NewPrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -207,15 +308,14 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ChangedByUserId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("GroupId", "ProductId", "ChangeDate")
+                        .HasDatabaseName("IX_PriceHistory_GroupId_ProductId_Date");
 
                     b.ToTable("PriceHistories");
                 });
@@ -239,13 +339,13 @@ namespace Data.Migrations
                     b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ProductModelId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Quantity")
@@ -254,25 +354,17 @@ namespace Data.Migrations
                     b.Property<int>("StockId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("StockModelId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductModelId");
-
-                    b.HasIndex("StockId");
-
-                    b.HasIndex("StockModelId");
+                    b.HasIndex("StockId", "ExpirationDate")
+                        .HasDatabaseName("IX_ProductExpirations_StockId_Date");
 
                     b.ToTable("ProductExpirations");
                 });
@@ -293,10 +385,11 @@ namespace Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CategoryModelId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Cost")
                         .HasColumnType("decimal(18,2)");
@@ -305,9 +398,11 @@ namespace Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -325,17 +420,22 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserGroupId", "BarCode")
-                        .IsUnique();
+                    b.HasIndex("CategoryId");
 
-                    b.HasIndex("UserGroupId", "SKU")
-                        .IsUnique();
+                    b.HasIndex("CategoryModelId");
+
+                    b.HasIndex("GroupId", "BarCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Products_GroupId_BarCode");
+
+                    b.HasIndex("GroupId", "Name")
+                        .HasDatabaseName("IX_Products_GroupId_Name");
+
+                    b.HasIndex("GroupId", "SKU")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Products_GroupId_SKU");
 
                     b.ToTable("Products");
                 });
@@ -351,10 +451,10 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ProductModelId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
                     b.Property<int>("TaxId")
@@ -363,20 +463,15 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductModelId");
-
                     b.HasIndex("TaxId");
 
-                    b.HasIndex("UserGroupId", "ProductId", "TaxId")
-                        .IsUnique();
+                    b.HasIndex("GroupId", "ProductId", "TaxId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ProductTaxes_GroupId_ProductId_TaxId");
 
                     b.ToTable("ProductTaxes");
                 });
@@ -396,7 +491,6 @@ namespace Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -405,6 +499,9 @@ namespace Data.Migrations
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -417,11 +514,9 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
 
                     b.ToTable("Promotions");
                 });
@@ -437,13 +532,13 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
                     b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ProductModelId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Quantity")
@@ -455,17 +550,14 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductModelId");
+                    b.HasIndex("GroupId", "OrderId", "ProductId")
+                        .HasDatabaseName("IX_PurchaseOrderItems_GroupId_OrderId_ProductId");
 
                     b.ToTable("PurchaseOrderItems");
                 });
@@ -481,6 +573,9 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -490,7 +585,6 @@ namespace Data.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("Status")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -506,15 +600,18 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("SupplierId");
 
                     b.HasIndex("SupplierModelId");
+
+                    b.HasIndex("GroupId", "OrderDate")
+                        .HasDatabaseName("IX_PurchaseOrders_GroupId_Date");
+
+                    b.HasIndex("GroupId", "OrderNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PurchaseOrders_GroupId_OrderNumber");
 
                     b.ToTable("PurchaseOrders");
                 });
@@ -533,10 +630,10 @@ namespace Data.Migrations
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ProductModelId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Quantity")
@@ -554,17 +651,14 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductModelId");
-
                     b.HasIndex("SaleId");
+
+                    b.HasIndex("GroupId", "SaleId", "ProductId")
+                        .HasDatabaseName("IX_SaleItems_GroupId_SaleId_ProductId");
 
                     b.ToTable("SaleItems");
                 });
@@ -586,6 +680,9 @@ namespace Data.Migrations
                     b.Property<int?>("CustomerModelId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("PaymentMethodId")
                         .HasColumnType("integer");
 
@@ -600,10 +697,6 @@ namespace Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -621,6 +714,9 @@ namespace Data.Migrations
 
                     b.HasIndex("UserId");
 
+                    b.HasIndex("GroupId", "SaleDate")
+                        .HasDatabaseName("IX_Sales_GroupId_Date");
+
                     b.ToTable("Sales");
                 });
 
@@ -635,8 +731,10 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Location")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -649,13 +747,12 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("GroupId", "ProductId", "Location")
+                        .HasDatabaseName("IX_Stock_GroupId_ProductId_Location");
 
                     b.ToTable("Stock");
                 });
@@ -671,6 +768,9 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("MovementDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -683,12 +783,10 @@ namespace Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Reason")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("ReferenceNumber")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
@@ -698,22 +796,18 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StockId");
+                    b.HasIndex("GroupId");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserGroupId", "StockId", "MovementType", "MovementDate")
-                        .IsUnique();
+                    b.HasIndex("StockId", "MovementDate")
+                        .HasDatabaseName("IX_StockMovements_StockId_Date");
 
                     b.ToTable("StockMovements");
                 });
@@ -729,10 +823,8 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("HasAdvancedAnalytics")
                         .HasColumnType("boolean");
@@ -751,18 +843,14 @@ namespace Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("Requires2FA")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -800,6 +888,9 @@ namespace Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -821,14 +912,14 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserGroupId", "Document")
-                        .IsUnique();
+                    b.HasIndex("GroupId", "Document")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Suppliers_GroupId_Document");
+
+                    b.HasIndex("GroupId", "Name")
+                        .HasDatabaseName("IX_Suppliers_GroupId_Name");
 
                     b.ToTable("Suppliers");
                 });
@@ -844,6 +935,9 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -853,10 +947,10 @@ namespace Data.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ProductModelId")
+                    b.Property<int>("SupplierId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("SupplierId")
+                    b.Property<int?>("SupplierModelId")
                         .HasColumnType("integer");
 
                     b.Property<string>("SupplierSku")
@@ -870,10 +964,6 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("ValidFrom")
                         .HasColumnType("timestamp with time zone");
 
@@ -884,12 +974,12 @@ namespace Data.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ProductModelId");
-
                     b.HasIndex("SupplierId");
 
-                    b.HasIndex("UserGroupId", "SupplierId", "ProductId", "ValidFrom")
-                        .IsUnique();
+                    b.HasIndex("SupplierModelId");
+
+                    b.HasIndex("GroupId", "SupplierId", "ProductId", "ValidFrom")
+                        .HasDatabaseName("IX_SupplierPrices_GroupId_SupplierId_ProductId_ValidFrom");
 
                     b.ToTable("SupplierPrices");
                 });
@@ -902,6 +992,9 @@ namespace Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -910,156 +1003,49 @@ namespace Data.Migrations
                     b.Property<decimal>("Rate")
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Taxes_GroupId_Name");
 
                     b.ToTable("Taxes");
                 });
 
             modelBuilder.Entity("Data.Models.UserGroupModel", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("GroupId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("GroupId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("UserGroups");
-                });
-
-            modelBuilder.Entity("Data.Models.UserHierarchyModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("CanAlterStock")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("CanGenerateReports")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("CanManageProducts")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("CanManagePromotions")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("CanPerformTransactions")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LinkedUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ParentUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LinkedUserId");
-
-                    b.HasIndex("ParentUserId");
-
-                    b.ToTable("UserHierarchies");
-                });
-
-            modelBuilder.Entity("Data.Models.UserSubscriptionModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PaymentStatus")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("StartDate")
+                    b.Property<DateTime>("SubscriptionEndDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("SubscriptionPlanId")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTime>("SubscriptionStartDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserGroupId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("Id");
+                    b.HasKey("GroupId");
 
                     b.HasIndex("SubscriptionPlanId");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserGroupId", "UserId", "SubscriptionPlanId", "StartDate")
-                        .IsUnique();
-
-                    b.ToTable("UserSubscriptions");
+                    b.ToTable("UserGroups");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1161,9 +1147,6 @@ namespace Data.Migrations
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("UserGroupModelId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1176,8 +1159,6 @@ namespace Data.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
-
-                    b.HasIndex("UserGroupModelId");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -1263,246 +1244,43 @@ namespace Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Data.Models.CategoryModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("UserGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserGroup");
+                });
+
             modelBuilder.Entity("Data.Models.CustomerModel", b =>
                 {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Data.Models.LoyaltyProgramModel", "LoyaltyProgram")
                         .WithMany("Customers")
                         .HasForeignKey("LoyaltyProgramId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("LoyaltyProgram");
+
+                    b.Navigation("UserGroup");
                 });
 
-            modelBuilder.Entity("Data.Models.PriceHistoryModel", b =>
+            modelBuilder.Entity("Data.Models.LinkedUserModel", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "ChangedByUser")
-                        .WithMany()
-                        .HasForeignKey("ChangedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany("PriceHistories")
-                        .HasForeignKey("ProductId")
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany("LinkedUsers")
+                        .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ChangedByUser");
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("Data.Models.ProductExpirationModel", b =>
-                {
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", null)
-                        .WithMany("ProductExpirations")
-                        .HasForeignKey("ProductModelId");
-
-                    b.HasOne("Data.Models.StockModel", "Stock")
-                        .WithMany()
-                        .HasForeignKey("StockId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.StockModel", null)
-                        .WithMany("ProductExpirations")
-                        .HasForeignKey("StockModelId");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Stock");
-                });
-
-            modelBuilder.Entity("Data.Models.ProductTaxModel", b =>
-                {
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", null)
-                        .WithMany("ProductTaxes")
-                        .HasForeignKey("ProductModelId");
-
-                    b.HasOne("Data.Models.TaxModel", "Tax")
-                        .WithMany("ProductTaxes")
-                        .HasForeignKey("TaxId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Tax");
-                });
-
-            modelBuilder.Entity("Data.Models.PurchaseOrderItemModel", b =>
-                {
-                    b.HasOne("Data.Models.PurchaseOrderModel", "Order")
-                        .WithMany("Items")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", null)
-                        .WithMany("PurchaseOrderItems")
-                        .HasForeignKey("ProductModelId");
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("Data.Models.PurchaseOrderModel", b =>
-                {
-                    b.HasOne("Data.Models.SupplierModel", "Supplier")
-                        .WithMany()
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.SupplierModel", null)
-                        .WithMany("PurchaseOrders")
-                        .HasForeignKey("SupplierModelId");
-
-                    b.Navigation("Supplier");
-                });
-
-            modelBuilder.Entity("Data.Models.SaleItemModel", b =>
-                {
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", null)
-                        .WithMany("SaleItems")
-                        .HasForeignKey("ProductModelId");
-
-                    b.HasOne("Data.Models.SaleModel", "Sale")
-                        .WithMany("SaleItems")
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Sale");
-                });
-
-            modelBuilder.Entity("Data.Models.SaleModel", b =>
-                {
-                    b.HasOne("Data.Models.CustomerModel", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Data.Models.CustomerModel", null)
-                        .WithMany("Sales")
-                        .HasForeignKey("CustomerModelId");
-
-                    b.HasOne("Data.Models.PaymentMethodModel", "PaymentMethod")
-                        .WithMany()
-                        .HasForeignKey("PaymentMethodId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.PaymentMethodModel", null)
-                        .WithMany("Sales")
-                        .HasForeignKey("PaymentMethodModelId");
-
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
-
-                    b.Navigation("PaymentMethod");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Data.Models.StockModel", b =>
-                {
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany("Stock")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("Data.Models.StockMovementModel", b =>
-                {
-                    b.HasOne("Data.Models.StockModel", "Stock")
-                        .WithMany("StockMovements")
-                        .HasForeignKey("StockId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Stock");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Data.Models.SupplierPriceModel", b =>
-                {
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", null)
-                        .WithMany("SupplierPrices")
-                        .HasForeignKey("ProductModelId");
-
-                    b.HasOne("Data.Models.SupplierModel", "Supplier")
-                        .WithMany("SupplierPrices")
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Supplier");
-                });
-
-            modelBuilder.Entity("Data.Models.UserGroupModel", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithOne()
-                        .HasForeignKey("Data.Models.UserGroupModel", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Data.Models.UserHierarchyModel", b =>
-                {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "LinkedUser")
                         .WithMany()
                         .HasForeignKey("LinkedUserId")
@@ -1518,20 +1296,377 @@ namespace Data.Migrations
                     b.Navigation("LinkedUser");
 
                     b.Navigation("ParentUser");
+
+                    b.Navigation("UserGroup");
                 });
 
-            modelBuilder.Entity("Data.Models.UserSubscriptionModel", b =>
+            modelBuilder.Entity("Data.Models.LoyaltyProgramModel", b =>
                 {
-                    b.HasOne("Data.Models.SubscriptionPlanModel", "SubscriptionPlan")
-                        .WithMany("UserSubscriptions")
-                        .HasForeignKey("SubscriptionPlanId")
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.PaymentMethodModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.PriceHistoryModel", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("PriceHistories")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.ProductExpirationModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("ProductExpirations")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.StockModel", "Stock")
+                        .WithMany("ProductExpirations")
+                        .HasForeignKey("StockId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Stock");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.ProductModel", b =>
+                {
+                    b.HasOne("Data.Models.CategoryModel", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.CategoryModel", null)
+                        .WithMany("Products")
+                        .HasForeignKey("CategoryModelId");
+
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.ProductTaxModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("ProductTaxes")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.TaxModel", "Tax")
+                        .WithMany("ProductTaxes")
+                        .HasForeignKey("TaxId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Tax");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.PromotionModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.PurchaseOrderItemModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.PurchaseOrderModel", "Order")
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("PurchaseOrderItems")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.PurchaseOrderModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.SupplierModel", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.SupplierModel", null)
+                        .WithMany("PurchaseOrders")
+                        .HasForeignKey("SupplierModelId");
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.SaleItemModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("SaleItems")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.SaleModel", "Sale")
+                        .WithMany("SaleItems")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Sale");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.SaleModel", b =>
+                {
+                    b.HasOne("Data.Models.CustomerModel", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Data.Models.CustomerModel", null)
+                        .WithMany("Sales")
+                        .HasForeignKey("CustomerModelId");
+
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.PaymentMethodModel", "PaymentMethod")
+                        .WithMany()
+                        .HasForeignKey("PaymentMethodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.PaymentMethodModel", null)
+                        .WithMany("Sales")
+                        .HasForeignKey("PaymentMethodModelId");
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("PaymentMethod");
+
+                    b.Navigation("User");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.StockModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("Stock")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.StockMovementModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.StockModel", "Stock")
+                        .WithMany("StockMovements")
+                        .HasForeignKey("StockId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Stock");
+
+                    b.Navigation("User");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.SupplierModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.SupplierPriceModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("SupplierPrices")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.SupplierModel", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.SupplierModel", null)
+                        .WithMany("SupplierPrices")
+                        .HasForeignKey("SupplierModelId");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.TaxModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.UserGroupModel", b =>
+                {
+                    b.HasOne("Data.Models.SubscriptionPlanModel", "SubscriptionPlan")
+                        .WithMany("UserGroups")
+                        .HasForeignKey("SubscriptionPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("SubscriptionPlan");
@@ -1546,13 +1681,6 @@ namespace Data.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUser", b =>
-                {
-                    b.HasOne("Data.Models.UserGroupModel", null)
-                        .WithMany("Users")
-                        .HasForeignKey("UserGroupModelId");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -1595,6 +1723,11 @@ namespace Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Data.Models.CategoryModel", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("Data.Models.CustomerModel", b =>
@@ -1648,7 +1781,7 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Data.Models.SubscriptionPlanModel", b =>
                 {
-                    b.Navigation("UserSubscriptions");
+                    b.Navigation("UserGroups");
                 });
 
             modelBuilder.Entity("Data.Models.SupplierModel", b =>
@@ -1665,7 +1798,7 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Data.Models.UserGroupModel", b =>
                 {
-                    b.Navigation("Users");
+                    b.Navigation("LinkedUsers");
                 });
 #pragma warning restore 612, 618
         }

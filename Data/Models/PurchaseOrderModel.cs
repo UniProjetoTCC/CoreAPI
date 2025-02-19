@@ -8,6 +8,7 @@ namespace Data.Models
     [Table("PurchaseOrders")]
     public class PurchaseOrderModel
     { 
+        // Identificadores
         [Key] 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; } 
@@ -17,7 +18,8 @@ namespace Data.Models
         public required int SupplierId { get; set; }
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         [StringLength(50)]
@@ -26,24 +28,19 @@ namespace Data.Models
         [Required]
         public required DateTime OrderDate { get; set; }
 
-        [Required]
         [StringLength(20)]
-        public required string Status { get; set; } = "Pending";
+        public string? Status { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0, double.MaxValue)]
         public required decimal TotalAmount { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
-        [Required]
         public virtual required SupplierModel Supplier { get; set; } 
-
-        [Required]
+        public virtual required UserGroupModel UserGroup { get; set; }
         public virtual required ICollection<PurchaseOrderItemModel> Items { get; set; } = new List<PurchaseOrderItemModel>(); 
     } 
 }

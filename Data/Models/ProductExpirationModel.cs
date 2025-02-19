@@ -1,6 +1,6 @@
-using System; 
-using System.ComponentModel.DataAnnotations; 
-using System.ComponentModel.DataAnnotations.Schema; 
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
@@ -20,7 +20,8 @@ namespace Data.Models
         public required int StockId { get; set; }
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         public required DateTime ExpirationDate { get; set; } 
@@ -34,17 +35,14 @@ namespace Data.Models
         public required string BatchNumber { get; set; }
 
         [Required]
-        public bool IsActive { get; set; } = true;
-
-        [ForeignKey("ProductId")]
-        public virtual required ProductModel Product { get; set; }
-
-        [ForeignKey("StockId")]
-        public virtual required StockModel Stock { get; set; }
+        public required bool IsActive { get; set; } = false;
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
+
+        public virtual required ProductModel Product { get; set; }
+        public virtual required StockModel Stock { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
     }
 }

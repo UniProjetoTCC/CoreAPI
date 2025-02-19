@@ -7,6 +7,7 @@ namespace Data.Models
     [Table("PurchaseOrderItems")]
     public class PurchaseOrderItemModel
     { 
+        // Identificadores
         [Key] 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; } 
@@ -20,7 +21,8 @@ namespace Data.Models
         public required int ProductId { get; set; } 
 
         [Required]
-        public required string UserGroupId { get; set; } 
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; } 
 
         [Required]
         [Range(1, int.MaxValue)]
@@ -28,18 +30,14 @@ namespace Data.Models
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0, double.MaxValue)]
         public required decimal UnitPrice { get; set; } 
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
-
         public DateTime? UpdatedAt { get; set; } 
 
-        [Required]
         public virtual required PurchaseOrderModel Order { get; set; } 
-
-        [Required]
         public virtual required ProductModel Product { get; set; } 
+        public virtual required UserGroupModel UserGroup { get; set; }
     } 
 }

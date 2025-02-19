@@ -1,19 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
-    [Table("Promotions")]
-    public class PromotionModel 
-    { 
-        [Key] 
+    [Table("Categories")]
+    public class CategoryModel
+    {
+        [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        public int Id { get; set; }
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; }
+        public required int UserGroupId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -23,17 +24,6 @@ namespace Data.Models
         public string? Description { get; set; }
 
         [Required]
-        [Column(TypeName = "decimal(18,2)")]
-        [Range(0, 100)]
-        public required decimal DiscountPercentage { get; set; }
-
-        [Required]
-        public required DateTime StartDate { get; set; }
-
-        [Required]
-        public required DateTime EndDate { get; set; }
-
-        [Required]
         public required bool Active { get; set; } = true;
 
         [Required]
@@ -41,5 +31,6 @@ namespace Data.Models
         public DateTime? UpdatedAt { get; set; }
 
         public virtual required UserGroupModel UserGroup { get; set; }
-    } 
+        public virtual ICollection<ProductModel> Products { get; set; } = new List<ProductModel>();
+    }
 }

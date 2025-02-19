@@ -12,8 +12,9 @@ namespace Data.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; } 
 
+        [ForeignKey("UserGroup")]
         [Required]
-        public required string UserGroupId { get; set; }
+        public required int GroupId { get; set; }
 
         [Required, StringLength(100)] 
         public required string Name { get; set; } = string.Empty; 
@@ -24,12 +25,10 @@ namespace Data.Models
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0, double.MaxValue)]
         public required decimal PointsPerCurrency { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0, double.MaxValue)]
         public required decimal RedemptionRate { get; set; }
 
         [Range(0, int.MaxValue)] 
@@ -46,7 +45,8 @@ namespace Data.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation Properties
+
         public virtual required ICollection<CustomerModel> Customers { get; set; } = new List<CustomerModel>();
+        public virtual required UserGroupModel UserGroup { get; set; }
     }
 }

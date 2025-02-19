@@ -12,8 +12,9 @@ namespace Data.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; } 
 
+        [ForeignKey("UserGroup")]
         [Required]
-        public required string UserGroupId { get; set; }
+        public required int GroupId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -47,8 +48,8 @@ namespace Data.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation Properties
         public virtual LoyaltyProgramModel? LoyaltyProgram { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
         public virtual ICollection<SaleModel> Sales { get; set; } = new List<SaleModel>();
     }
 }

@@ -20,7 +20,8 @@ namespace Data.Models
         public required int ProductId { get; set; } 
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         [Range(1, int.MaxValue)]
@@ -43,10 +44,10 @@ namespace Data.Models
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
-
         public DateTime? UpdatedAt { get; set; } 
 
         public virtual required SaleModel Sale { get; set; } 
         public virtual required ProductModel Product { get; set; } 
+        public virtual required UserGroupModel UserGroup { get; set; }
     }
 }

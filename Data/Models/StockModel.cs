@@ -17,22 +17,23 @@ namespace Data.Models
         public required int ProductId { get; set; } 
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         [Range(0, int.MaxValue)]
         public required decimal Quantity { get; set; } 
 
         [StringLength(100)]
-        public required string Location { get; set; } 
+        public string? Location { get; set; } 
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation Properties
-        public virtual required ProductModel Product { get; set; } 
+        public virtual required ProductModel Product { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
         public virtual required ICollection<StockMovementModel> StockMovements { get; set; } = new List<StockMovementModel>();
         public virtual required ICollection<ProductExpirationModel> ProductExpirations { get; set; } = new List<ProductExpirationModel>();
     } 

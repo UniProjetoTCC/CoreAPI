@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
-    [Table("UserHierarchies")]
-    public class UserHierarchyModel
+    [Table("LinkedUsers")]
+    public class LinkedUserModel
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -20,7 +20,8 @@ namespace Data.Models
         public required string LinkedUserId { get; set; }
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         public required bool CanPerformTransactions { get; set; }
@@ -44,5 +45,6 @@ namespace Data.Models
 
         public virtual required IdentityUser ParentUser { get; set; }
         public virtual required IdentityUser LinkedUser { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
     }
 }

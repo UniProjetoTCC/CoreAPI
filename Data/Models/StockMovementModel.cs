@@ -20,8 +20,9 @@ namespace Data.Models
         [ForeignKey("User")]
         public required string UserId { get; set; }
 
-        [Required]
-        public required string UserGroupId { get; set; }
+        [Required] 
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; } 
 
         [Required] 
         [StringLength(20)]
@@ -32,20 +33,20 @@ namespace Data.Models
         public required int Quantity { get; set; } 
 
         [StringLength(200)]
-        public required string Reason { get; set; }
+        public string? Reason { get; set; }
 
         [Required]
         public required DateTime MovementDate { get; set; } = DateTime.UtcNow;
 
         [StringLength(50)]
-        public required string ReferenceNumber { get; set; }
-
-        public virtual required StockModel Stock { get; set; }
-        public virtual required IdentityUser User { get; set; }
+        public string? ReferenceNumber { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
+
+        public virtual required StockModel Stock { get; set; }
+        public virtual required IdentityUser User { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
     } 
 }

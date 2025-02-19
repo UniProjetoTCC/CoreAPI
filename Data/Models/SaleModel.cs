@@ -18,14 +18,15 @@ namespace Data.Models
         public required string UserId { get; set; } 
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; } 
 
-        public virtual required IdentityUser User { get; set; } 
+        [Required]
+        [ForeignKey("PaymentMethod")]
+        public required int PaymentMethodId { get; set; } 
 
         [ForeignKey("Customer")]
         public int? CustomerId { get; set; } 
-
-        public virtual CustomerModel? Customer { get; set; } 
 
         [Required]
         [Range(0, double.MaxValue)]
@@ -36,16 +37,13 @@ namespace Data.Models
         public required DateTime SaleDate { get; set; } = DateTime.UtcNow; 
 
         [Required]
-        [ForeignKey("PaymentMethod")]
-        public required int PaymentMethodId { get; set; } 
-
-        public virtual required PaymentMethodModel PaymentMethod { get; set; } 
-
-        [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
+        public virtual CustomerModel? Customer { get; set; }
+        public virtual required IdentityUser User { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual required PaymentMethodModel PaymentMethod { get; set; }
         public virtual required ICollection<SaleItemModel> SaleItems { get; set; } = new List<SaleItemModel>(); 
     } 
 }

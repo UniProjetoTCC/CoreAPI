@@ -13,7 +13,8 @@ namespace Data.Models
         public int Id { get; set; } 
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -48,12 +49,12 @@ namespace Data.Models
         [StringLength(20)]
         public required string PaymentTerms { get; set; } 
 
-        public virtual required ICollection<SupplierPriceModel> SupplierPrices { get; set; } 
-        public virtual required ICollection<PurchaseOrderModel> PurchaseOrders { get; set; } 
-
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
-
         public DateTime? UpdatedAt { get; set; } 
+
+        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual required ICollection<SupplierPriceModel> SupplierPrices { get; set; } 
+        public virtual required ICollection<PurchaseOrderModel> PurchaseOrders { get; set; } 
     } 
 }

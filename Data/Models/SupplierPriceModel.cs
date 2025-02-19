@@ -20,11 +20,11 @@ namespace Data.Models
         public required int ProductId { get; set; } 
 
         [Required]
-        public required string UserGroupId { get; set; }
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0, double.MaxValue)]
         public required decimal UnitPrice { get; set; } 
 
         [Required]
@@ -32,23 +32,22 @@ namespace Data.Models
         public required int MinimumQuantity { get; set; } 
 
         [Required]
-        public bool IsActive { get; set; } = true;
+        public required bool IsActive { get; set; } = true;
 
         [Required]
         [StringLength(50)]
         public required string SupplierSku { get; set; }
 
-        public virtual required SupplierModel Supplier { get; set; }
-        public virtual required ProductModel Product { get; set; }
-
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
         [Required]
-        public DateTime ValidFrom { get; set; } = DateTime.UtcNow;
-
+        public required DateTime ValidFrom { get; set; } = DateTime.UtcNow;
         public DateTime? ValidUntil { get; set; }
+
+        public virtual required SupplierModel Supplier { get; set; }
+        public virtual required ProductModel Product { get; set; }
+        public virtual required UserGroupModel UserGroup { get; set; }
     } 
 }

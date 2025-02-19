@@ -11,42 +11,36 @@ namespace Data.Models
         public int Id { get; set; }
 
         [Required]
-        public required string UserGroupId { get; set; }
-
-        [Required]
-        [StringLength(100)]
+        [StringLength(50)]
         public required string Name { get; set; }  // Standard, Premium, Enterprise
 
         [Required]
         [Range(0, 1000)]
-        public int LinkedUserLimit { get; set; }
+        public required int LinkedUserLimit { get; set; }
 
         [Required]
-        public bool Requires2FA { get; set; }
+        public required bool Requires2FA { get; set; }
 
         [Required]
-        public bool HasPremiumSupport { get; set; }
+        public required bool HasPremiumSupport { get; set; }
 
         [Required]
-        public bool HasAdvancedAnalytics { get; set; }
+        public required bool HasAdvancedAnalytics { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0, double.MaxValue)]
         public required decimal MonthlyPrice { get; set; }
 
         [Required]
-        [StringLength(500)]
-        public required string Description { get; set; }
+        public required bool IsActive { get; set; } = false;
 
         [Required]
-        public required bool IsActive { get; set; } = true;
+        public required DateTime EndDate { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required ICollection<UserSubscriptionModel> UserSubscriptions { get; set; }
+        public virtual ICollection<UserGroupModel> UserGroups { get; set; } = new List<UserGroupModel>();
     }
 }

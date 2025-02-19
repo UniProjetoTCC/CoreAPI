@@ -11,8 +11,9 @@ namespace Data.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; } 
 
+        [ForeignKey("UserGroup")]
         [Required]
-        public required string UserGroupId { get; set; }
+        public required int GroupId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -35,5 +36,6 @@ namespace Data.Models
         public DateTime? UpdatedAt { get; set; }
 
         public virtual required ICollection<SaleModel> Sales { get; set; } = new List<SaleModel>();
+        public virtual required UserGroupModel UserGroup { get; set; }
     } 
 }
