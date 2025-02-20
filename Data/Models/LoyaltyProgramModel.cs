@@ -16,7 +16,7 @@ namespace Data.Models
         [Required]
         public required int GroupId { get; set; }
 
-        [Required, StringLength(100)] 
+        [Required, StringLength(50)] 
         public required string Name { get; set; } = string.Empty; 
 
         [Required]

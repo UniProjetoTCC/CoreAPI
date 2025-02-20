@@ -17,7 +17,7 @@ namespace Data.Models
         public required int UserGroupId { get; set; }
 
         [Required]
-        [StringLength(100)]
+        [StringLength(50)]
         public required string Name { get; set; }
 
         [StringLength(500)]

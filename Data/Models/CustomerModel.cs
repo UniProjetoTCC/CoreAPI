@@ -17,7 +17,7 @@ namespace Data.Models
         public required int GroupId { get; set; }
 
         [Required]
-        [StringLength(100)]
+        [StringLength(50)]
         public required string Name { get; set; }
 
         [Required]
@@ -25,7 +25,7 @@ namespace Data.Models
         public required string Document { get; set; }
 
         [Required]
-        [StringLength(100)]
+        [StringLength(50)]
         [EmailAddress]
         public required string Email { get; set; }
 

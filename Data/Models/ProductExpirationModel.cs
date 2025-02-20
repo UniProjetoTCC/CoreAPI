@@ -34,6 +34,9 @@ namespace Data.Models
         [StringLength(100)]
         public required string BatchNumber { get; set; }
 
+        [StringLength(50)]
+        public required string? Location{get; set;}
+
         [Required]
         public required bool IsActive { get; set; } = false;
 

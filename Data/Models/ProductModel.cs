@@ -21,7 +21,7 @@ namespace Data.Models
         public required int CategoryId { get; set; }
 
         [Required]
-        [StringLength(100)]
+        [StringLength(50)]
         public required string Name { get; set; }
 
         [Required]
