@@ -11,6 +11,10 @@ namespace Data.Models
         public int Id { get; set; }
 
         [Required]
+        [ForeignKey("UserGroup")]
+        public required int GroupId { get; set; }
+
+        [Required]
         [ForeignKey("Product")]
         public required int ProductId { get; set; }
 
@@ -19,6 +23,7 @@ namespace Data.Models
         public required int PromotionId { get; set; }
 
         // Propriedades de navegação
+        public virtual required UserGroupModel UserGroup { get; set; }
         public virtual required ProductModel Product { get; set; }
         public virtual required PromotionModel Promotion { get; set; }
     }
