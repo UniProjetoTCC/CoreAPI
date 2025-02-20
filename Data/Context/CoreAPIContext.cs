@@ -24,6 +24,7 @@ namespace Data.Context
         public DbSet<ProductModel> Products { get; set; }
         public DbSet<ProductExpirationModel> ProductExpirations { get; set; }
         public DbSet<ProductTaxModel> ProductTaxes { get; set; }
+        public DbSet<ProductPromotionModel> ProductPromotions { get; set; }
         public DbSet<PromotionModel> Promotions { get; set; }
         public DbSet<SupplierModel> Suppliers { get; set; }
         public DbSet<SupplierPriceModel> SupplierPrices { get; set; }
@@ -259,6 +260,41 @@ namespace Data.Context
             modelBuilder.Entity<ProductTaxModel>()
                 .HasIndex(pt => new { pt.GroupId, pt.ProductId, pt.TaxId })
                 .HasDatabaseName("IX_ProductTaxes_GroupId_ProductId_TaxId")
+                .IsUnique();
+
+            //=================================================================
+            // Product Promotion relationships and indexes
+            //=================================================================
+            // Configure the relationship between ProductPromotion and Product.
+            // Each product-promotion association links one product with one promotion.
+            modelBuilder.Entity<ProductPromotionModel>()
+                .HasOne(pp => pp.Product)
+                .WithMany(p => p.ProductPromotions)
+                .HasForeignKey(pp => pp.ProductId)
+                .OnDelete(DeleteBehavior.Cascade); // Delete ProductPromotion when Product is deleted
+
+            // Configure the relationship between ProductPromotion and Promotion.
+            // Each product-promotion association links one promotion with one product.
+            modelBuilder.Entity<ProductPromotionModel>()
+                .HasOne(pp => pp.Promotion)
+                .WithMany(p => p.ProductPromotions)
+                .HasForeignKey(pp => pp.PromotionId)
+                .OnDelete(DeleteBehavior.Cascade); // Delete ProductPromotion when Promotion is deleted
+
+            // Create an index to optimize queries filtering by ProductId
+            modelBuilder.Entity<ProductPromotionModel>()
+                .HasIndex(pp => pp.ProductId)
+                .HasDatabaseName("IX_ProductPromotions_ProductId");
+
+            // Create an index to optimize queries filtering by PromotionId
+            modelBuilder.Entity<ProductPromotionModel>()
+                .HasIndex(pp => pp.PromotionId)
+                .HasDatabaseName("IX_ProductPromotions_PromotionId");
+
+            // Create a unique index to optimize queries filtering by ProductId and PromotionId.
+            modelBuilder.Entity<ProductPromotionModel>()
+                .HasIndex(pp => new { pp.ProductId, pp.PromotionId })
+                .HasDatabaseName("IX_ProductPromotions_ProductId_PromotionId")
                 .IsUnique();
 
             //=================================================================

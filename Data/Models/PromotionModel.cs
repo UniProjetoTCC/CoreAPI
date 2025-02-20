@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
 
 namespace Data.Models
 {
@@ -40,6 +41,8 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
+        public virtual required ICollection<ProductPromotionModel> ProductPromotions { get; set; } = new List<ProductPromotionModel>();
+        
         public virtual required UserGroupModel UserGroup { get; set; }
     } 
 }

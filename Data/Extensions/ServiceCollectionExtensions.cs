@@ -15,6 +15,7 @@ namespace Data.Extensions
             services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
             services.AddScoped<IPriceHistoryRepository, PriceHistoryRepository>();
             services.AddScoped<IProductExpirationRepository, ProductExpirationRepository>();
+            services.AddScoped<IProductPromotionRepository, ProductPromotionRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductTaxRepository, ProductTaxRepository>();
             services.AddScoped<IPromotionRepository, PromotionRepository>();

@@ -58,6 +58,7 @@ namespace Data.Models
         public virtual required ICollection<SupplierPriceModel> SupplierPrices { get; set; } = new List<SupplierPriceModel>();
         public virtual required ICollection<ProductExpirationModel> ProductExpirations { get; set; } = new List<ProductExpirationModel>();
         public virtual required ICollection<PurchaseOrderItemModel> PurchaseOrderItems { get; set; } = new List<PurchaseOrderItemModel>();
+        public virtual required ICollection<ProductPromotionModel> ProductPromotions { get; set; } = new List<ProductPromotionModel>();
 
         public virtual required UserGroupModel UserGroup { get; set; }
         public virtual required CategoryModel Category { get; set; }
