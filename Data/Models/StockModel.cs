@@ -24,7 +24,7 @@ namespace Data.Models
         [Range(0, int.MaxValue)]
         public required decimal Quantity { get; set; } 
 
-        [StringLength(100)]
+        [StringLength(50)]
         public string? Location { get; set; } 
 
         [Required]
