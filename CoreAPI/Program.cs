@@ -11,16 +11,18 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using AspNetCoreRateLimit;
 using StackExchange.Redis;
-using Business.Services;
+
 using Business.Services.Base;
-using Data.Context;
+using Business.Extensions;
+using Business.Services;
 using Data.Extensions;
+using Data.Context;
 
 namespace CoreAPI
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +42,6 @@ namespace CoreAPI
             builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
                 ConnectionMultiplexer.Connect(builder.Configuration["Redis:Configuration"] ?? 
                     throw new InvalidOperationException("Redis:Configuration not found in appsettings.json")));
-            builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
 
             // Configure rate limiting with Redis
             builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
@@ -49,7 +50,7 @@ namespace CoreAPI
             builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 
-            // Add services to the container.
+            // Add services to the container
             builder.Services.AddControllers();
 
             // Set the connection string with .env variables
@@ -129,13 +130,10 @@ namespace CoreAPI
 
             // Add Auto Mapper, the class mapper to database classes and vice versa
             builder.Services.AddAutoMapper(typeof(Program));
-
-            // Dependency Injections
-            builder.Services.AddScoped<IEmailSenderService, EmailSenderService>();
-            builder.Services.AddScoped<ICustomPasswordValidator, CustomPasswordValidator>();
             
             // Register repositories
             builder.Services.AddRepositories();
+            builder.Services.AddBusinessServices();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
@@ -201,10 +199,16 @@ namespace CoreAPI
                 {
                     var context = services.GetRequiredService<CoreAPIContext>();
                     context.Database.Migrate();
+
+                    // Setup default roles and subscription plans
+                    var roleService = services.GetRequiredService<IRoleService>();
+                    await roleService.SetupRolesAndPlansAsync();
+                    
+                    logger.LogInformation("Database migration and initial setup completed successfully.");
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "An error occurred while migrating the database.");
+                    logger.LogError(ex, "An error occurred while migrating the database or setting up initial data.");
                 }
             }
 
