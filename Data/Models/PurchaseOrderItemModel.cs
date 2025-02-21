@@ -13,8 +13,8 @@ namespace Data.Models
         public int Id { get; set; } 
 
         [Required]
-        [ForeignKey("Order")]
-        public required int OrderId { get; set; } 
+        [ForeignKey("PurchaseOrder")]
+        public required int PurchaseOrderId { get; set; } 
 
         [Required]
         [ForeignKey("Product")]
@@ -36,8 +36,8 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
         public DateTime? UpdatedAt { get; set; } 
 
-        public virtual required PurchaseOrderModel Order { get; set; } 
-        public virtual required ProductModel Product { get; set; } 
-        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual PurchaseOrderModel? PurchaseOrder { get; set; } 
+        public virtual ProductModel? Product { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
     } 
 }

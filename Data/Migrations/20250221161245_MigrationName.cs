@@ -59,12 +59,12 @@ namespace Data.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     LinkedUserLimit = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     Requires2FA = table.Column<bool>(type: "boolean", nullable: false),
+                    RequiresEmailVerification = table.Column<bool>(type: "boolean", nullable: false),
                     HasPremiumSupport = table.Column<bool>(type: "boolean", nullable: false),
                     HasAdvancedAnalytics = table.Column<bool>(type: "boolean", nullable: false),
                     MonthlyPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -240,7 +240,7 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserGroupId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Active = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -254,7 +254,7 @@ namespace Data.Migrations
                         column: x => x.UserGroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -304,13 +304,13 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     PointsPerCurrency = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     RedemptionRate = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     Points = table.Column<int>(type: "integer", nullable: false),
                     DiscountPercentage = table.Column<decimal>(type: "numeric", nullable: false),
-                    Active = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -322,7 +322,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -332,7 +332,7 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Active = table.Column<bool>(type: "boolean", nullable: false),
@@ -347,7 +347,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -357,12 +357,12 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     DiscountPercentage = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     StartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Active = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -384,11 +384,11 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Document = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: false),
-                    Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Email = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Phone = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
+                    Address = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     ContactPerson = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     PaymentTerms = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -403,7 +403,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -413,7 +413,7 @@ namespace Data.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Rate = table.Column<decimal>(type: "numeric(5,2)", nullable: false)
                 },
                 constraints: table =>
@@ -424,7 +424,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -435,7 +435,7 @@ namespace Data.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
                     CategoryId = table.Column<int>(type: "integer", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     SKU = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     BarCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
@@ -465,7 +465,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -477,11 +477,11 @@ namespace Data.Migrations
                     GroupId = table.Column<int>(type: "integer", nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Document = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: false),
-                    Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     LoyaltyProgramId = table.Column<int>(type: "integer", nullable: true),
-                    Active = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -499,7 +499,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -514,6 +514,7 @@ namespace Data.Migrations
                     OrderDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     TotalAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    DeliveryDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     SupplierModelId = table.Column<int>(type: "integer", nullable: true)
@@ -537,7 +538,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -576,7 +577,40 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductPromotions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    ProductId = table.Column<int>(type: "integer", nullable: false),
+                    PromotionId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductPromotions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProductPromotions_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProductPromotions_Promotions_PromotionId",
+                        column: x => x.PromotionId,
+                        principalTable: "Promotions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProductPromotions_UserGroups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "UserGroups",
+                        principalColumn: "GroupId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -599,19 +633,19 @@ namespace Data.Migrations
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ProductTaxes_Taxes_TaxId",
                         column: x => x.TaxId,
                         principalTable: "Taxes",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ProductTaxes_UserGroups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -623,7 +657,6 @@ namespace Data.Migrations
                     ProductId = table.Column<int>(type: "integer", nullable: false),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
                     Quantity = table.Column<decimal>(type: "numeric", nullable: false),
-                    Location = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -641,7 +674,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -688,7 +721,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -744,7 +777,7 @@ namespace Data.Migrations
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -753,7 +786,7 @@ namespace Data.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<int>(type: "integer", nullable: false),
+                    PurchaseOrderId = table.Column<int>(type: "integer", nullable: false),
                     ProductId = table.Column<int>(type: "integer", nullable: false),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
@@ -771,17 +804,17 @@ namespace Data.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_PurchaseOrderItems_PurchaseOrders_OrderId",
-                        column: x => x.OrderId,
+                        name: "FK_PurchaseOrderItems_PurchaseOrders_PurchaseOrderId",
+                        column: x => x.PurchaseOrderId,
                         principalTable: "PurchaseOrders",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_PurchaseOrderItems_UserGroups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -796,6 +829,7 @@ namespace Data.Migrations
                     ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     BatchNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Location = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -854,7 +888,7 @@ namespace Data.Migrations
                         column: x => x.StockId,
                         principalTable: "Stock",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_StockMovements_UserGroups_GroupId",
                         column: x => x.GroupId,
@@ -893,13 +927,13 @@ namespace Data.Migrations
                         column: x => x.SaleId,
                         principalTable: "Sales",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_SaleItems_UserGroups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -1024,6 +1058,22 @@ namespace Data.Migrations
                 columns: new[] { "StockId", "ExpirationDate" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProductPromotions_GroupId_ProductId_PromotionId",
+                table: "ProductPromotions",
+                columns: new[] { "GroupId", "ProductId", "PromotionId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductPromotions_ProductId",
+                table: "ProductPromotions",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductPromotions_PromotionId",
+                table: "ProductPromotions",
+                column: "PromotionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Products_CategoryId",
                 table: "Products",
                 column: "CategoryId");
@@ -1072,19 +1122,24 @@ namespace Data.Migrations
                 column: "GroupId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PurchaseOrderItems_GroupId_OrderId_ProductId",
+                name: "IX_PurchaseOrderItems_GroupId_PurchaseOrderId_ProductId",
                 table: "PurchaseOrderItems",
-                columns: new[] { "GroupId", "OrderId", "ProductId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PurchaseOrderItems_OrderId",
-                table: "PurchaseOrderItems",
-                column: "OrderId");
+                columns: new[] { "GroupId", "PurchaseOrderId", "ProductId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseOrderItems_ProductId",
                 table: "PurchaseOrderItems",
                 column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItems_PurchaseOrderId",
+                table: "PurchaseOrderItems",
+                column: "PurchaseOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrders_Date",
+                table: "PurchaseOrders",
+                column: "OrderDate");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseOrders_GroupId_Date",
@@ -1133,6 +1188,11 @@ namespace Data.Migrations
                 column: "CustomerModelId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Sales_Date",
+                table: "Sales",
+                column: "SaleDate");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Sales_GroupId_Date",
                 table: "Sales",
                 columns: new[] { "GroupId", "SaleDate" });
@@ -1153,9 +1213,9 @@ namespace Data.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Stock_GroupId_ProductId_Location",
+                name: "IX_Stock_GroupId_ProductId",
                 table: "Stock",
-                columns: new[] { "GroupId", "ProductId", "Location" });
+                columns: new[] { "GroupId", "ProductId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Stock_ProductId",
@@ -1163,9 +1223,19 @@ namespace Data.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_Date",
+                table: "StockMovements",
+                column: "MovementDate");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_StockMovements_GroupId",
                 table: "StockMovements",
                 column: "GroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_StockId",
+                table: "StockMovements",
+                column: "StockId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StockMovements_StockId_Date",
@@ -1258,10 +1328,10 @@ namespace Data.Migrations
                 name: "ProductExpirations");
 
             migrationBuilder.DropTable(
-                name: "ProductTaxes");
+                name: "ProductPromotions");
 
             migrationBuilder.DropTable(
-                name: "Promotions");
+                name: "ProductTaxes");
 
             migrationBuilder.DropTable(
                 name: "PurchaseOrderItems");
@@ -1280,6 +1350,9 @@ namespace Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Promotions");
 
             migrationBuilder.DropTable(
                 name: "Taxes");

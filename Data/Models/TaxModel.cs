@@ -24,7 +24,7 @@ namespace Data.Models
         [Column(TypeName = "decimal(5,2)")]
         public required decimal Rate { get; set; } 
 
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required ICollection<ProductTaxModel> ProductTaxes { get; set; } = new List<ProductTaxModel>();
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<ProductTaxModel>? ProductTaxes { get; set; } = new List<ProductTaxModel>();
     } 
 }

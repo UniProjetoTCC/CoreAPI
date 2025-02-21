@@ -23,8 +23,8 @@ namespace Data.Models
         public required int PromotionId { get; set; }
 
         // Propriedades de navegação
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required ProductModel Product { get; set; }
-        public virtual required PromotionModel Promotion { get; set; }
+        public virtual ProductModel? Product { get; set; }
+        public virtual PromotionModel? Promotion { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
     }
 }

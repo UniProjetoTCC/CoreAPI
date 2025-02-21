@@ -29,9 +29,9 @@ namespace Data.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation Properties
-        public virtual required ProductModel Product { get; set; }
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required ICollection<StockMovementModel> StockMovements { get; set; } = new List<StockMovementModel>();
-        public virtual required ICollection<ProductExpirationModel> ProductExpirations { get; set; } = new List<ProductExpirationModel>();
+        public virtual ProductModel? Product { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<StockMovementModel>? StockMovements { get; set; } = new List<StockMovementModel>();
+        public virtual ICollection<ProductExpirationModel>? ProductExpirations { get; set; } = new List<ProductExpirationModel>();
     } 
 }

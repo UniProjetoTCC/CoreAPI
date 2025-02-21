@@ -19,7 +19,13 @@ namespace Data.Models
         public required int LinkedUserLimit { get; set; }
 
         [Required]
+        public required bool IsActive { get; set; } = false;
+
+        [Required]
         public required bool Requires2FA { get; set; }
+
+        [Required]
+        public required bool RequiresEmailVerification { get; set; }
 
         [Required]
         public required bool HasPremiumSupport { get; set; }
@@ -32,15 +38,10 @@ namespace Data.Models
         public required decimal MonthlyPrice { get; set; }
 
         [Required]
-        public required bool IsActive { get; set; } = false;
-
-        [Required]
-        public required DateTime EndDate { get; set; }
-
-        [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual ICollection<UserGroupModel> UserGroups { get; set; } = new List<UserGroupModel>();
+        // Navigation properties
+        public virtual ICollection<UserGroupModel>? UserGroups { get; set; } = new List<UserGroupModel>();
     }
 }

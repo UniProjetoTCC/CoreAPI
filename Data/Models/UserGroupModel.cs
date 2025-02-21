@@ -29,8 +29,9 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required IdentityUser User { get; set; }
-        public virtual required SubscriptionPlanModel SubscriptionPlan { get; set; }
-        public virtual ICollection<LinkedUserModel> LinkedUsers { get; set; } = new List<LinkedUserModel>();
+        // Navigation properties
+        public virtual IdentityUser? User { get; set; }
+        public virtual SubscriptionPlanModel? SubscriptionPlan { get; set; }
+        public virtual ICollection<LinkedUserModel>? LinkedUsers { get; set; }
     }
 }

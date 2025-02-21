@@ -44,8 +44,8 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required ProductModel Product { get; set; }
-        public virtual required StockModel Stock { get; set; }
-        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual ProductModel? Product { get; set; }
+        public virtual StockModel? Stock { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
     }
 }

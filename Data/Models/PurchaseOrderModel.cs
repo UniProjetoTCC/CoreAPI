@@ -35,12 +35,14 @@ namespace Data.Models
         [Column(TypeName = "decimal(18,2)")]
         public required decimal TotalAmount { get; set; }
 
+        public DateTime? DeliveryDate { get; set; }
+
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required SupplierModel Supplier { get; set; } 
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required ICollection<PurchaseOrderItemModel> Items { get; set; } = new List<PurchaseOrderItemModel>(); 
+        public virtual SupplierModel? Supplier { get; set; } 
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<PurchaseOrderItemModel>? Items { get; set; } = new List<PurchaseOrderItemModel>(); 
     } 
 }

@@ -17,39 +17,35 @@ namespace Data.Models
         public required int GroupId { get; set; }
 
         [Required]
-        [StringLength(50)]
+        [StringLength(100)]
         public required string Name { get; set; }
 
         [Required]
         [StringLength(14)]
         public required string Document { get; set; }
 
-        [Required]
-        [StringLength(50)]
-        [EmailAddress]
-        public required string Email { get; set; }
+        [StringLength(100)]
+        public string? Email { get; set; }
 
-        [Required]
         [StringLength(20)]
-        [Phone]
-        public required string Phone { get; set; }
+        public string? Phone { get; set; }
 
         [StringLength(200)]
-        public required string Address { get; set; }
+        public string? Address { get; set; }
 
         [ForeignKey("LoyaltyProgram")]
         public int? LoyaltyProgramId { get; set; }
 
         [Required]
-        public required bool Active { get; set; } = true;
+        public required bool IsActive { get; set; } = true;
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
 
+        public virtual UserGroupModel? UserGroup { get; set; }
         public virtual LoyaltyProgramModel? LoyaltyProgram { get; set; }
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual ICollection<SaleModel> Sales { get; set; } = new List<SaleModel>();
+        public virtual ICollection<SaleModel>? Sales { get; set; } = new List<SaleModel>();
     }
 }

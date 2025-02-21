@@ -41,9 +41,9 @@ namespace Data.Models
         public DateTime? UpdatedAt { get; set; }
 
         public virtual CustomerModel? Customer { get; set; }
-        public virtual required IdentityUser User { get; set; }
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required PaymentMethodModel PaymentMethod { get; set; }
-        public virtual required ICollection<SaleItemModel> SaleItems { get; set; } = new List<SaleItemModel>(); 
+        public virtual IdentityUser? User { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual PaymentMethodModel? PaymentMethod { get; set; }
+        public virtual ICollection<SaleItemModel>? SaleItems { get; set; } = new List<SaleItemModel>(); 
     } 
 }

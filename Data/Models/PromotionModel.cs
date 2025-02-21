@@ -35,14 +35,13 @@ namespace Data.Models
         public required DateTime EndDate { get; set; }
 
         [Required]
-        public required bool Active { get; set; } = true;
+        public required bool IsActive { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required ICollection<ProductPromotionModel> ProductPromotions { get; set; } = new List<ProductPromotionModel>();
-        
-        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<ProductPromotionModel>? ProductPromotions { get; set; } = new List<ProductPromotionModel>();
     } 
 }

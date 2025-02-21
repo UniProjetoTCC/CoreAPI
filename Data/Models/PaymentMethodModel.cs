@@ -35,7 +35,7 @@ namespace Data.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required ICollection<SaleModel> Sales { get; set; } = new List<SaleModel>();
-        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual ICollection<SaleModel>? Sales { get; set; } = new List<SaleModel>();
+        public virtual UserGroupModel? UserGroup { get; set; }
     } 
 }

@@ -1,12 +1,16 @@
 using Business.DataRepositories;
 using Data.Models;
+using Data.Context;
 
 namespace Data.Repositories
 {
-    public class ProductPromotionRepository : BaseRepository<ProductPromotionModel>, IProductPromotionRepository
+    public class ProductPromotionRepository : IProductPromotionRepository
     {
-        public ProductPromotionRepository(ApplicationDbContext context) : base(context)
+        private readonly CoreAPIContext _context;
+
+        public ProductPromotionRepository(CoreAPIContext context)
         {
+            _context = context;
         }
     }
 }

@@ -493,9 +493,9 @@ namespace Data.Context
             // Each purchase order item belongs to one purchase order.
             // When a purchase order is deleted, all its items are also deleted.
             modelBuilder.Entity<PurchaseOrderItemModel>()
-                .HasOne(poi => poi.Order)
+                .HasOne(poi => poi.PurchaseOrder)
                 .WithMany(po => po.Items)
-                .HasForeignKey(poi => poi.OrderId)
+                .HasForeignKey(poi => poi.PurchaseOrderId)
                 .OnDelete(DeleteBehavior.Cascade); // Delete PurchaseOrderItems when PurchaseOrder is deleted
 
             // Configure the relationship between PurchaseOrderItem and Product.
@@ -514,20 +514,20 @@ namespace Data.Context
                 .HasForeignKey(poi => poi.GroupId)
                 .OnDelete(DeleteBehavior.Cascade); // Delete when UserGroup is deleted.
 
-            // Create an index to optimize queries by OrderId
+            // Create an index to optimize queries by PurchaseOrderId
             modelBuilder.Entity<PurchaseOrderItemModel>()
-                .HasIndex(poi => poi.OrderId)
-                .HasDatabaseName("IX_PurchaseOrderItems_OrderId");
+                .HasIndex(poi => poi.PurchaseOrderId)
+                .HasDatabaseName("IX_PurchaseOrderItems_PurchaseOrderId");
 
             // Create an index to optimize queries by ProductId
             modelBuilder.Entity<PurchaseOrderItemModel>()
                 .HasIndex(poi => poi.ProductId)
                 .HasDatabaseName("IX_PurchaseOrderItems_ProductId");
 
-            // Create an index to optimize queries filtering by GroupId, OrderId, and ProductId.
+            // Create an index to optimize queries filtering by GroupId, PurchaseOrderId, and ProductId.
             modelBuilder.Entity<PurchaseOrderItemModel>()
-                .HasIndex(poi => new { poi.GroupId, poi.OrderId, poi.ProductId })
-                .HasDatabaseName("IX_PurchaseOrderItems_GroupId_OrderId_ProductId");
+                .HasIndex(poi => new { poi.GroupId, poi.PurchaseOrderId, poi.ProductId })
+                .HasDatabaseName("IX_PurchaseOrderItems_GroupId_PurchaseOrderId_ProductId");
 
             //=================================================================
             // Supplier relationships and indexes
@@ -641,7 +641,6 @@ namespace Data.Context
             //=================================================================
             // Configure the relationship between PaymentCard and IdentityUser.
             // Each PaymentCard is associated with one IdentityUser (owner of the card).
-            // Configuration of the relationship between UserPaymentCardModel and IdentityUser
             modelBuilder.Entity<UserPaymentCardModel>()
                 .HasOne(upc => upc.User) // A card belongs to a single user
                 .WithMany() // Assuming you don't have a collection of cards in IdentityUser

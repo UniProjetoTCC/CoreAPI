@@ -1,13 +1,16 @@
 using AutoMapper;
+using Business.Models;
+using Data.Models;
 
-namespace Business.AutoMapper
+namespace CoreAPI.AutoMapper
 {
     public class AutoMapperProfile : Profile
     {
         public AutoMapperProfile()
         {
-            // Aqui você registrará seus mapeamentos
-            // exemplo: CreateMap<UserModel, UserDto>();
+            CreateMap<UserGroupModel, UserGroup>().ReverseMap();
+            CreateMap<SubscriptionPlanModel, SubscriptionPlan>().ReverseMap();
+            CreateMap<LinkedUserModel, LinkedUser>().ReverseMap();
         }
     }
 }

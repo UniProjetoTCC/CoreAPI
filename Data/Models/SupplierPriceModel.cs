@@ -46,8 +46,8 @@ namespace Data.Models
         public required DateTime ValidFrom { get; set; } = DateTime.UtcNow;
         public DateTime? ValidUntil { get; set; }
 
-        public virtual required SupplierModel Supplier { get; set; }
-        public virtual required ProductModel Product { get; set; }
-        public virtual required UserGroupModel UserGroup { get; set; }
+        public virtual SupplierModel? Supplier { get; set; }
+        public virtual ProductModel? Product { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
     } 
 }

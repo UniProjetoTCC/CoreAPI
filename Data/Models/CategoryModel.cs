@@ -30,7 +30,7 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual ICollection<ProductModel> Products { get; set; } = new List<ProductModel>();
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<ProductModel>? Products { get; set; } = new List<ProductModel>();
     }
 }

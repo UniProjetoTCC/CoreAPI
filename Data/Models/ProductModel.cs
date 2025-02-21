@@ -51,16 +51,15 @@ namespace Data.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Propriedades de navegação
-        public virtual required ICollection<StockModel> Stock { get; set; } = new List<StockModel>();
-        public virtual required ICollection<PriceHistoryModel> PriceHistories { get; set; } = new List<PriceHistoryModel>();
-        public virtual required ICollection<ProductTaxModel> ProductTaxes { get; set; } = new List<ProductTaxModel>();
-        public virtual required ICollection<SaleItemModel> SaleItems { get; set; } = new List<SaleItemModel>();
-        public virtual required ICollection<SupplierPriceModel> SupplierPrices { get; set; } = new List<SupplierPriceModel>();
-        public virtual required ICollection<ProductExpirationModel> ProductExpirations { get; set; } = new List<ProductExpirationModel>();
-        public virtual required ICollection<PurchaseOrderItemModel> PurchaseOrderItems { get; set; } = new List<PurchaseOrderItemModel>();
-        public virtual required ICollection<ProductPromotionModel> ProductPromotions { get; set; } = new List<ProductPromotionModel>();
-
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required CategoryModel Category { get; set; }
+        public virtual CategoryModel? Category { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<StockModel>? Stock { get; set; } = new List<StockModel>();
+        public virtual ICollection<PriceHistoryModel>? PriceHistories { get; set; } = new List<PriceHistoryModel>();
+        public virtual ICollection<ProductTaxModel>? ProductTaxes { get; set; } = new List<ProductTaxModel>();
+        public virtual ICollection<SaleItemModel>? SaleItems { get; set; } = new List<SaleItemModel>();
+        public virtual ICollection<SupplierPriceModel>? SupplierPrices { get; set; } = new List<SupplierPriceModel>();
+        public virtual ICollection<ProductExpirationModel>? ProductExpirations { get; set; } = new List<ProductExpirationModel>();
+        public virtual ICollection<PurchaseOrderItemModel>? PurchaseOrderItems { get; set; } = new List<PurchaseOrderItemModel>();
+        public virtual ICollection<ProductPromotionModel>? ProductPromotions { get; set; } = new List<ProductPromotionModel>();
     }
 }

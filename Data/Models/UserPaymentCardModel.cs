@@ -33,7 +33,7 @@ public class UserPaymentCardModel
     [Required]
     public required CardType Type { get; set; }
 
-    public virtual required IdentityUser User { get; set; }
+    public virtual IdentityUser? User { get; set; }
 }
 
 public enum CardType

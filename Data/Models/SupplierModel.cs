@@ -53,8 +53,8 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
         public DateTime? UpdatedAt { get; set; } 
 
-        public virtual required UserGroupModel UserGroup { get; set; }
-        public virtual required ICollection<SupplierPriceModel> SupplierPrices { get; set; } 
-        public virtual required ICollection<PurchaseOrderModel> PurchaseOrders { get; set; } 
+        public virtual UserGroupModel? UserGroup { get; set; }
+        public virtual ICollection<SupplierPriceModel>? SupplierPrices { get; set; } 
+        public virtual ICollection<PurchaseOrderModel>? PurchaseOrders { get; set; } 
     } 
 }

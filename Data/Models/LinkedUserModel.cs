@@ -40,11 +40,11 @@ namespace Data.Models
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual required IdentityUser ParentUser { get; set; }
-        public virtual required IdentityUser LinkedUser { get; set; }
-        public virtual required UserGroupModel UserGroup { get; set; }
+        // Navigation properties
+        public virtual IdentityUser? ParentUser { get; set; }
+        public virtual IdentityUser? LinkedUser { get; set; }
+        public virtual UserGroupModel? UserGroup { get; set; }
     }
 }

@@ -42,8 +42,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -67,11 +67,7 @@ namespace Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
@@ -84,12 +80,14 @@ namespace Data.Migrations
                         .HasColumnType("character varying(14)");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<int?>("LoyaltyProgramId")
                         .HasColumnType("integer");
@@ -100,7 +98,6 @@ namespace Data.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -184,9 +181,6 @@ namespace Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -201,10 +195,13 @@ namespace Data.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int>("Points")
                         .HasColumnType("integer");
@@ -256,8 +253,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -345,6 +342,10 @@ namespace Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Location")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
@@ -406,8 +407,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
@@ -440,6 +441,38 @@ namespace Data.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("Data.Models.ProductPromotionModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PromotionId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_ProductPromotions_ProductId");
+
+                    b.HasIndex("PromotionId")
+                        .HasDatabaseName("IX_ProductPromotions_PromotionId");
+
+                    b.HasIndex("GroupId", "ProductId", "PromotionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ProductPromotions_GroupId_ProductId_PromotionId");
+
+                    b.ToTable("ProductPromotions");
+                });
+
             modelBuilder.Entity("Data.Models.ProductTaxModel", b =>
                 {
                     b.Property<int>("Id")
@@ -465,9 +498,11 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_ProductTaxes_ProductId");
 
-                    b.HasIndex("TaxId");
+                    b.HasIndex("TaxId")
+                        .HasDatabaseName("IX_ProductTaxes_TaxId");
 
                     b.HasIndex("GroupId", "ProductId", "TaxId")
                         .IsUnique()
@@ -483,9 +518,6 @@ namespace Data.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -503,10 +535,13 @@ namespace Data.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
@@ -535,10 +570,10 @@ namespace Data.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("OrderId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int>("PurchaseOrderId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Quantity")
@@ -552,12 +587,14 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_PurchaseOrderItems_ProductId");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("PurchaseOrderId")
+                        .HasDatabaseName("IX_PurchaseOrderItems_PurchaseOrderId");
 
-                    b.HasIndex("GroupId", "OrderId", "ProductId")
-                        .HasDatabaseName("IX_PurchaseOrderItems_GroupId_OrderId_ProductId");
+                    b.HasIndex("GroupId", "PurchaseOrderId", "ProductId")
+                        .HasDatabaseName("IX_PurchaseOrderItems_GroupId_PurchaseOrderId_ProductId");
 
                     b.ToTable("PurchaseOrderItems");
                 });
@@ -571,6 +608,9 @@ namespace Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeliveryDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("GroupId")
@@ -602,7 +642,11 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SupplierId");
+                    b.HasIndex("OrderDate")
+                        .HasDatabaseName("IX_PurchaseOrders_Date");
+
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("IX_PurchaseOrders_SupplierId");
 
                     b.HasIndex("SupplierModelId");
 
@@ -653,9 +697,11 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_SaleItems_ProductId");
 
-                    b.HasIndex("SaleId");
+                    b.HasIndex("SaleId")
+                        .HasDatabaseName("IX_SaleItems_SaleId");
 
                     b.HasIndex("GroupId", "SaleId", "ProductId")
                         .HasDatabaseName("IX_SaleItems_GroupId_SaleId_ProductId");
@@ -704,13 +750,18 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerId");
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("IX_Sales_CustomerId");
 
                     b.HasIndex("CustomerModelId");
 
-                    b.HasIndex("PaymentMethodId");
+                    b.HasIndex("PaymentMethodId")
+                        .HasDatabaseName("IX_Sales_PaymentMethodId");
 
                     b.HasIndex("PaymentMethodModelId");
+
+                    b.HasIndex("SaleDate")
+                        .HasDatabaseName("IX_Sales_Date");
 
                     b.HasIndex("UserId");
 
@@ -734,10 +785,6 @@ namespace Data.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Location")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
@@ -749,10 +796,11 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_Stock_ProductId");
 
-                    b.HasIndex("GroupId", "ProductId", "Location")
-                        .HasDatabaseName("IX_Stock_GroupId_ProductId_Location");
+                    b.HasIndex("GroupId", "ProductId")
+                        .HasDatabaseName("IX_Stock_GroupId_ProductId");
 
                     b.ToTable("Stock");
                 });
@@ -804,6 +852,12 @@ namespace Data.Migrations
 
                     b.HasIndex("GroupId");
 
+                    b.HasIndex("MovementDate")
+                        .HasDatabaseName("IX_StockMovements_Date");
+
+                    b.HasIndex("StockId")
+                        .HasDatabaseName("IX_StockMovements_StockId");
+
                     b.HasIndex("UserId");
 
                     b.HasIndex("StockId", "MovementDate")
@@ -821,9 +875,6 @@ namespace Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("HasAdvancedAnalytics")
@@ -849,6 +900,9 @@ namespace Data.Migrations
                     b.Property<bool>("Requires2FA")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("RequiresEmailVerification")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -867,8 +921,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("ContactPerson")
                         .IsRequired()
@@ -885,8 +939,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
@@ -896,8 +950,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("PaymentTerms")
                         .IsRequired()
@@ -906,8 +960,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -997,8 +1051,8 @@ namespace Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<decimal>("Rate")
                         .HasColumnType("decimal(5,2)");
@@ -1289,7 +1343,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("UserGroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("UserGroup");
@@ -1300,7 +1354,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.LoyaltyProgramModel", "LoyaltyProgram")
@@ -1345,7 +1399,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("UserGroup");
@@ -1356,7 +1410,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("UserGroup");
@@ -1373,7 +1427,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.ProductModel", "Product")
@@ -1431,10 +1485,37 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Category");
+
+                    b.Navigation("UserGroup");
+                });
+
+            modelBuilder.Entity("Data.Models.ProductPromotionModel", b =>
+                {
+                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ProductModel", "Product")
+                        .WithMany("ProductPromotions")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.PromotionModel", "Promotion")
+                        .WithMany("ProductPromotions")
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Promotion");
 
                     b.Navigation("UserGroup");
                 });
@@ -1444,19 +1525,19 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.ProductModel", "Product")
                         .WithMany("ProductTaxes")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.TaxModel", "Tax")
                         .WithMany("ProductTaxes")
                         .HasForeignKey("TaxId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
@@ -1482,13 +1563,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.PurchaseOrderModel", "Order")
-                        .WithMany("Items")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.ProductModel", "Product")
@@ -1497,9 +1572,15 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Order");
+                    b.HasOne("Data.Models.PurchaseOrderModel", "PurchaseOrder")
+                        .WithMany("Items")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Product");
+
+                    b.Navigation("PurchaseOrder");
 
                     b.Navigation("UserGroup");
                 });
@@ -1509,7 +1590,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.SupplierModel", "Supplier")
@@ -1532,7 +1613,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.ProductModel", "Product")
@@ -1544,7 +1625,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.SaleModel", "Sale")
                         .WithMany("SaleItems")
                         .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
@@ -1568,7 +1649,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.PaymentMethodModel", "PaymentMethod")
@@ -1601,7 +1682,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.ProductModel", "Product")
@@ -1626,7 +1707,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.StockModel", "Stock")
                         .WithMany("StockMovements")
                         .HasForeignKey("StockId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
@@ -1647,7 +1728,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("UserGroup");
@@ -1658,7 +1739,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Data.Models.ProductModel", "Product")
@@ -1689,7 +1770,7 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("UserGroup");
@@ -1802,6 +1883,8 @@ namespace Data.Migrations
 
                     b.Navigation("ProductExpirations");
 
+                    b.Navigation("ProductPromotions");
+
                     b.Navigation("ProductTaxes");
 
                     b.Navigation("PurchaseOrderItems");
@@ -1811,6 +1894,11 @@ namespace Data.Migrations
                     b.Navigation("Stock");
 
                     b.Navigation("SupplierPrices");
+                });
+
+            modelBuilder.Entity("Data.Models.PromotionModel", b =>
+                {
+                    b.Navigation("ProductPromotions");
                 });
 
             modelBuilder.Entity("Data.Models.PurchaseOrderModel", b =>
