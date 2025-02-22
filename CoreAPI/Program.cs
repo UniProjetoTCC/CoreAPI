@@ -17,6 +17,7 @@ using Business.Extensions;
 using Business.Services;
 using Data.Extensions;
 using Data.Context;
+using CoreAPI.Logging;
 
 namespace CoreAPI
 {
@@ -49,6 +50,13 @@ namespace CoreAPI
             builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
             builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+
+            // Configure custom logging
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole(options =>
+            {
+                options.FormatterName = "CustomConsole";
+            }).AddConsoleFormatter<CustomConsoleFormatter, CustomConsoleFormatterOptions>();
 
             // Add services to the container
             builder.Services.AddControllers();
@@ -217,13 +225,11 @@ namespace CoreAPI
                 app.UseSwagger();
                 app.UseSwaggerUI();
 
-                logger.LogInformation(@"
-                ╔════════════════════════════════════════════╗
-                ║             API Documentation              ║
-                ╠════════════════════════════════════════════╣
-                ║  Swagger UI: http://localhost:5000/swagger ║
-                ╚════════════════════════════════════════════╝
-                ");
+                logger.LogInformation("╭────────────────────────────────────────────────────────────────────────╮");
+                logger.LogInformation("│                                                                        │");
+                logger.LogInformation("│               Swagger UI: http://localhost:5000/swagger                │");
+                logger.LogInformation("│                                                                        │");
+                logger.LogInformation("╰────────────────────────────────────────────────────────────────────────╯");
             }
             else
             {

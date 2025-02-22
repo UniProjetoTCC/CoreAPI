@@ -103,8 +103,6 @@ namespace Business.Services
             }
 
             var planName = config["Name"] ?? throw new ArgumentException("Plan name cannot be null or empty");
-
-            _logger.LogInformation("Checking if plan {PlanName} exists", planName);
             var plan = await _subscriptionPlanRepository.GetByNameAsync(planName);
             if (plan == null)
             {

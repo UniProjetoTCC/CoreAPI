@@ -14,5 +14,10 @@ RUN dotnet publish "CoreAPI/CoreAPI.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
+
+# Configurar timezone para Brasília
+ENV TZ=America/Sao_Paulo
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "CoreAPI.dll"]
