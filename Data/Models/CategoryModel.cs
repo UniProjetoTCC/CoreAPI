@@ -14,7 +14,7 @@ namespace Data.Models
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int UserGroupId { get; set; }
+        public required int GroupId { get; set; }
 
         [Required]
         [StringLength(50)]

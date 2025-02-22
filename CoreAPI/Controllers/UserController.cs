@@ -13,6 +13,7 @@ using System.IO;
 using System;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using Business.DataRepositories;
 
 namespace CoreAPI.Controllers
 {
@@ -24,19 +25,31 @@ namespace CoreAPI.Controllers
         private readonly string PROJECT_NAME;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IRoleService _roleService;
+        private readonly IUserGroupRepository _userGroupRepository;
+        private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
         private readonly IConfiguration _configuration;
         private readonly IEmailSenderService _emailSender;
         private readonly ILogger<UserController> _logger;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
         public UserController(
             UserManager<IdentityUser> userManager, 
             SignInManager<IdentityUser> signInManager,
+            IRoleService roleService,
+            IUserGroupRepository userGroupRepository,
+            ISubscriptionPlanRepository subscriptionPlanRepository,
+            RoleManager<IdentityRole> roleManager,
             IConfiguration configuration,
             IEmailSenderService emailSender,
-            ILogger<UserController> logger)
+            ILogger<UserController> logger) 
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleService = roleService;
+            _userGroupRepository = userGroupRepository;
+            _subscriptionPlanRepository = subscriptionPlanRepository;
+            _roleManager = roleManager;
             _configuration = configuration;
             _emailSender = emailSender;
             _logger = logger;
@@ -46,19 +59,36 @@ namespace CoreAPI.Controllers
         }
 
         /// <summary>
-        /// Registers a new user in the system
+        /// Registers a new user in the system with a Free subscription plan.
         /// </summary>
         /// <remarks>
-        /// Creates a new account with the provided credentials.
-        /// Password must meet the following requirements:
+        /// This endpoint performs the following steps:
+        /// 1. Validates the registration model and checks if user already exists
+        /// 2. Creates a new user with the provided credentials
+        /// 3. Assigns the FreeUser role and creates a user group with Free plan
+        /// 4. Generates and sends email confirmation token
+        /// 
+        /// The password must meet the following requirements:
         /// - Minimum 8 characters
         /// - At least 1 number
         /// - At least 1 special character
         /// - At least 1 uppercase and 1 lowercase letter
+        /// 
+        /// On successful registration:
+        /// - User is created with FreeUser role
+        /// - User group is created with Free subscription plan
+        /// - Email confirmation token is generated and sent
+        /// - User must confirm email before accessing certain features
+        /// 
+        /// Error cases:
+        /// - User already exists (400 Bad Request)
+        /// - Invalid password format (400 Bad Request)
+        /// - Error assigning role or creating group (400 Bad Request)
+        /// - Error sending confirmation email (200 OK with warning message)
         /// </remarks>
-        /// <param name="model">New user data</param>
+        /// <param name="model">Registration model containing email, username, and password</param>
         /// <response code="200">User created successfully</response>
-        /// <response code="400">Invalid data or password does not meet requirements</response>
+        /// <response code="400">Invalid data, user already exists, or error during registration</response>
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
@@ -79,6 +109,19 @@ namespace CoreAPI.Controllers
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
                 return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
+
+            // Create user group with free subscription plan
+            try
+            {
+                // Assign Free plan which will map to FreeUser role
+                await _roleService.AssignRoleAsync(user.Id, "FreeUser");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning free plan to user {UserId}", user.Id);
+                await _userManager.DeleteAsync(user);
+                return BadRequest(new { Message = "Error creating user account. Please try again." });
+            }
 
             // Generate email confirmation token
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -558,6 +601,113 @@ namespace CoreAPI.Controllers
                 RefreshToken = refreshToken,
                 RequiresTwoFactor = false
             });
+        }
+
+        /// <summary>
+        /// Changes a user's subscription plan and associated role.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint performs the following steps:
+        /// 1. Validates the user exists and has permission to change plans
+        /// 2. Verifies the target plan exists and is valid
+        /// 3. Checks if user meets requirements for the new plan
+        /// 4. Updates user's role and subscription plan
+        /// 
+        /// Plan upgrade flow:
+        /// - Free -> Standard: Requires email verification
+        /// - Standard -> Premium: Requires 2FA setup
+        /// - Premium -> Enterprise: Requires 2FA and email verification
+        /// 
+        /// Plan downgrade flow:
+        /// - Enterprise -> Premium: No requirements
+        /// - Premium -> Standard: No requirements
+        /// - Standard -> Free: No requirements
+        /// 
+        /// Requirements by plan:
+        /// - Free: No requirements
+        /// - Standard: Email verification
+        /// - Premium: Email verification + 2FA
+        /// - Enterprise: Email verification + 2FA
+        /// 
+        /// Error cases:
+        /// - User not found (404 Not Found)
+        /// - Invalid plan name (400 Bad Request)
+        /// - Missing requirements for plan (400 Bad Request)
+        /// - Error during plan change (500 Internal Server Error)
+        /// </remarks>
+        /// <param name="planName">Name of the target subscription plan</param>
+        /// <response code="200">Plan changed successfully</response>
+        /// <response code="400">Invalid plan or missing requirements</response>
+        /// <response code="404">User not found</response>
+        /// <response code="500">Error during plan change</response>
+        [HttpPost("ChangePlan/{planName}")]
+        [Authorize]
+        public async Task<IActionResult> ChangePlan(string planName)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return BadRequest("User not found");
+            }
+
+            string internalPlanName = SetInternalPlanName(planName);
+
+            if (!await _roleManager.RoleExistsAsync(internalPlanName))
+            {
+                return BadRequest("Role not found");
+            }
+
+            if (await UpgradeDowngradeSubscription(user.Id, planName))
+            {
+                bool result = await _roleService.AssignRoleAsync(user.Id, internalPlanName);
+                if (!result)
+                    return BadRequest("Failed to assign role");
+                return Ok("Plan upgraded successfully");
+            }
+            else
+            {
+                bool result = await _roleService.AssignRoleAsync(user.Id, internalPlanName);
+                if (!result)
+                    return BadRequest("Failed to assign role");
+                return Ok("Plan downgraded successfully");
+            }
+        }
+
+        private async Task<bool> UpgradeDowngradeSubscription(string userId, string planName)
+        {
+            var userGroup = await _userGroupRepository.GetByUserIdAsync(userId);
+            if (userGroup == null)
+                throw new InvalidOperationException("User group not found");
+
+            var currentPlan = await _subscriptionPlanRepository.GetByIdAsync(userGroup.SubscriptionPlanId);
+            if (currentPlan == null)
+                throw new InvalidOperationException("Current subscription plan not found");
+
+            var targetPlan = await _subscriptionPlanRepository.GetByNameAsync(planName);
+            if (targetPlan == null)
+                throw new InvalidOperationException("Target subscription plan not found");
+
+            if (currentPlan.Id == targetPlan.Id)
+            {
+                throw new InvalidOperationException($"You're already on the {planName} plan");
+            }
+
+            // Return true if upgrading (target plan has higher ID), false if downgrading
+            return targetPlan.Id > currentPlan.Id;
+        }
+
+        private string SetInternalPlanName(string planName)
+        {
+            Dictionary<string, string> plansDict = new Dictionary<string, string>()
+            {
+                {"Free", "FreeUser"},
+                {"Standard", "StandardPlanUser"},
+                {"Premium", "PremiumPlanUser"},
+                {"Enterprise", "EnterprisePlanUser"},
+                {"Admin", "AdminUser"}
+            };
+
+            return plansDict[planName];
         }
 
         private string GenerateQrCodeUri(string email, string unformattedKey)

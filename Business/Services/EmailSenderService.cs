@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Mail;
+using System.Threading;
+using System.Collections.Generic;
 
 namespace Business.Services
 {
@@ -16,6 +18,9 @@ namespace Business.Services
         private readonly string _projectName;
         private readonly ILogger<EmailSenderService> _logger;
         private readonly IMessageBrokerService _messageBroker;
+        private readonly SemaphoreSlim _emailSemaphore = new SemaphoreSlim(1, 1);
+        private readonly HashSet<string> _processingEmails = new HashSet<string>();
+        private readonly object _lockObject = new object();
 
         public EmailSenderService(
             IConfiguration configuration, 
@@ -42,15 +47,30 @@ namespace Business.Services
         {
             _messageBroker.SubscribeAsync<EmailMessage>("email_notifications", async message =>
             {
+                // Generate a unique key for this email
+                var emailKey = $"{message.To}_{message.Subject}_{DateTime.UtcNow.Ticks}";
+
+                // Check if this email is already being processed
+                lock (_lockObject)
+                {
+                    if (_processingEmails.Contains(emailKey))
+                    {
+                        _logger.LogWarning("Duplicate email detected for {Recipient} with subject {Subject}", message.To, message.Subject);
+                        return;
+                    }
+                    _processingEmails.Add(emailKey);
+                }
+
                 try
                 {
+                    await _emailSemaphore.WaitAsync();
                     _logger.LogInformation("Processing email for {Recipient}", message.To);
                     
                     using var client = new SmtpClient(_smtpHost, _smtpPort)
                     {
                         Credentials = new NetworkCredential(_smtpUser, _smtpPassword),
                         EnableSsl = true,
-                        Timeout = 10000
+                        Timeout = 10000 // 10 seconds timeout
                     };
 
                     using var mailMessage = new MailMessage
@@ -60,7 +80,6 @@ namespace Business.Services
                         Body = message.Body,
                         IsBodyHtml = true
                     };
-
                     mailMessage.To.Add(message.To);
 
                     await client.SendMailAsync(mailMessage);
@@ -68,7 +87,16 @@ namespace Business.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to process email for {Recipient}", message.To);
+                    _logger.LogError(ex, "Failed to send email to {Recipient}", message.To);
+                    throw;
+                }
+                finally
+                {
+                    _emailSemaphore.Release();
+                    lock (_lockObject)
+                    {
+                        _processingEmails.Remove(emailKey);
+                    }
                 }
             }).GetAwaiter().GetResult();
 

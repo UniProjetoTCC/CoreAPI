@@ -20,6 +20,9 @@ namespace Data.Models
         public required int SubscriptionPlanId { get; set; }
 
         [Required]
+        public required bool IsActive { get; set; }
+
+        [Required]
         public required DateTime SubscriptionStartDate { get; set; }
 
         [Required]

@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     /// <inheritdoc />
-    public partial class MigrationName : Migration
+    public partial class InitialDataBaseMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -211,6 +211,7 @@ namespace Data.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<string>(type: "text", nullable: false),
                     SubscriptionPlanId = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     SubscriptionStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     SubscriptionEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -239,7 +240,7 @@ namespace Data.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserGroupId = table.Column<int>(type: "integer", nullable: false),
+                    GroupId = table.Column<int>(type: "integer", nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Active = table.Column<bool>(type: "boolean", nullable: false),
@@ -250,8 +251,8 @@ namespace Data.Migrations
                 {
                     table.PrimaryKey("PK_Categories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Categories_UserGroups_UserGroupId",
-                        column: x => x.UserGroupId,
+                        name: "FK_Categories_UserGroups_GroupId",
+                        column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
                         onDelete: ReferentialAction.Cascade);
@@ -266,6 +267,7 @@ namespace Data.Migrations
                     ParentUserId = table.Column<string>(type: "text", nullable: false),
                     LinkedUserId = table.Column<string>(type: "text", nullable: false),
                     GroupId = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CanPerformTransactions = table.Column<bool>(type: "boolean", nullable: false),
                     CanGenerateReports = table.Column<bool>(type: "boolean", nullable: false),
                     CanManageProducts = table.Column<bool>(type: "boolean", nullable: false),
@@ -976,7 +978,7 @@ namespace Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Categories_GroupId_Name",
                 table: "Categories",
-                columns: new[] { "UserGroupId", "Name" });
+                columns: new[] { "GroupId", "Name" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Customers_GroupId_Document",

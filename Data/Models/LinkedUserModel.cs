@@ -24,6 +24,9 @@ namespace Data.Models
         public required int GroupId { get; set; }
 
         [Required]
+        public required bool IsActive { get; set; }
+
+        [Required]
         public required bool CanPerformTransactions { get; set; }
 
         [Required]

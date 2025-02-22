@@ -8,7 +8,8 @@ namespace Business.Services.Base
     public interface IRoleService
     {
         Task SetupRolesAndPlansAsync();
-        Task<bool> AssignRoleAsync(string userId, string roleName, string? createdByUserId = null, bool transactions = false, bool reports = false, bool manage = false, bool stock = false, bool promotions = false);
+        Task<bool> AssignRoleAsync(string userId, string roleName);
+        Task<bool> AssignLinkedUserAsync(string userId, string createdByUserId, LinkedUserPermissions permissions);
         Task<string?> GetUserRoleAsync(string userId);
     }
 

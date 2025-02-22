@@ -65,20 +65,20 @@ namespace Data.Context
             modelBuilder.Entity<CategoryModel>()
                 .HasOne(c => c.UserGroup)
                 .WithMany() // No navigation property on the UserGroup side.
-                .HasForeignKey(c => c.UserGroupId)
+                .HasForeignKey(c => c.GroupId)
                 .OnDelete(DeleteBehavior.Cascade); // Delete when UserGroup is deleted
 
             // Configure the one-to-many relationship between Category and Product.
-            // A category can have multiple products, and each product must belong to one category.
+            // A category can have multiple products, and each product must belong to one catsegory.
             modelBuilder.Entity<CategoryModel>()
                 .HasMany(c => c.Products)
                 .WithOne(p => p.Category)
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete of products when a category is deleted.
 
-            // Create an index to optimize queries filtering by UserGroupId and Category Name.
+            // Create an index to optimize queries filtering by GroupId and Category Name.
             modelBuilder.Entity<CategoryModel>()
-                .HasIndex(c => new { c.UserGroupId, c.Name })
+                .HasIndex(c => new { c.GroupId, c.Name })
                 .HasDatabaseName("IX_Categories_GroupId_Name");
 
             //=================================================================

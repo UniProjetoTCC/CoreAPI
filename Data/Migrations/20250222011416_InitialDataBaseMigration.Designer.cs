@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     [DbContext(typeof(CoreAPIContext))]
-    [Migration("20250221161245_MigrationName")]
-    partial class MigrationName
+    [Migration("20250222011416_InitialDataBaseMigration")]
+    partial class InitialDataBaseMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,6 +43,9 @@ namespace Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -51,12 +54,9 @@ namespace Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("UserGroupId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserGroupId", "Name")
+                    b.HasIndex("GroupId", "Name")
                         .HasDatabaseName("IX_Categories_GroupId_Name");
 
                     b.ToTable("Categories");
@@ -153,6 +153,9 @@ namespace Data.Migrations
 
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LinkedUserId")
                         .IsRequired()
@@ -1080,6 +1083,9 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("SubscriptionEndDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1345,7 +1351,7 @@ namespace Data.Migrations
                 {
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
                         .WithMany()
-                        .HasForeignKey("UserGroupId")
+                        .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

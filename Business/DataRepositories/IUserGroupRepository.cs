@@ -8,9 +8,9 @@ namespace Business.DataRepositories
 {
     public interface IUserGroupRepository
     {
-        Task<UserGroup> GetByUserIdAsync(string userId);
-        Task<UserGroup> GetByGroupIdAsync(int groupId);
+        Task<UserGroup?> GetByUserIdAsync(string userId);
+        Task<UserGroup?> GetByGroupIdAsync(int groupId);
         Task<UserGroup> CreateGroupAsync(string userId, int subscriptionPlanId);
-        Task<UserGroup> UpdateGroupAsync(int groupId, int subscriptionPlanId);
+        Task<UserGroup?> UpdateGroupAsync(int groupId, int subscriptionPlanId);
     }
 }

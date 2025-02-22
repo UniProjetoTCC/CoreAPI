@@ -62,6 +62,10 @@ namespace Data.Repositories
         {
             // Get the creator's group
             var creatorGroup = await _userGroupRepository.GetByUserIdAsync(createdByUserId);
+            if (creatorGroup == null)
+            {
+                throw new InvalidOperationException($"User {createdByUserId} does not have a group");
+            }
 
             var linkedUser = new LinkedUserModel
             {
@@ -73,7 +77,8 @@ namespace Data.Repositories
                 CanManageProducts = canManageProducts,
                 CanAlterStock = canAlterStock,
                 CanManagePromotions = canManagePromotions,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
             };
 
             _context.LinkedUsers.Add(linkedUser);

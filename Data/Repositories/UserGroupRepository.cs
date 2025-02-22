@@ -20,30 +20,24 @@ namespace Data.Repositories
             _mapper = mapper;
         }
 
-        public async Task<UserGroup> GetByUserIdAsync(string userId)
+        public async Task<UserGroup?> GetByUserIdAsync(string userId)
         {
             var group = await _context.UserGroups
                 .Include(g => g.SubscriptionPlan)
                 .FirstOrDefaultAsync(g => g.UserId == userId);
 
-            if (group == null)
-            {
-                throw new KeyNotFoundException($"UserGroup not found for user {userId}");
-            }
+            if (group == null) return null;
 
             return _mapper.Map<UserGroup>(group);
         }
 
-        public async Task<UserGroup> GetByGroupIdAsync(int groupId)
-        {
+        public async Task<UserGroup?> GetByGroupIdAsync(int groupId)
+        {   
             var group = await _context.UserGroups
                 .Include(g => g.SubscriptionPlan)
                 .FirstOrDefaultAsync(g => g.GroupId == groupId);
 
-            if (group == null)
-            {
-                throw new KeyNotFoundException($"UserGroup with ID {groupId} not found");
-            }
+            if (group == null) return null;
 
             return _mapper.Map<UserGroup>(group);
         }
@@ -56,7 +50,8 @@ namespace Data.Repositories
                 SubscriptionPlanId = subscriptionPlanId,
                 SubscriptionStartDate = DateTime.UtcNow,
                 SubscriptionEndDate = DateTime.UtcNow.AddMonths(1),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
             };
 
             _context.UserGroups.Add(group);
@@ -65,13 +60,10 @@ namespace Data.Repositories
             return _mapper.Map<UserGroup>(group);
         }
 
-        public async Task<UserGroup> UpdateGroupAsync(int groupId, int subscriptionPlanId)
+        public async Task<UserGroup?> UpdateGroupAsync(int groupId, int subscriptionPlanId)
         {
             var group = await _context.UserGroups.FindAsync(groupId);
-            if (group == null)
-            {
-                throw new KeyNotFoundException($"UserGroup with ID {groupId} not found");
-            }
+            if (group == null) return null;
 
             group.SubscriptionPlanId = subscriptionPlanId;
             group.SubscriptionStartDate = DateTime.UtcNow;

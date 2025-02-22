@@ -4,14 +4,16 @@ using System.Threading.Tasks;
 using Business.Services.Base;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
+using System.Collections.Generic;
 
 namespace Business.Services
 {
-    public class MessageBrokerService : IMessageBrokerService
+    public class MessageBrokerService : IMessageBrokerService, IDisposable
     {
         private readonly IConnectionMultiplexer _redis;
         private readonly ISubscriber _subscriber;
         private readonly ILogger<MessageBrokerService> _logger;
+        private readonly HashSet<string> _activeSubscriptions;
         private bool _disposed;
 
         public MessageBrokerService(IConnectionMultiplexer redis, ILogger<MessageBrokerService> logger)
@@ -19,12 +21,12 @@ namespace Business.Services
             _redis = redis ?? throw new ArgumentNullException(nameof(redis));
             _subscriber = redis.GetSubscriber();
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _activeSubscriptions = new HashSet<string>();
         }
 
         public async Task PublishAsync<T>(string channel, T message)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(MessageBrokerService));
+            ThrowIfDisposed();
 
             try
             {
@@ -41,21 +43,27 @@ namespace Business.Services
 
         public async Task SubscribeAsync<T>(string channel, Func<T, Task> handler)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(MessageBrokerService));
+            ThrowIfDisposed();
+
+            // Prevent duplicate subscriptions
+            if (_activeSubscriptions.Contains(channel))
+            {
+                _logger.LogWarning("Already subscribed to channel {Channel}", channel);
+                return;
+            }
 
             try
             {
                 await _subscriber.SubscribeAsync(RedisChannel.Literal(channel), async (_, value) =>
                 {
                     if (value.IsNullOrEmpty) return;
-                    
+
                     try
                     {
-                        var typedMessage = JsonSerializer.Deserialize<T>(value!);
-                        if (typedMessage != null)
+                        var message = JsonSerializer.Deserialize<T>(value!);
+                        if (message != null)
                         {
-                            await handler(typedMessage);
+                            await handler(message);
                         }
                     }
                     catch (Exception ex)
@@ -63,8 +71,9 @@ namespace Business.Services
                         _logger.LogError(ex, "Error processing message from channel {Channel}", channel);
                     }
                 });
-                
-                _logger.LogInformation("Subscribed to channel {Channel}", channel);
+
+                _activeSubscriptions.Add(channel);
+                _logger.LogInformation("Successfully subscribed to channel {Channel}", channel);
             }
             catch (Exception ex)
             {
@@ -73,13 +82,32 @@ namespace Business.Services
             }
         }
 
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(MessageBrokerService));
+            }
+        }
+
         public void Dispose()
         {
-            if (!_disposed)
+            if (_disposed) return;
+
+            try
             {
-                _redis?.Dispose();
-                _disposed = true;
+                foreach (var channel in _activeSubscriptions)
+                {
+                    _subscriber.Unsubscribe(RedisChannel.Literal(channel));
+                }
+                _activeSubscriptions.Clear();
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during MessageBrokerService disposal");
+            }
+
+            _disposed = true;
         }
     }
 }
