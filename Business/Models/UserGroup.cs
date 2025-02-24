@@ -7,6 +7,7 @@ namespace Business.Models
         public int GroupId { get; set; }
         public string UserId { get; set; } = null!;
         public int SubscriptionPlanId { get; set; }
+        public bool IsActive { get; set; }
         public DateTime SubscriptionStartDate { get; set; }
         public DateTime SubscriptionEndDate { get; set; }
         public DateTime CreatedAt { get; set; }

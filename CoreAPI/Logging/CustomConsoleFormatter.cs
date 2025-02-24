@@ -12,7 +12,7 @@ namespace CoreAPI.Logging
         private static readonly ConcurrentDictionary<string, string> _categoryCache = new();
         private const int TIME_COL_WIDTH = 8;
         private const int LEVEL_COL_WIDTH = 5;
-        private const int CATEGORY_COL_WIDTH = 14;
+        private const int CATEGORY_COL_WIDTH = 18;
 
         private static readonly Dictionary<string, string> _categoryMappings = new()
         {
@@ -66,7 +66,14 @@ namespace CoreAPI.Logging
             var dim = "\u001b[2m"; // Texto mais suave para os separadores
 
             // Destacar caixa do Swagger e URL
-            if (message.Contains("Swagger UI:"))
+            if (message.Contains("EXTREME ERROR"))
+            {
+                var extremeColor = "\u001b[38;5;196m"; // Vermelho mais vivo
+                var bgColor = "\u001b[48;5;52m";       // Fundo vermelho escuro
+                var bold = "\u001b[1m";                // Negrito
+                message = $"{extremeColor}{bgColor}{bold}{message}{reset}";
+            }
+            else if (message.Contains("Swagger UI:"))
             {
                 var parts = message.Split("Swagger UI:");
                 var url = parts[1].Trim().Replace("                │", ""); // Remove a barra vertical duplicada

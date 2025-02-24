@@ -11,6 +11,7 @@ namespace Business.Extensions
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IMessageBrokerService, MessageBrokerService>();
             services.AddScoped<IEmailSenderService, EmailSenderService>();
+            services.AddScoped<IScheduledJobsService, ScheduledJobsService>();
 
             return services;
         }

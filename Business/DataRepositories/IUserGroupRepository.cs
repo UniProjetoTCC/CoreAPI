@@ -12,5 +12,7 @@ namespace Business.DataRepositories
         Task<UserGroup?> GetByGroupIdAsync(int groupId);
         Task<UserGroup> CreateGroupAsync(string userId, int subscriptionPlanId);
         Task<UserGroup?> UpdateGroupAsync(int groupId, int subscriptionPlanId);
+        Task DeactivateExpiredUserGroups();
+        Task<Dictionary<int, List<UserGroup>>> GetExpiringUserGroups();
     }
 }

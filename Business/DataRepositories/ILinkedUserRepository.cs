@@ -12,5 +12,7 @@ namespace Business.DataRepositories
         Task<LinkedUser> CreateLinkedUserAsync(string userId, string createdByUserId, bool canPerformTransactions, bool canGenerateReports, bool canManageProducts, bool canAlterStock, bool canManagePromotions);
         Task<LinkedUser> UpdateLinkedUserAsync(int id, bool canPerformTransactions, bool canGenerateReports, bool canManageProducts, bool canAlterStock, bool canManagePromotions);
         Task<bool> DeleteLinkedUserAsync(int id);
+        Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId);
+        Task DeactivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);
     }
 }
