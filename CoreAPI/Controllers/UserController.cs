@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Business.DataRepositories;
 
+
 namespace CoreAPI.Controllers
 {
     [ApiController]
@@ -32,6 +33,7 @@ namespace CoreAPI.Controllers
         private readonly IEmailSenderService _emailSender;
         private readonly ILogger<UserController> _logger;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ILinkedUserRepository _linkedUserRepository;
 
         public UserController(
             UserManager<IdentityUser> userManager, 
@@ -671,6 +673,84 @@ namespace CoreAPI.Controllers
                     return BadRequest("Failed to assign role");
                 return Ok("Plan downgraded successfully");
             }
+        }
+
+        [HttpPost("CreateLinkedUser")]
+        [Authorize]
+        public async Task<IActionResult> CreateLinkedUser([FromBody] LinkedUserPermissions model)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if(currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found.");
+                return Unauthorized();
+            }
+
+            var currentLinkedUsers = await _roleService.GetLinkedUserCountAsync(currentUser.Id);
+            var linkedUserLimit = await _roleService.GetLinkedUserLimitAsync(currentUser.Id);
+            if(currentLinkedUsers >= linkedUserLimit)
+            {
+                return BadRequest($"You have reached your limit of linked users ({linkedUserLimit})");
+            }
+
+            var result = await _roleService.AssignLinkedUserAsync(currentUser.Id, model.Id, model.Permissions);
+            if(!result)
+            {
+                return BadRequest("Failed to create linked user.");
+            }
+
+            return Ok("Linked user created sucessfully!");
+
+        }
+        [HttpPost("UpdateLinkedUser/{userId}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateLinkedUser(string userId, [FromBody] LinkedUserPermissions permissions)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if(currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found");
+                return Unauthorized();
+            }
+
+            var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+            if(linkedUser == null)
+            {
+                return NotFound("Linked user not found.");
+            }
+
+            var result = await _linkedUserRepository.UpdateLinkedUserAsync(userId, permissions);
+            if(!result)
+            {
+                return BadRequest("Failed to update linked user permissions");
+            }
+
+            return Ok("Linked user permissions updated succesfully.");
+            }
+
+        [HttpPost("DeleteLinkedUser/{userId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteLinkedUser(string userId)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found.");
+                return Unauthorized();
+            }
+
+            var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId); 
+            if (linkedUser == null)
+            {
+                return NotFound("Linked User not found.");
+            } 
+
+            var result = await _linkedUserRepository.DeleteLinkedUserAsync(userId);
+            if (!result)
+            {
+                return BadRequest("Failed to delete linked user.");
+            }
+            return Ok("Linked user deleted successfully!");
         }
 
         private async Task<bool> UpgradeDowngradeSubscription(string userId, string planName)

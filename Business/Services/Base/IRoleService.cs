@@ -11,10 +11,14 @@ namespace Business.Services.Base
         Task<bool> AssignRoleAsync(string userId, string roleName);
         Task<bool> AssignLinkedUserAsync(string userId, string createdByUserId, LinkedUserPermissions permissions);
         Task<string?> GetUserRoleAsync(string userId);
+        
     }
+
+
 
     public class LinkedUserPermissions
     {
+        public int Id {get; set;}
         public bool CanPerformTransactions { get; set; }
         public bool CanGenerateReports { get; set; }
         public bool CanManageProducts { get; set; }
