@@ -126,5 +126,29 @@ namespace Data.Repositories
 
             return true;
         }
+
+        public async Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId)
+        {
+            var linkedUsers = await _context.LinkedUsers
+                .Where(l => l.GroupId == groupId)
+                .ToListAsync();
+
+            return _mapper.Map<IEnumerable<LinkedUser>>(linkedUsers);
+        }
+
+        public async Task DeactivateLinkedUsersAsync(IEnumerable<int> linkedUserIds)
+        {
+            var linkedUsers = await _context.LinkedUsers
+                .Where(lu => linkedUserIds.Contains(lu.Id))
+                .ToListAsync();
+
+            foreach (var linkedUser in linkedUsers)
+            {
+                linkedUser.IsActive = false;
+                linkedUser.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

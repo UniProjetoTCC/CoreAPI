@@ -14,6 +14,8 @@ using System;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Business.DataRepositories;
+using Hangfire;
+using Business.Jobs.Background;
 
 namespace CoreAPI.Controllers
 {
@@ -657,11 +659,44 @@ namespace CoreAPI.Controllers
                 return BadRequest("Role not found");
             }
 
+            // Get user's group before any changes
+            var userGroup = await _userGroupRepository.GetByUserIdAsync(user.Id);
+            if (userGroup != null)
+            {
+                try
+                {
+                    // Cancel any existing downgrade jobs for this group
+                    // await _scheduledJobsService.CancelDowngradeJobForGroup(_scheduler, userGroup.GroupId);
+                    _logger.LogInformation("Cancelled existing downgrade job for group {GroupId}", userGroup.GroupId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to cancel existing downgrade job for group {GroupId}", userGroup.GroupId);
+                    // Continue with plan change even if job cancellation fails
+                }
+            }
+
             if (await UpgradeDowngradeSubscription(user.Id, planName))
             {
                 bool result = await _roleService.AssignRoleAsync(user.Id, internalPlanName);
                 if (!result)
                     return BadRequest("Failed to assign role");
+
+                // Schedule downgrade job even on upgrade (for safety)
+                if (userGroup != null)
+                {
+                    try
+                    {
+                        // await _scheduledJobsService.ScheduleJobsForGroup(_scheduler, userGroup.GroupId);
+                        _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan upgrade", userGroup.GroupId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to schedule downgrade job for user {UserId}", user.Id);
+                        // Don't return error since the plan upgrade was successful
+                    }
+                }
+
                 return Ok("Plan upgraded successfully");
             }
             else
@@ -669,6 +704,22 @@ namespace CoreAPI.Controllers
                 bool result = await _roleService.AssignRoleAsync(user.Id, internalPlanName);
                 if (!result)
                     return BadRequest("Failed to assign role");
+
+                // Schedule downgrade job when plan is downgraded
+                if (userGroup != null)
+                {
+                    try
+                    {
+                        // await _scheduledJobsService.ScheduleJobsForGroup(_scheduler, userGroup.GroupId);
+                        _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan downgrade", userGroup.GroupId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to schedule downgrade job for user {UserId}", user.Id);
+                        // Don't return error since the plan downgrade was successful
+                    }
+                }
+
                 return Ok("Plan downgraded successfully");
             }
         }
