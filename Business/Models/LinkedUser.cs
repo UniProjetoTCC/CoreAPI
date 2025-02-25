@@ -5,8 +5,8 @@ namespace Business.Models
     public class LinkedUser
     {
         public int Id { get; set; }
-        public string UserId { get; set; } = null!;
-        public string CreatedByUserId { get; set; } = null!;
+        public string LinkedUserId { get; set; } = null!;
+        public string ParentUserId { get; set; } = null!;
         public bool IsActive { get; set; }
         public bool CanPerformTransactions { get; set; }
         public bool CanGenerateReports { get; set; }

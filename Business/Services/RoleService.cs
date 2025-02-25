@@ -84,7 +84,7 @@ namespace Business.Services
 
             // Setup Subscription Plans
             var plansConfig = _configuration.GetSection("Plans");
-            
+
             await CreatePlanIfNotExistsAsync("Free", plansConfig.GetSection("Free"));
             await CreatePlanIfNotExistsAsync("Standard", plansConfig.GetSection("Standard"));
             await CreatePlanIfNotExistsAsync("Premium", plansConfig.GetSection("Premium"));
@@ -118,7 +118,7 @@ namespace Business.Services
                     !double.TryParse(config["Price"], out double price))
                 {
                     // Log detailed error if any configuration value is invalid
-                    _logger.LogError("Invalid configuration values for {PlanType} plan. Values: LinkedUserLimit={LinkedUserLimit}, Active={Active}, 2FA={2FA}, EmailVerification={EmailVerification}, PremiumSupport={PremiumSupport}, Analytics={Analytics}, Price={Price}", 
+                    _logger.LogError("Invalid configuration values for {PlanType} plan. Values: LinkedUserLimit={LinkedUserLimit}, Active={Active}, 2FA={2FA}, EmailVerification={EmailVerification}, PremiumSupport={PremiumSupport}, Analytics={Analytics}, Price={Price}",
                         planType,
                         config["LinkedUserLimit"],
                         config["Active"],
@@ -354,7 +354,7 @@ namespace Business.Services
             {
                 // Update existing linked user permissions
                 await _linkedUserRepository.UpdateLinkedUserAsync(
-                    existingLinkedUser.Id,
+                    existingLinkedUser.LinkedUserId,
                     permissions.CanPerformTransactions,
                     permissions.CanGenerateReports,
                     permissions.CanManageProducts,
@@ -491,7 +491,7 @@ namespace Business.Services
             var result = await _userManager.AddToRoleAsync(user, roleName);
             if (!result.Succeeded)
             {
-                _logger.LogError("Failed to add role {RoleName} to user {UserId}. Errors: {Errors}", 
+                _logger.LogError("Failed to add role {RoleName} to user {UserId}. Errors: {Errors}",
                     roleName, userId, string.Join(", ", result.Errors.Select(e => e.Description)));
                 return false;
             }
@@ -502,9 +502,9 @@ namespace Business.Services
                 var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
                 if (!removeResult.Succeeded)
                 {
-                    _logger.LogError("Failed to remove old roles from user {UserId}. Errors: {Errors}", 
+                    _logger.LogError("Failed to remove old roles from user {UserId}. Errors: {Errors}",
                         userId, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
-                    
+
                     // Rollback - remove new role and restore old one
                     await _userManager.RemoveFromRoleAsync(user, roleName);
                     if (currentRole != null)
@@ -579,6 +579,99 @@ namespace Business.Services
             // Finally, add all the claims to the user's identity
             var claimsResult = await _userManager.AddClaimsAsync(user, claims);
             return claimsResult.Succeeded;
+        }
+
+        public async Task<bool> CreateLinkedUserAsync(string createdByUserId, LinkedUserPermissions permissions)
+        {
+            if (string.IsNullOrEmpty(createdByUserId))
+            {
+                return false;
+            }
+
+            var user = await _userManager.FindByIdAsync(createdByUserId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var roleExists = await _roleManager.RoleExistsAsync("LinkedUser");
+            if (!roleExists)
+            {
+                return false;
+            }
+
+            var result = await _userManager.AddToRoleAsync(user, "LinkedUser");
+            if (!result.Succeeded)
+            {
+                return false;
+            }
+
+            await _linkedUserRepository.CreateLinkedUserAsync(
+                createdByUserId, //Same ID as the user who created it, change if necessary
+                createdByUserId,
+                permissions.CanAlterStock,
+                permissions.CanGenerateReports,
+                permissions.CanManageProducts,
+                permissions.CanManagePromotions,
+                permissions.CanPerformTransactions
+            );
+
+            return true;
+
+        }
+
+        public async Task<bool> UpdateLinkedUserAsync(string userId, LinkedUserPermissions permissions)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return false;
+            }
+
+            var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+            if (linkedUser == null)
+            {
+                return false;
+            }
+
+            linkedUser.CanAlterStock = permissions.CanAlterStock;
+            linkedUser.CanGenerateReports = permissions.CanGenerateReports;
+            linkedUser.CanManageProducts = permissions.CanManageProducts;
+            linkedUser.CanManagePromotions = permissions.CanManagePromotions;
+            linkedUser.CanPerformTransactions = permissions.CanPerformTransactions;
+
+            var updateResult = await _linkedUserRepository.UpdateLinkedUserAsync(
+                linkedUser.LinkedUserId,
+                linkedUser.CanAlterStock,
+                linkedUser.CanGenerateReports,
+                linkedUser.CanManageProducts,
+                linkedUser.CanManagePromotions,
+                linkedUser.CanPerformTransactions
+            );
+
+            if(updateResult == null)
+            {
+                return false;
+            }
+            
+            return true;
+        }
+
+        public async Task<bool> DeleteLinkedUserAsync(string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return false;
+            }
+
+            var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+            if (linkedUser == null)
+            {
+                return false;
+            }
+
+            var deleteResult = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.LinkedUserId);
+            
+            return deleteResult;
         }
     }
 }

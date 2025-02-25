@@ -11,7 +11,10 @@ namespace Business.Services.Base
         Task<bool> AssignRoleAsync(string userId, string roleName);
         Task<bool> AssignLinkedUserAsync(string userId, string createdByUserId, LinkedUserPermissions permissions);
         Task<string?> GetUserRoleAsync(string userId);
+        
     }
+
+
 
     public class LinkedUserPermissions
     {
