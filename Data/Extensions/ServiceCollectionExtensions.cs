@@ -31,6 +31,7 @@ namespace Data.Extensions
             services.AddScoped<ITaxRepository, TaxRepository>();
             services.AddScoped<IUserGroupRepository, UserGroupRepository>();
             services.AddScoped<IUserPaymentCardRepository, UserPaymentCardRepository>();
+            services.AddScoped<IBackgroundJobRepository, BackgroundJobRepository>();
 
             return services;
         }

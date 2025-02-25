@@ -11,6 +11,7 @@ namespace CoreAPI.AutoMapper
             CreateMap<UserGroupModel, UserGroup>().ReverseMap();
             CreateMap<SubscriptionPlanModel, SubscriptionPlan>().ReverseMap();
             CreateMap<LinkedUserModel, LinkedUser>().ReverseMap();
+            CreateMap<BackgroundJobsModel, HangJob>().ReverseMap();
         }
     }
 }

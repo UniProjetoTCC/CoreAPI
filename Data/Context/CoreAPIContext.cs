@@ -52,6 +52,9 @@ namespace Data.Context
         public DbSet<PaymentMethodModel> PaymentMethods { get; set; }
         public DbSet<UserPaymentCardModel> UserPaymentCards { get; set; }
 
+        // Background job-related entities
+        public DbSet<BackgroundJobsModel> BackgroundJobs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Call the base method to ensure any configurations defined in the base class are applied.

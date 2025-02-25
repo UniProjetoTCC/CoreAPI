@@ -11,7 +11,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using AspNetCoreRateLimit;
 using StackExchange.Redis;
-using Quartz;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
 using System.Text.Json.Serialization;
@@ -50,6 +49,8 @@ namespace CoreAPI
             var multiplexer = ConnectionMultiplexer.Connect(redisConfig);
             builder.Services.AddSingleton<IConnectionMultiplexer>(multiplexer);
 
+            // Configure Hangfire
+            builder.Services.AddHangfireConfiguration(builder.Configuration);
             builder.Services.AddHangfire(config =>
             {
                 config.UseRedisStorage(multiplexer, new RedisStorageOptions
@@ -66,15 +67,6 @@ namespace CoreAPI
             builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
             builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
-
-            // Configure Quartz for scheduled jobs
-            builder.Services.AddQuartzConfiguration();
-            builder.Services.AddSingleton(provider =>
-            {
-                var scheduler = provider.GetRequiredService<ISchedulerFactory>().GetScheduler().Result;
-                scheduler.Start().Wait();
-                return scheduler;
-            });
 
             // Configure custom logging
             builder.Logging.ClearProviders();
@@ -255,11 +247,8 @@ namespace CoreAPI
                 app.UseSwagger();
                 app.UseSwaggerUI();
 
-                logger.LogInformation("╭────────────────────────────────────────────────────────────────────────╮");
-                logger.LogInformation("│                                                                        │");
-                logger.LogInformation("│               Swagger UI: http://localhost:5000/swagger                │");
-                logger.LogInformation("│                                                                        │");
-                logger.LogInformation("╰────────────────────────────────────────────────────────────────────────╯");
+                logger.LogInformation(">>> Swagger UI: http://localhost:5000/swagger <<<");
+
             }
             else
             {
@@ -277,6 +266,9 @@ namespace CoreAPI
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Configure Hangfire Dashboard
+            app.UseHangfireDashboard();
 
             app.MapControllers();
 

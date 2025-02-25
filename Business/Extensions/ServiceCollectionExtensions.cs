@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Business.Services;
 using Business.Services.Base;
+using Business.DataRepositories;
 
 namespace Business.Extensions
 {
@@ -11,7 +12,7 @@ namespace Business.Extensions
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IMessageBrokerService, MessageBrokerService>();
             services.AddScoped<IEmailSenderService, EmailSenderService>();
-            services.AddScoped<IScheduledJobsService, ScheduledJobsService>();
+            services.AddScoped<IBackgroundJobService, BackgroundJobService>();
 
             return services;
         }

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace CoreAPI.Logging
 {
@@ -35,10 +36,7 @@ namespace CoreAPI.Logging
             _options = options;
         }
 
-        public override void Write<TState>(
-            in LogEntry<TState> logEntry,
-            IExternalScopeProvider? scopeProvider,
-            TextWriter textWriter)
+        public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider scopeProvider, TextWriter textWriter)
         {
             string? message = logEntry.Formatter?.Invoke(logEntry.State, logEntry.Exception);
             if (message is null)
@@ -77,18 +75,13 @@ namespace CoreAPI.Logging
             }
             else if (message.Contains("Swagger UI:"))
             {
-                var parts = message.Split("Swagger UI:");
-                var url = parts[1].Trim().Replace("                │", ""); // Remove a barra vertical duplicada
-                var boxColor = "\u001b[38;5;87m"; // Ciano brilhante
-                var urlColor = "\u001b[38;5;226m"; // Amarelo mais vivo
-                message = $"{boxColor}{parts[0]}Swagger UI: {urlColor}{url}{boxColor}                │";
-            }
-            else if (message.Contains("╭") || message.Contains("╰") || message.Contains("│"))
-            {
-                message = $"\u001b[38;5;87m{message}\u001b[0m"; // Mesma cor da caixa do Swagger
+                message = $"\u001b[38;5;226m{message}\u001b[0m"; // Amarelo vibrante
             }
 
-            textWriter.Write($"{timeCol}{dim}│{reset}{levelColor}{levelCol}{reset}{dim}│{reset} {categoryCol}{dim}│{reset} {message}");
+            // Processar a mensagem para juntar múltiplas linhas
+            var processedMessage = ProcessMultilineMessage(message);
+
+            textWriter.Write($"{timeCol}{dim}│{reset}{levelColor}{levelCol}{reset}{dim}│{reset} {categoryCol}{dim}│{reset} {processedMessage}");
             
             if (logEntry.Exception != null)
             {
@@ -96,6 +89,16 @@ namespace CoreAPI.Logging
                 textWriter.Write($"{new string(' ', TIME_COL_WIDTH)}{dim}│{reset} {new string(' ', LEVEL_COL_WIDTH)}{dim}│{reset} {new string(' ', CATEGORY_COL_WIDTH)}{dim}│{reset} {"\u001b[31m"}{logEntry.Exception}{reset}");
             }
             textWriter.WriteLine();
+        }
+
+        private static string ProcessMultilineMessage(string message)
+        {
+            // Substituir quebras de linha por espaços e remover espaços extras
+            return string.Join(" ", message.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                        .Replace("    ", " ")
+                        .Replace("   ", " ")
+                        .Replace("  ", " ")
+                        .Trim();
         }
 
         private static string GetSimplifiedCategory(string category)

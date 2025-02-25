@@ -34,6 +34,7 @@ namespace CoreAPI.Controllers
         private readonly IEmailSenderService _emailSender;
         private readonly ILogger<UserController> _logger;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IBackgroundJobService _backgroundJobService;
 
         public UserController(
             UserManager<IdentityUser> userManager, 
@@ -44,7 +45,8 @@ namespace CoreAPI.Controllers
             RoleManager<IdentityRole> roleManager,
             IConfiguration configuration,
             IEmailSenderService emailSender,
-            ILogger<UserController> logger) 
+            ILogger<UserController> logger,
+            IBackgroundJobService backgroundJobService) 
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -55,6 +57,7 @@ namespace CoreAPI.Controllers
             _configuration = configuration;
             _emailSender = emailSender;
             _logger = logger;
+            _backgroundJobService = backgroundJobService;
 
             PROJECT_NAME = configuration["ProjectName"] ??
                 throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
@@ -665,8 +668,15 @@ namespace CoreAPI.Controllers
             {
                 try
                 {
-                    // Cancel any existing downgrade jobs for this group
-                    // await _scheduledJobsService.CancelDowngradeJobForGroup(_scheduler, userGroup.GroupId);
+                    // Obter jobs ativos para o grupo
+                    var activeJobs = await _backgroundJobService.GetActiveJobsByGroupId(userGroup.GroupId);
+                    if (activeJobs != null)
+                    {
+                        foreach (var job in activeJobs)
+                        {
+                            await _backgroundJobService.CancelDowngrade(job.HangfireJobId);
+                        }
+                    }
                     _logger.LogInformation("Cancelled existing downgrade job for group {GroupId}", userGroup.GroupId);
                 }
                 catch (Exception ex)
@@ -687,7 +697,8 @@ namespace CoreAPI.Controllers
                 {
                     try
                     {
-                        // await _scheduledJobsService.ScheduleJobsForGroup(_scheduler, userGroup.GroupId);
+                        // Agendar job de downgrade
+                        await _backgroundJobService.EnqueueUserDowngrade(userGroup.GroupId);
                         _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan upgrade", userGroup.GroupId);
                     }
                     catch (Exception ex)
@@ -710,7 +721,8 @@ namespace CoreAPI.Controllers
                 {
                     try
                     {
-                        // await _scheduledJobsService.ScheduleJobsForGroup(_scheduler, userGroup.GroupId);
+                        // Agendar job de downgrade
+                        await _backgroundJobService.EnqueueUserDowngrade(userGroup.GroupId);
                         _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan downgrade", userGroup.GroupId);
                     }
                     catch (Exception ex)
