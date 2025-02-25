@@ -1,25 +1,35 @@
 using Microsoft.Extensions.Logging;
-using Quartz;
-using Business.Services.Base;
+using Business.DataRepositories;
+using Hangfire;
 
 namespace Business.Jobs.Scheduled
 {
-    public class DeactivateExpiredGroupsJob : IJob
+    public class DeactivateExpiredGroupsJob
     {
-        private readonly IScheduledJobsService _scheduledJobsService;
+        private readonly IUserGroupRepository _userGroupRepository;
         private readonly ILogger<DeactivateExpiredGroupsJob> _logger;
 
         public DeactivateExpiredGroupsJob(
-            IScheduledJobsService scheduledJobsService,
+            IUserGroupRepository userGroupRepository,
             ILogger<DeactivateExpiredGroupsJob> logger)
         {
-            _scheduledJobsService = scheduledJobsService;
+            _userGroupRepository = userGroupRepository;
             _logger = logger;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        [Queue("critical")]
+        public async Task Execute()
         {
-            await _scheduledJobsService.HandleDeactivateExpiredUserGroups(context);
+            try
+            {
+                await _userGroupRepository.DeactivateExpiredUserGroups();
+                _logger.LogInformation("Successfully deactivated expired user groups");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to deactivate expired user groups");
+                throw;
+            }
         }
     }
 }

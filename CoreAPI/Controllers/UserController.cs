@@ -37,6 +37,7 @@ namespace CoreAPI.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILinkedUserRepository _linkedUserRepository;
 
+
         public UserController(
             UserManager<IdentityUser> userManager,
             SignInManager<IdentityUser> signInManager,
@@ -669,8 +670,15 @@ namespace CoreAPI.Controllers
             {
                 try
                 {
-                    // Cancel any existing downgrade jobs for this group
-                    // await _scheduledJobsService.CancelDowngradeJobForGroup(_scheduler, userGroup.GroupId);
+                    // Obter jobs ativos para o grupo
+                    var activeJobs = await _backgroundJobService.GetActiveJobsByGroupId(userGroup.GroupId);
+                    if (activeJobs != null)
+                    {
+                        foreach (var job in activeJobs)
+                        {
+                            await _backgroundJobService.CancelDowngrade(job.HangfireJobId);
+                        }
+                    }
                     _logger.LogInformation("Cancelled existing downgrade job for group {GroupId}", userGroup.GroupId);
                 }
                 catch (Exception ex)
@@ -691,7 +699,8 @@ namespace CoreAPI.Controllers
                 {
                     try
                     {
-                        // await _scheduledJobsService.ScheduleJobsForGroup(_scheduler, userGroup.GroupId);
+                        // Agendar job de downgrade
+                        await _backgroundJobService.EnqueueUserDowngrade(userGroup.GroupId);
                         _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan upgrade", userGroup.GroupId);
                     }
                     catch (Exception ex)
@@ -714,7 +723,8 @@ namespace CoreAPI.Controllers
                 {
                     try
                     {
-                        // await _scheduledJobsService.ScheduleJobsForGroup(_scheduler, userGroup.GroupId);
+                        // Agendar job de downgrade
+                        await _backgroundJobService.EnqueueUserDowngrade(userGroup.GroupId);
                         _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan downgrade", userGroup.GroupId);
                     }
                     catch (Exception ex)
