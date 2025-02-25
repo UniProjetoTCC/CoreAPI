@@ -75,7 +75,7 @@ namespace Business.Jobs.Background
 
                     foreach (var linkedUser in recentLinkedUsers)
                     {
-                        var user = await _userManager.FindByIdAsync(linkedUser.UserId);
+                        var user = await _userManager.FindByIdAsync(linkedUser.LinkedUserId);
                         if (user?.Email == null)
                         {
                             _logger.LogWarning("User or email not found for linked user ID: {LinkedUserId}", linkedUser.Id);

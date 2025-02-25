@@ -18,7 +18,6 @@ namespace Business.Services.Base
 
     public class LinkedUserPermissions
     {
-        public int Id {get; set;}
         public bool CanPerformTransactions { get; set; }
         public bool CanGenerateReports { get; set; }
         public bool CanManageProducts { get; set; }

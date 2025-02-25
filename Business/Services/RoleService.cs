@@ -354,7 +354,7 @@ namespace Business.Services
             {
                 // Update existing linked user permissions
                 await _linkedUserRepository.UpdateLinkedUserAsync(
-                    existingLinkedUser.Id,
+                    existingLinkedUser.LinkedUserId,
                     permissions.CanPerformTransactions,
                     permissions.CanGenerateReports,
                     permissions.CanManageProducts,
@@ -640,7 +640,7 @@ namespace Business.Services
             linkedUser.CanPerformTransactions = permissions.CanPerformTransactions;
 
             var updateResult = await _linkedUserRepository.UpdateLinkedUserAsync(
-                linkedUser.Id,
+                linkedUser.LinkedUserId,
                 linkedUser.CanAlterStock,
                 linkedUser.CanGenerateReports,
                 linkedUser.CanManageProducts,
@@ -669,7 +669,7 @@ namespace Business.Services
                 return false;
             }
 
-            var deleteResult = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.Id);
+            var deleteResult = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.LinkedUserId);
             
             return deleteResult;
         }

@@ -82,9 +82,10 @@ namespace Data.Repositories
 
             return _mapper.Map<LinkedUser>(linkedUser);
         }
+        
 
-        public async Task<LinkedUser> UpdateLinkedUserAsync(
-            int id,
+        public async Task<LinkedUser?> UpdateLinkedUserAsync(
+            string id,
             bool canPerformTransactions,
             bool canGenerateReports,
             bool canManageProducts,
@@ -94,7 +95,7 @@ namespace Data.Repositories
             var linkedUser = await _context.LinkedUsers.FindAsync(id);
             if (linkedUser == null)
             {
-                throw new KeyNotFoundException($"LinkedUser with ID {id} not found");
+                return null;
             }
 
             linkedUser.CanPerformTransactions = canPerformTransactions;
@@ -109,7 +110,7 @@ namespace Data.Repositories
             return _mapper.Map<LinkedUser>(linkedUser);
         }
 
-        public async Task<bool> DeleteLinkedUserAsync(int id)
+        public async Task<bool> DeleteLinkedUserAsync(string id)
         {
             var linkedUser = await _context.LinkedUsers.FindAsync(id);
             if (linkedUser == null)
@@ -146,5 +147,6 @@ namespace Data.Repositories
 
             await _context.SaveChangesAsync();
         }
+
     }
 }
