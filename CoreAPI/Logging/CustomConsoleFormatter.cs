@@ -12,7 +12,7 @@ namespace CoreAPI.Logging
         private static readonly ConcurrentDictionary<string, string> _categoryCache = new();
         private const int TIME_COL_WIDTH = 8;
         private const int LEVEL_COL_WIDTH = 5;
-        private const int CATEGORY_COL_WIDTH = 18;
+        private const int CATEGORY_COL_WIDTH = 14;
 
         private static readonly Dictionary<string, string> _categoryMappings = new()
         {
@@ -53,7 +53,9 @@ namespace CoreAPI.Logging
             
             // Alinhar as colunas
             var timeCol = $"{time} ".PadRight(TIME_COL_WIDTH); // Dois espaços após o horário
-            var levelCol = $" {logLevel} ".PadRight(LEVEL_COL_WIDTH); // Espaço antes e depois do nível
+            var levelCol = logLevel == "ERROR" 
+                ? $" {logLevel}" // No padding for ERROR
+                : $" {logLevel} ".PadRight(LEVEL_COL_WIDTH); // Espaço antes e depois do nível para outros casos
 
             // Centralizar a categoria
             var categoryPadding = (CATEGORY_COL_WIDTH - category.Length) / 2;

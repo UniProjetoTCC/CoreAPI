@@ -14,12 +14,12 @@ namespace CoreAPI.Extensions
             {
                 // Configure global jobs
                 
-                // Monthly job to deactivate expired groups (runs at 00:00 on day 1 of every month)
+                // Daily job to deactivate expired groups (runs at 00:00 every day)
                 q.AddJob<DeactivateExpiredGroupsJob>(opts => opts.WithIdentity("DeactivateExpiredGroupsJob"))
                     .AddTrigger(opts => opts
                         .ForJob("DeactivateExpiredGroupsJob")
                         .WithIdentity("DeactivateExpiredGroupsTrigger")
-                        .WithCronSchedule("0 0 0 1 * ?"));
+                        .WithCronSchedule("0 0 0 * * ?"));
 
                 // Daily job to notify about expiring groups (runs at 00:00 every day)
                 q.AddJob<NotifyExpiringGroupsJob>(opts => opts.WithIdentity("NotifyExpiringGroupsJob"))
