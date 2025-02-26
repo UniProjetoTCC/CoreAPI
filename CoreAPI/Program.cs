@@ -158,6 +158,20 @@ namespace CoreAPI
                 };
             });
 
+            builder.Services.AddSingleton(provider =>
+            {
+                return new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"])),
+                    ValidateIssuer = true,
+                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["JWT:ValidAudience"],
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
             // Add Auto Mapper, the class mapper to database classes and vice versa
             builder.Services.AddAutoMapper(typeof(Program));
             
@@ -245,20 +259,22 @@ namespace CoreAPI
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Core API v1");
+                    c.EnableDeepLinking();
+                    c.EnableFilter();
+                    c.EnableValidator();
+                    c.EnableTryItOutByDefault();
+                });
 
                 logger.LogInformation(">>> Swagger UI: http://localhost:5000/swagger <<<");
-
+                logger.LogInformation(">>> Hangfire Dashboard: http://localhost:5000/hangfire?authorization=Bearer+YOUR_JWT_TOKEN <<<");
             }
             else
             {
                 app.UseExceptionHandler("/Error");
             }
-
-            app.UseHangfireDashboard("/hangfire", new DashboardOptions
-            {
-                DashboardTitle = "Background Jobs for CoreAPI"
-            });
 
             app.UseHttpsRedirection();
 
@@ -267,8 +283,7 @@ namespace CoreAPI
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // Configure Hangfire Dashboard
-            app.UseHangfireDashboard();
+            app.UseStaticFiles();
 
             app.MapControllers();
 

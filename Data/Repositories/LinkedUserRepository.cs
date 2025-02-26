@@ -150,5 +150,20 @@ namespace Data.Repositories
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task ActivateLinkedUsersAsync(IEnumerable<int> linkedUserIds)
+        {
+            var linkedUsers = await _context.LinkedUsers
+                .Where(lu => linkedUserIds.Contains(lu.Id))
+                .ToListAsync();
+
+            foreach (var linkedUser in linkedUsers)
+            {
+                linkedUser.IsActive = true;
+                linkedUser.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

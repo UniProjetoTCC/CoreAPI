@@ -15,6 +15,7 @@ namespace Business.Models
     public static class JobTypes
     {
         public const string LinkedUsersDeactivation = "LinkedUsersDeactivation";
+        public const string LinkedUsersActivation = "LinkedUsersActivation";
         // Adicione outros tipos de jobs aqui conforme necessário
     }
 }

@@ -14,5 +14,6 @@ namespace Business.DataRepositories
         Task<bool> DeleteLinkedUserAsync(int id);
         Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId);
         Task DeactivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);
+        Task ActivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);
     }
 }

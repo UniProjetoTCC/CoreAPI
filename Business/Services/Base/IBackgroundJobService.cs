@@ -13,6 +13,14 @@ namespace Business.Services.Base
         Task<string> EnqueueUserDowngrade(int groupId);
 
         /// <summary>
+        /// Enqueues a job to handle user upgrade process.
+        /// This will send a notification email and execute the upgrade immediately.
+        /// </summary>
+        /// <param name="groupId">The ID of the group to upgrade</param>
+        /// <returns>The job ID of the scheduled upgrade</returns>
+        Task<string> EnqueueUserUpgrade(int groupId);
+
+        /// <summary>
         /// Cancels a scheduled downgrade if it hasn't been executed yet
         /// </summary>
         /// <param name="jobId">The ID of the scheduled downgrade job</param>
@@ -25,5 +33,13 @@ namespace Business.Services.Base
         /// <param name="groupId">The ID of the group</param>
         /// <returns>List of active background jobs</returns>
         Task<IEnumerable<HangJob>?> GetActiveJobsByGroupId(int groupId);
+
+        /// <summary>
+        /// Updates the status of a job
+        /// </summary>
+        /// <param name="jobId">The ID of the job to update</param>
+        /// <param name="status">The new status (Scheduled, Executed, Cancelled)</param>
+        /// <returns>True if the update was successful, false otherwise</returns>
+        Task<bool> UpdateJobStatus(string jobId, string status);
     }
 }

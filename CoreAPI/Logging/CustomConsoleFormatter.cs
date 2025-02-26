@@ -36,7 +36,7 @@ namespace CoreAPI.Logging
             _options = options;
         }
 
-        public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider scopeProvider, TextWriter textWriter)
+        public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
             string? message = logEntry.Formatter?.Invoke(logEntry.State, logEntry.Exception);
             if (message is null)
@@ -73,7 +73,7 @@ namespace CoreAPI.Logging
                 var bold = "\u001b[1m";                // Negrito
                 message = $"{extremeColor}{bgColor}{bold}{message}{reset}";
             }
-            else if (message.Contains("Swagger UI:"))
+            else if (message.Contains("Swagger UI:") || message.Contains("Hangfire Dashboard"))
             {
                 message = $"\u001b[38;5;226m{message}\u001b[0m"; // Amarelo vibrante
             }
