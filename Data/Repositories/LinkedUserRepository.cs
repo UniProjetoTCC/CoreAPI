@@ -62,16 +62,12 @@ namespace Data.Repositories
         {
             // Get the creator's group
             var creatorGroup = await _userGroupRepository.GetByUserIdAsync(createdByUserId);
-            if (creatorGroup == null)
-            {
-                throw new InvalidOperationException($"User {createdByUserId} does not have a group");
-            }
 
             var linkedUser = new LinkedUserModel
             {
                 LinkedUserId = userId,
                 ParentUserId = createdByUserId,
-                GroupId = creatorGroup.GroupId,
+                GroupId = creatorGroup?.GroupId ?? 0,
                 CanPerformTransactions = canPerformTransactions,
                 CanGenerateReports = canGenerateReports,
                 CanManageProducts = canManageProducts,
@@ -86,9 +82,10 @@ namespace Data.Repositories
 
             return _mapper.Map<LinkedUser>(linkedUser);
         }
+        
 
-        public async Task<LinkedUser> UpdateLinkedUserAsync(
-            int id,
+        public async Task<LinkedUser?> UpdateLinkedUserAsync(
+            string id,
             bool canPerformTransactions,
             bool canGenerateReports,
             bool canManageProducts,
@@ -98,7 +95,7 @@ namespace Data.Repositories
             var linkedUser = await _context.LinkedUsers.FindAsync(id);
             if (linkedUser == null)
             {
-                throw new KeyNotFoundException($"LinkedUser with ID {id} not found");
+                return null;
             }
 
             linkedUser.CanPerformTransactions = canPerformTransactions;
@@ -113,7 +110,7 @@ namespace Data.Repositories
             return _mapper.Map<LinkedUser>(linkedUser);
         }
 
-        public async Task<bool> DeleteLinkedUserAsync(int id)
+        public async Task<bool> DeleteLinkedUserAsync(string id)
         {
             var linkedUser = await _context.LinkedUsers.FindAsync(id);
             if (linkedUser == null)

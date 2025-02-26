@@ -17,6 +17,7 @@ using Business.DataRepositories;
 using Hangfire;
 using Business.Jobs.Background;
 
+
 namespace CoreAPI.Controllers
 {
     [ApiController]
@@ -34,10 +35,11 @@ namespace CoreAPI.Controllers
         private readonly IEmailSenderService _emailSender;
         private readonly ILogger<UserController> _logger;
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly IBackgroundJobService _backgroundJobService;
+        private readonly ILinkedUserRepository _linkedUserRepository;
+
 
         public UserController(
-            UserManager<IdentityUser> userManager, 
+            UserManager<IdentityUser> userManager,
             SignInManager<IdentityUser> signInManager,
             IRoleService roleService,
             IUserGroupRepository userGroupRepository,
@@ -46,7 +48,7 @@ namespace CoreAPI.Controllers
             IConfiguration configuration,
             IEmailSenderService emailSender,
             ILogger<UserController> logger,
-            IBackgroundJobService backgroundJobService) 
+            ILinkedUserRepository linkedUserRepository)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -57,7 +59,7 @@ namespace CoreAPI.Controllers
             _configuration = configuration;
             _emailSender = emailSender;
             _logger = logger;
-            _backgroundJobService = backgroundJobService;
+            _linkedUserRepository = linkedUserRepository;
 
             PROJECT_NAME = configuration["ProjectName"] ??
                 throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
@@ -253,6 +255,18 @@ namespace CoreAPI.Controllers
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginModel userLogin)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    Status = "Error",
+                    Message = "Invalid data",
+                    Errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                });
+            }
+
             var user = await _userManager.FindByEmailAsync(userLogin.Email);
             if (user == null)
                 return Unauthorized(new { message = "Invalid email or password" });
@@ -376,8 +390,8 @@ namespace CoreAPI.Controllers
                     return BadRequest("Invalid request");
                 }
 
-                var result = await _userManager.ResetPasswordAsync(user, 
-                    resetPasswordModel.Token, 
+                var result = await _userManager.ResetPasswordAsync(user,
+                    resetPasswordModel.Token,
                     resetPasswordModel.NewPassword);
 
                 if (result.Succeeded)
@@ -722,6 +736,133 @@ namespace CoreAPI.Controllers
             }
         }
 
+        [HttpPost("CreateLinkedUser")]
+        [Authorize]
+        public async Task<IActionResult> CreateLinkedUserAsync([FromBody] RegisterLinkedUserModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found.");
+                return Unauthorized();
+            }
+
+            var userGroup = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
+            if (userGroup == null) return NotFound("User group not found.");
+
+            var linkedUsers = await _linkedUserRepository.GetAllByGroupIdAsync(userGroup.GroupId);
+            if (linkedUsers == null) return NotFound("Linked user not found.");
+
+            var groupPlan = await _subscriptionPlanRepository.GetByIdAsync(userGroup.SubscriptionPlanId);
+
+            if (linkedUsers.Count() >= groupPlan.LinkedUserLimit)
+            {
+                return BadRequest($"You have reached your limit of linked users!");
+            }
+
+            var userExists = await _userManager.FindByEmailAsync(model.Email);
+            if (userExists != null)
+                return BadRequest(new { Message = "User already exists!" });
+
+            IdentityUser user = new()
+            {
+                Email = model.Email,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                UserName = model.Username
+            };
+
+            var created = await _userManager.CreateAsync(user, model.Password);
+            if (!created.Succeeded)
+                return BadRequest(new { Errors = created.Errors.Select(e => e.Description) });
+
+            LinkedUserPermissions permissions = new LinkedUserPermissions();
+            permissions.CanPerformTransactions = model.CanPerformTransactions;
+            permissions.CanGenerateReports = model.CanGenerateReports;
+            permissions.CanManageProducts = model.CanManageProducts;
+            permissions.CanAlterStock = model.CanAlterStock;
+            permissions.CanManagePromotions = model.CanManageProducts;
+
+            var result = await _roleService.AssignLinkedUserAsync(user.Id, currentUser.Id, permissions);
+            if (!result)
+            {
+                return BadRequest("Failed to create linked user.");
+            }
+
+            return Ok("Linked user created sucessfully!");
+        }
+
+        [HttpPost("UpdateLinkedUser")]
+        [Authorize]
+        public async Task<IActionResult> UpdateLinkedUserAsync([FromBody] UpdateLinkedUserModel model)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found");
+                return Unauthorized();
+            }
+
+            var linkedUser = await _userManager.FindByEmailAsync(model.Email);
+            if (linkedUser == null)
+            {
+                return NotFound(new { Message = "User not found" });
+            }
+
+            var linkedUserMetadata = await _linkedUserRepository.GetByUserIdAsync(linkedUser.Id);
+            if (linkedUserMetadata == null) return NotFound("Linked user not found.");
+            if (linkedUserMetadata.ParentUserId != currentUser.Id) return Unauthorized();
+
+            
+            var result = await _linkedUserRepository.UpdateLinkedUserAsync(
+                linkedUser.Id,
+                model.CanPerformTransactions,
+                model.CanGenerateReports,
+                model.CanManageProducts,
+                model.CanAlterStock,
+                model.CanManagePromotions
+            );
+            if (result == null)
+            {
+                return BadRequest("Failed to update linked user permissions");
+            }
+
+            return Ok("Linked user permissions updated succesfully.");
+        }
+
+        [HttpPost("DeleteLinkedUser/{email}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteLinkedUserAsync(string email)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found.");
+                return Unauthorized();
+            }
+
+            var linkedUser = await _userManager.FindByEmailAsync(email);
+            if(linkedUser == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            //Buscar o linkeduser pelo linkedUserRepository e ver se o usuario que ta fazendo a request(currentUser) é o mesmo que criou o usuario
+            var linkedUserMetadata = await _linkedUserRepository.GetByUserIdAsync(linkedUser.Id);
+            if (linkedUserMetadata == null) return NotFound("Linked user not found.");
+            if (linkedUserMetadata.ParentUserId != currentUser.Id) return Unauthorized();
+
+
+            var result = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.Id);
+            if (!result)
+            {
+                return BadRequest("Failed to delete linked user.");
+            }
+            return Ok("Linked user deleted successfully!");
+        }
+
         private async Task<bool> UpgradeDowngradeSubscription(string userId, string planName)
         {
             var userGroup = await _userGroupRepository.GetByUserIdAsync(userId);
@@ -762,7 +903,7 @@ namespace CoreAPI.Controllers
         private string GenerateQrCodeUri(string email, string unformattedKey)
         {
             const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
-            
+
             return string.Format(
                 AuthenticatorUriFormat,
                 Uri.EscapeDataString(PROJECT_NAME),
@@ -788,7 +929,7 @@ namespace CoreAPI.Controllers
 
         private ClaimsPrincipal? GetPrincipalFromExpiredToken(string? token)
         {
-            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ??
                 throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
 
             var tokenValidationParameters = new TokenValidationParameters
@@ -805,8 +946,8 @@ namespace CoreAPI.Controllers
             var tokenHandler = new JwtSecurityTokenHandler();
             var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
 
-            if (securityToken is not JwtSecurityToken jwtSecurityToken || 
-                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, 
+            if (securityToken is not JwtSecurityToken jwtSecurityToken ||
+                !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256,
                 StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new SecurityTokenException("Invalid token");
@@ -817,7 +958,7 @@ namespace CoreAPI.Controllers
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET") ??
                 throw new InvalidOperationException("JWT_SECRET environment variable is not set!")));
 
             var token = new JwtSecurityToken(
@@ -833,7 +974,7 @@ namespace CoreAPI.Controllers
 
         private async Task<string> GenerateJwtToken(IdentityUser user)
         {
-            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ??
                 throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
 
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
