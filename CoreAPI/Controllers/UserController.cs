@@ -17,7 +17,6 @@ using Business.DataRepositories;
 using Hangfire;
 using Business.Jobs.Background;
 
-
 namespace CoreAPI.Controllers
 {
     [ApiController]
@@ -36,7 +35,7 @@ namespace CoreAPI.Controllers
         private readonly ILogger<UserController> _logger;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILinkedUserRepository _linkedUserRepository;
-
+        private readonly IBackgroundJobService _backgroundJobService;
 
         public UserController(
             UserManager<IdentityUser> userManager,
@@ -48,7 +47,8 @@ namespace CoreAPI.Controllers
             IConfiguration configuration,
             IEmailSenderService emailSender,
             ILogger<UserController> logger,
-            ILinkedUserRepository linkedUserRepository)
+            ILinkedUserRepository linkedUserRepository,
+            IBackgroundJobService backgroundJobService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -60,6 +60,7 @@ namespace CoreAPI.Controllers
             _emailSender = emailSender;
             _logger = logger;
             _linkedUserRepository = linkedUserRepository;
+            _backgroundJobService = backgroundJobService;
 
             PROJECT_NAME = configuration["ProjectName"] ??
                 throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
@@ -757,8 +758,9 @@ namespace CoreAPI.Controllers
             if (linkedUsers == null) return NotFound("Linked user not found.");
 
             var groupPlan = await _subscriptionPlanRepository.GetByIdAsync(userGroup.SubscriptionPlanId);
+            if (groupPlan == null) return NotFound("Subscription plan not found.");
 
-            if (linkedUsers.Count() >= groupPlan.LinkedUserLimit)
+            if (groupPlan != null && linkedUsers.Count() >= groupPlan.LinkedUserLimit)
             {
                 return BadRequest($"You have reached your limit of linked users!");
             }
@@ -815,7 +817,7 @@ namespace CoreAPI.Controllers
             if (linkedUserMetadata == null) return NotFound("Linked user not found.");
             if (linkedUserMetadata.ParentUserId != currentUser.Id) return Unauthorized();
 
-            
+
             var result = await _linkedUserRepository.UpdateLinkedUserAsync(
                 linkedUser.Id,
                 model.CanPerformTransactions,

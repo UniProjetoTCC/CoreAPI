@@ -73,7 +73,7 @@ namespace CoreAPI.Logging
                 var bold = "\u001b[1m";                // Negrito
                 message = $"{extremeColor}{bgColor}{bold}{message}{reset}";
             }
-            else if (message.Contains("Swagger UI:") || message.Contains("Hangfire Dashboard"))
+            else if (message.Contains("Swagger UI:"))
             {
                 message = $"\u001b[38;5;226m{message}\u001b[0m"; // Amarelo vibrante
             }

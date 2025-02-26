@@ -6,7 +6,6 @@ using Business.Services.Base;
 using Business.Models;
 using Hangfire;
 
-
 namespace Business.Jobs.Background
 {
     public class UserUpgradeJob

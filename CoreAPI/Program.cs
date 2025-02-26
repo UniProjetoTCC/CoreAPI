@@ -269,7 +269,6 @@ namespace CoreAPI
                 });
 
                 logger.LogInformation(">>> Swagger UI: http://localhost:5000/swagger <<<");
-                logger.LogInformation(">>> Hangfire Dashboard: http://localhost:5000/hangfire?authorization=Bearer+YOUR_JWT_TOKEN <<<");
             }
             else
             {
