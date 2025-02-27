@@ -3,15 +3,16 @@
 A .NET 8.0 Web API built with Docker, PostgreSQL, and various advanced services for distributed processing and resource management.
 
 ## Table of Contents
+
 1. [Prerequisites](#prerequisites)
 2. [Environment Setup](#environment-setup)
 3. [Project Structure](#project-structure)
 4. [API Documentation](#api-documentation)
-5. [Available Services](#available-services)
-   - [Redis Cache](#redis-cache)
-   - [Message Broker](#redis-message-broker)
-   - [Rate Limiting](#ip-rate-limiting)
-   - [Background Jobs](#background-jobs-hangfire)
+5. [Available Services](#available-services)  
+   - [Redis Cache](#1-redis-cache)  
+   - [Message Broker](#2-redis-message-broker)  
+   - [Rate Limiting](#3-ip-rate-limiting)  
+   - [Background Jobs](#4-background-jobs-hangfire)
 
 ## Prerequisites
 
@@ -23,6 +24,7 @@ A .NET 8.0 Web API built with Docker, PostgreSQL, and various advanced services 
 ## Environment Setup
 
 ### 1. Environment File (.env)
+
 ```env
 DB_HOST=INSERT_YOUR_DB_HOST_HERE
 DB_PORT=5432
@@ -40,6 +42,7 @@ EMAIL_PASSWORD=INSERT_YOUR_EMAIL_PASSWORD_HERE
 ```
 
 ### 2. Docker Commands
+
 ```bash
 # Start containers
 docker-compose up -d
@@ -52,6 +55,7 @@ docker-compose down -v
 ```
 
 ### 3. Database Migrations
+
 ```powershell
 # Create new migration
 dotnet ef migrations add MigrationName --project Data --startup-project CoreAPI
@@ -115,27 +119,29 @@ Interactive API documentation and testing interface.
 #### Container Management
 
 - **Container Restart:**
-  - The Swagger UI will continue to work even after container restarts
 
+  - The Swagger UI will continue to work even after container restarts
 - **Volume Management:**
+
   - If you remove volumes (`docker-compose down -v`), you'll need to refresh the Swagger UI
   - In this case, clear your browser cache or do a hard refresh (Ctrl+F5)
 
 #### Authentication
 
 1. **Get JWT Token:**
+
    - Use the `/api/auth/login` endpoint
    - Provide username and password
    - Copy the returned token
-
 2. **Configure Swagger Authorization:**
+
    - Click the "Authorize" button at the top
      - Or the lock at the right side of any endpoint to enable the authentication just for that endpoint
    - In the "Value" field, enter: `Bearer your-token-here`
    - Click "Authorize"
    - All subsequent requests will include the token
-
 3. **Token Format:**
+
 ```
 Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
@@ -143,21 +149,23 @@ Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 #### Testing Endpoints
 
 1. **Select an Endpoint:**
+
    - Endpoints are grouped by controller
    - Click to expand and see available methods
-
 2. **Make a Request:**
+
    - Click "Try it out"
    - Fill in required parameters
    - Click "Execute"
-
 3. **View Results:**
+
    - Response status
    - Response headers
    - Response body
    - Curl command
 
 #### Common Status Codes
+
 - `200`: Success
 - `201`: Created
 - `400`: Bad Request
@@ -174,6 +182,7 @@ Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Distributed caching system for performance optimization.
 
 #### Configuration
+
 ```csharp
 // In Program.cs
 builder.Services.AddStackExchangeRedisCache(options =>
@@ -186,6 +195,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
 #### Usage
 
 1. **Dependency Injection:**
+
 ```csharp
 private readonly ICacheService _cacheService;
 
@@ -196,6 +206,7 @@ public MyService(ICacheService cacheService)
 ```
 
 2. **Basic Operations:**
+
 ```csharp
 // Store in cache
 await _cacheService.SetAsync("key", object, TimeSpan.FromMinutes(30));
@@ -211,6 +222,7 @@ bool exists = await _cacheService.ExistsAsync("key");
 ```
 
 3. **Cache with Fallback:**
+
 ```csharp
 var data = await _cacheService.GetOrCreateAsync(
     "key",
@@ -224,6 +236,7 @@ var data = await _cacheService.GetOrCreateAsync(
 Message broker system for asynchronous communication between components.
 
 #### Configuration
+
 ```csharp
 // In Program.cs
 builder.Services.AddMessageBroker(builder.Configuration);
@@ -232,6 +245,7 @@ builder.Services.AddMessageBroker(builder.Configuration);
 #### Usage
 
 1. **Publishing Messages:**
+
 ```csharp
 private readonly IMessageBrokerService _messageBroker;
 
@@ -246,6 +260,7 @@ await _messageBroker.PublishWithDelayAsync("channel", message, TimeSpan.FromMinu
 ```
 
 2. **Consuming Messages:**
+
 ```csharp
 // Subscribe to channel
 await _messageBroker.SubscribeAsync<MessageDto>("channel", async (message) => 
@@ -267,6 +282,7 @@ await _messageBroker.SubscribeAsync<MessageDto>(
 Request rate limiting system using AspNetCoreRateLimit.
 
 #### Configuration
+
 ```json
 {
   "IpRateLimiting": {
@@ -313,6 +329,7 @@ public class UserController : ControllerBase
 Background processing system supporting instant and scheduled jobs.
 
 #### Configuration
+
 ```csharp
 // In Program.cs
 builder.Services.AddHangfire(config =>
@@ -324,6 +341,7 @@ builder.Services.AddHangfire(config =>
 #### Usage
 
 1. **Instant Jobs:**
+
 ```csharp
 private readonly IBackgroundJobService _jobService;
 
@@ -340,6 +358,7 @@ await _jobService.EnqueueWithContinuationAsync<IEmailService, INotificationServi
 ```
 
 2. **Recurring Jobs:**
+
 ```csharp
 // Schedule daily job
 await _jobService.ScheduleRecurringAsync<IUserService>(
@@ -354,3 +373,4 @@ await _jobService.ScheduleRecurringAsync<IHealthCheckService>(
     service => service.CheckSystem(),
     "*/5 * * * *"
 );
+```
