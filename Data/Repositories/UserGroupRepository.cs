@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using Business.DataRepositories;
@@ -32,7 +33,7 @@ namespace Data.Repositories
         }
 
         public async Task<UserGroup?> GetByGroupIdAsync(int groupId)
-        {   
+        {
             var group = await _context.UserGroups
                 .Include(g => g.SubscriptionPlan)
                 .FirstOrDefaultAsync(g => g.GroupId == groupId);
@@ -122,5 +123,7 @@ namespace Data.Repositories
 
             return expiringGroupsByDays;
         }
+
+
     }
 }

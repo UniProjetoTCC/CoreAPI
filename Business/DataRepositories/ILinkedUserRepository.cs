@@ -10,8 +10,9 @@ namespace Business.DataRepositories
         Task<LinkedUser?> GetByIdAsync(int id);
         Task<IEnumerable<LinkedUser>> GetByCreatedByUserIdAsync(string createdByUserId);
         Task<LinkedUser> CreateLinkedUserAsync(string userId, string createdByUserId, bool canPerformTransactions, bool canGenerateReports, bool canManageProducts, bool canAlterStock, bool canManagePromotions);
-        Task<LinkedUser?> UpdateLinkedUserAsync(string id, bool canPerformTransactions, bool canGenerateReports, bool canManageProducts, bool canAlterStock, bool canManagePromotions);
-        Task<bool> DeleteLinkedUserAsync(string id);
+        Task<LinkedUser?> UpdateLinkedUserAsync(string linkedUserId, bool canPerformTransactions, bool canGenerateReports, bool canManageProducts, bool canAlterStock, bool canManagePromotions);
+        Task<bool> DeleteLinkedUserAsync(string linkedUserId);
+        Task<bool> IsLinkedUserAsync(string userId);
         Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId);
         Task DeactivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);
         Task ActivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);

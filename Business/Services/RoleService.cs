@@ -648,11 +648,11 @@ namespace Business.Services
                 linkedUser.CanPerformTransactions
             );
 
-            if(updateResult == null)
+            if (updateResult == null)
             {
                 return false;
             }
-            
+
             return true;
         }
 
@@ -670,7 +670,7 @@ namespace Business.Services
             }
 
             var deleteResult = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.LinkedUserId);
-            
+
             return deleteResult;
         }
     }
