@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 using Business.DataRepositories;
 using Hangfire;
 using Business.Jobs.Background;
-
+using System.Linq;
 
 namespace CoreAPI.Controllers
 {
@@ -36,6 +36,7 @@ namespace CoreAPI.Controllers
         private readonly ILogger<UserController> _logger;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILinkedUserRepository _linkedUserRepository;
+        private readonly IBackgroundJobService _backgroundJobService;
 
 
         public UserController(
@@ -48,7 +49,8 @@ namespace CoreAPI.Controllers
             IConfiguration configuration,
             IEmailSenderService emailSender,
             ILogger<UserController> logger,
-            ILinkedUserRepository linkedUserRepository)
+            ILinkedUserRepository linkedUserRepository,
+            IBackgroundJobService backgroundJobService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -60,6 +62,7 @@ namespace CoreAPI.Controllers
             _emailSender = emailSender;
             _logger = logger;
             _linkedUserRepository = linkedUserRepository;
+            _backgroundJobService = backgroundJobService;
 
             PROJECT_NAME = configuration["ProjectName"] ??
                 throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
@@ -742,8 +745,7 @@ namespace CoreAPI.Controllers
         [Authorize]
         public async Task<IActionResult> CreateLinkedUserAsync([FromBody] RegisterLinkedUserModel model)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null)
@@ -752,6 +754,9 @@ namespace CoreAPI.Controllers
                 return Unauthorized();
             }
 
+            var IsLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
+            if(IsLinkedUser) return BadRequest("Linked users can't create other linked users.");
+
             var userGroup = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
             if (userGroup == null) return NotFound("User group not found.");
 
@@ -759,15 +764,11 @@ namespace CoreAPI.Controllers
             if (linkedUsers == null) return NotFound("Linked user not found.");
 
             var groupPlan = await _subscriptionPlanRepository.GetByIdAsync(userGroup.SubscriptionPlanId);
-
-            if (linkedUsers.Count() >= groupPlan.LinkedUserLimit)
-            {
-                return BadRequest($"You have reached your limit of linked users!");
-            }
+            if (linkedUsers.Count() >= groupPlan.LinkedUserLimit) return BadRequest($"You have reached your limit of linked users!");
 
             var userExists = await _userManager.FindByEmailAsync(model.Email);
-            if (userExists != null)
-                return BadRequest(new { Message = "User already exists!" });
+            if (userExists != null) return BadRequest(new { Message = "User already exists!" });
+
 
             IdentityUser user = new()
             {
@@ -777,8 +778,7 @@ namespace CoreAPI.Controllers
             };
 
             var created = await _userManager.CreateAsync(user, model.Password);
-            if (!created.Succeeded)
-                return BadRequest(new { Errors = created.Errors.Select(e => e.Description) });
+            if (!created.Succeeded) return BadRequest(new { Errors = created.Errors.Select(e => e.Description) });
 
             LinkedUserPermissions permissions = new LinkedUserPermissions();
             permissions.CanPerformTransactions = model.CanPerformTransactions;
@@ -788,10 +788,10 @@ namespace CoreAPI.Controllers
             permissions.CanManagePromotions = model.CanManageProducts;
 
             var result = await _roleService.AssignLinkedUserAsync(user.Id, currentUser.Id, permissions);
-            if (!result)
-            {
-                return BadRequest("Failed to create linked user.");
-            }
+            if (!result) return BadRequest("Failed to create linked user.");
+
+
+
 
             return Ok("Linked user created sucessfully!");
         }
@@ -813,13 +813,16 @@ namespace CoreAPI.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
+            var IsLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
+            if(IsLinkedUser) return BadRequest("Linked users can't update other linked users.");
+
             var linkedUserMetadata = await _linkedUserRepository.GetByUserIdAsync(linkedUser.Id);
             if (linkedUserMetadata == null) return NotFound("Linked user not found.");
             if (linkedUserMetadata.ParentUserId != currentUser.Id) return Unauthorized();
 
-            
+
             var result = await _linkedUserRepository.UpdateLinkedUserAsync(
-                linkedUser.Id,
+                linkedUserMetadata.LinkedUserId,
                 model.CanPerformTransactions,
                 model.CanGenerateReports,
                 model.CanManageProducts,
@@ -846,24 +849,30 @@ namespace CoreAPI.Controllers
             }
 
             var linkedUser = await _userManager.FindByEmailAsync(email);
-            if(linkedUser == null)
+            if (linkedUser == null)
             {
                 return NotFound("User not found.");
             }
 
-            //Buscar o linkeduser pelo linkedUserRepository e ver se o usuario que ta fazendo a request(currentUser) é o mesmo que criou o usuario
+            var IsLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
+            if(IsLinkedUser) return BadRequest("Linked users can't delete other linked users.");
+
             var linkedUserMetadata = await _linkedUserRepository.GetByUserIdAsync(linkedUser.Id);
             if (linkedUserMetadata == null) return NotFound("Linked user not found.");
             if (linkedUserMetadata.ParentUserId != currentUser.Id) return Unauthorized();
 
-
-            var result = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.Id);
+            var result = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUserMetadata.LinkedUserId);
             if (!result)
             {
                 return BadRequest("Failed to delete linked user.");
             }
+
+            var userDeleted = await _userManager.DeleteAsync(linkedUser);
+            if (!userDeleted.Succeeded) return BadRequest("Failed to delete user.");
+
             return Ok("Linked user deleted successfully!");
         }
+
 
         private async Task<bool> UpgradeDowngradeSubscription(string userId, string planName)
         {

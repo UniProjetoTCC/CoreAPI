@@ -4,6 +4,7 @@ using Business.Models;
 using Data.Models;
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Data.Repositories
 {
@@ -82,17 +83,19 @@ namespace Data.Repositories
 
             return _mapper.Map<LinkedUser>(linkedUser);
         }
-        
+
 
         public async Task<LinkedUser?> UpdateLinkedUserAsync(
-            string id,
+            string linkedUserId,
             bool canPerformTransactions,
             bool canGenerateReports,
             bool canManageProducts,
             bool canAlterStock,
             bool canManagePromotions)
         {
-            var linkedUser = await _context.LinkedUsers.FindAsync(id);
+            var linkedUser = await _context.LinkedUsers
+                .Where(lu => lu.LinkedUserId == linkedUserId)
+                .FirstOrDefaultAsync();
             if (linkedUser == null)
             {
                 return null;
@@ -110,9 +113,11 @@ namespace Data.Repositories
             return _mapper.Map<LinkedUser>(linkedUser);
         }
 
-        public async Task<bool> DeleteLinkedUserAsync(string id)
+        public async Task<bool> DeleteLinkedUserAsync(string linkedUserId)
         {
-            var linkedUser = await _context.LinkedUsers.FindAsync(id);
+            var linkedUser = await _context.LinkedUsers
+                                   .Where(lu => lu.LinkedUserId == linkedUserId)
+                                   .FirstOrDefaultAsync();
             if (linkedUser == null)
             {
                 return false;
@@ -147,6 +152,12 @@ namespace Data.Repositories
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> IsLinkedUserAsync(string userId)
+        {
+            return await _context.LinkedUsers.AnyAsync(lu => lu.LinkedUserId == userId);
+        }
+
 
     }
 }
