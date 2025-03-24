@@ -189,8 +189,8 @@ namespace CoreAPI
                     Description = "Core API - .NET Web API",
                     Contact = new OpenApiContact
                     {
-                        Name = "Change This Later",
-                        Email = "ChangeThisLater@Later.com"
+                        Name = "Omnos",
+                        Email = "omnos.info@gmail.com"
                     }
                 });
 
