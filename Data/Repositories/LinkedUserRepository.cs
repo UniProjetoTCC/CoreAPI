@@ -5,6 +5,8 @@ using Data.Models;
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Data.Repositories
 {
@@ -13,15 +15,21 @@ namespace Data.Repositories
         private readonly CoreAPIContext _context;
         private readonly IMapper _mapper;
         private readonly IUserGroupRepository _userGroupRepository;
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly ILogger<LinkedUserRepository> _logger;
 
         public LinkedUserRepository(
             CoreAPIContext context,
             IMapper mapper,
-            IUserGroupRepository userGroupRepository)
+            IUserGroupRepository userGroupRepository,
+            UserManager<IdentityUser> userManager,
+            ILogger<LinkedUserRepository> logger)
         {
             _context = context;
             _mapper = mapper;
             _userGroupRepository = userGroupRepository;
+            _userManager = userManager;
+            _logger = logger;
         }
 
         public async Task<LinkedUser?> GetByUserIdAsync(string userId)
@@ -171,6 +179,70 @@ namespace Data.Repositories
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> DeleteAllLinkedUsersByParentIdAsync(string parentUserId)
+        {
+            var parentUser = await _userManager.FindByIdAsync(parentUserId);
+            if (parentUser == null)
+            {
+                _logger.LogWarning($"Parent user {parentUserId} not found");
+                return false;
+            }
+
+            var linkedUsers = await _context.LinkedUsers
+                .Where(lu => lu.ParentUserId == parentUserId)
+                .ToListAsync();
+
+            // If no linked users, return success
+            if (linkedUsers == null || !linkedUsers.Any())
+            {
+                _logger.LogInformation($"No linked users found for parent {parentUserId}");
+                return true;
+            }
+
+            // Start a database transaction
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var linkedUser in linkedUsers)
+                {
+                    // Get the linked user identity
+                    var linkedUserIdentity = await _userManager.FindByIdAsync(linkedUser.LinkedUserId);
+                    if (linkedUserIdentity != null)
+                    {
+                        // Delete linked user from repository
+                        var deleteLinkedResult = await DeleteLinkedUserAsync(linkedUser.LinkedUserId);
+                        if (!deleteLinkedResult)
+                        {
+                            _logger.LogWarning($"Failed to delete linked user {linkedUser.LinkedUserId} from repository");
+                            await transaction.RollbackAsync();
+                            return false;
+                        }
+                        
+                        // Delete linked user from identity
+                        var deleteIdentityResult = await _userManager.DeleteAsync(linkedUserIdentity);
+                        if (!deleteIdentityResult.Succeeded)
+                        {
+                            _logger.LogWarning($"Failed to delete linked user {linkedUser.LinkedUserId} from identity: {string.Join(", ", deleteIdentityResult.Errors.Select(e => e.Description))}");
+                            await transaction.RollbackAsync();
+                            return false;
+                        }
+                    }
+                }
+
+                // Commit the transaction if all operations succeeded
+                await transaction.CommitAsync();
+                _logger.LogInformation($"Successfully deleted all linked users for parent {parentUserId}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Roll back the transaction if an exception occurs
+                _logger.LogError(ex, $"Error deleting linked users for parent {parentUserId}");
+                await transaction.RollbackAsync();
+                return false;
+            }
         }
 
     }

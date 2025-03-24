@@ -18,7 +18,6 @@ using Hangfire;
 using Business.Jobs.Background;
 using System.Linq;
 
-
 namespace CoreAPI.Controllers
 {
     [ApiController]
@@ -841,42 +840,61 @@ namespace CoreAPI.Controllers
             return Ok("Linked user permissions updated succesfully.");
         }
 
-        [HttpPost("DeleteLinkedUser/{email}")]
+        [HttpPost("DeleteUser")]
         [Authorize]
-        public async Task<IActionResult> DeleteLinkedUserAsync(string email)
+        public async Task<IActionResult> DeleteUserAsync([FromBody] RequestDeleteUserModel model)
         {
             var currentUser = await _userManager.GetUserAsync(User);
-            if (currentUser == null)
-            {
-                _logger.LogWarning("No authenticated user found.");
-                return Unauthorized();
-            }
+            if (currentUser == null) return Unauthorized();
 
-            var linkedUser = await _userManager.FindByEmailAsync(email);
-            if (linkedUser == null)
-            {
-                return NotFound("User not found.");
-            }
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null || user.Email != model.Email) return NotFound("Invalid email match.");
 
-            var IsLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
-            if(IsLinkedUser) return BadRequest("Linked users can't delete other linked users.");
+            var token = await _userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
+            if (token == null) return BadRequest("Failed to generate delete token.");
 
-            var linkedUserMetadata = await _linkedUserRepository.GetByUserIdAsync(linkedUser.Id);
-            if (linkedUserMetadata == null) return NotFound("Linked user not found.");
-            if (linkedUserMetadata.ParentUserId != currentUser.Id) return Unauthorized();
+            var message = $@"
+                    <h2>Delete Your Account</h2>
+                    <p>Hello,</p>
+                    <p>We received a request to delete your account. Use the token below with the delete account endpoint:</p>
+                    <p style='background-color: #f5f5f5; padding: 10px; font-family: monospace;'>{token}</p>
+                    <p>If you didn't request this, you can safely ignore this email.</p>
+                    <p>The token will expire in 24 hours.</p>
+                    <br>
+                    <p>Best regards,</p>
+                    <p>{PROJECT_NAME} Team</p>";
 
-            var result = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUserMetadata.LinkedUserId);
-            if (!result)
-            {
-                return BadRequest("Failed to delete linked user.");
-            }
-
-            var userDeleted = await _userManager.DeleteAsync(linkedUser);
-            if (!userDeleted.Succeeded) return BadRequest("Failed to delete user.");
-
-            return Ok("Linked user deleted successfully!");
+            await _emailSender.SendEmailAsync(user.Email, "Delete Your Account", message);
+            return Ok("Delete token sent successfully.");
         }
 
+        [HttpPost("ConfirmDeleteUser")]
+        [Authorize]
+        public async Task<IActionResult> ConfirmDeleteUserAsync([FromBody] DeleteUserModel model)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            // Verify user token
+            var isValidToken = await _userManager.VerifyUserTokenAsync(
+                currentUser, 
+                TokenOptions.DefaultProvider, 
+                "DeleteAccount", 
+                model.Token);
+
+            if (!isValidToken) return BadRequest("Invalid or expired token.");
+            
+            // Delete all linked users first
+            bool linkedUsersDeleted = await _linkedUserRepository.DeleteAllLinkedUsersByParentIdAsync(currentUser.Id);
+            if (!linkedUsersDeleted) return BadRequest("Failed to delete linked users related to the user.");
+
+            // Finally delete the main user account
+            var userDeleted = await _userManager.DeleteAsync(currentUser);
+            if (!userDeleted.Succeeded) 
+                return BadRequest($"Failed to delete user: {string.Join(", ", userDeleted.Errors.Select(e => e.Description))}");
+
+            return Ok("User account deleted successfully!");
+        }
 
         private async Task<bool> UpgradeDowngradeSubscription(string userId, string planName)
         {

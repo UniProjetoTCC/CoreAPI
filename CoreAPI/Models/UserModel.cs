@@ -113,6 +113,19 @@ namespace CoreAPI.Models
         public string Token { get; set; } = string.Empty;
     }
 
+    public class RequestDeleteUserModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class DeleteUserModel
+    {
+        [Required(ErrorMessage = "Token is required")]
+        public string Token { get; set; } = string.Empty;
+    }
+
     public class TokenModel
     {
         public string AccessToken { get; set; } = string.Empty;
