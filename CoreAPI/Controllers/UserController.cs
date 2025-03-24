@@ -18,6 +18,7 @@ using Hangfire;
 using Business.Jobs.Background;
 using System.Linq;
 
+
 namespace CoreAPI.Controllers
 {
     [ApiController]
@@ -37,7 +38,6 @@ namespace CoreAPI.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILinkedUserRepository _linkedUserRepository;
         private readonly IBackgroundJobService _backgroundJobService;
-
 
         public UserController(
             UserManager<IdentityUser> userManager,
@@ -272,46 +272,44 @@ namespace CoreAPI.Controllers
 
             var user = await _userManager.FindByEmailAsync(userLogin.Email);
             if (user == null)
-            {
-                return Unauthorized(new { Status = "Error", Message = "Invalid email or password" });
-            }
+                return Unauthorized(new { message = "Invalid email or password" });
 
-            var result = await _signInManager.PasswordSignInAsync(user, userLogin.Password, false, true);
-
-            if (result.IsLockedOut)
+            if (!await _userManager.CheckPasswordAsync(user, userLogin.Password))
             {
-                return Unauthorized(new { Status = "Error", Message = "Account is locked out" });
-            }
-
-            if (!result.Succeeded)
-            {
-                if (result.RequiresTwoFactor)
+                if (await _userManager.GetLockoutEndDateAsync(user) > DateTimeOffset.UtcNow)
                 {
-                    return Ok(new TokenModel
-                    {
-                        RequiresTwoFactor = true,
-                        Email = user.Email
-                    });
+                    return Unauthorized(new { message = "Account is locked. Try again later." });
                 }
 
-                return Unauthorized(new { Status = "Error", Message = "Invalid email or password" });
+                await _userManager.AccessFailedAsync(user);
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    return Unauthorized(new { message = "Account is now locked. Try again in 15 minutes." });
+                }
+
+                return Unauthorized(new { message = "Invalid email or password" });
             }
 
-            var userClaims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, user.Id),
-                new(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new(ClaimTypes.Email, user.Email ?? string.Empty)
-            };
+            // Reset lockout count
+            await _userManager.ResetAccessFailedCountAsync(user);
 
-            var jwtToken = GetToken(userClaims);
+            if (await _userManager.GetTwoFactorEnabledAsync(user))
+            {
+                return Ok(new
+                {
+                    requiresTwoFactor = true,
+                    email = user.Email
+                });
+            }
+
+            var token = await GenerateJwtToken(user);
             var refreshToken = await GenerateRefreshTokenAsync(user);
 
-            return Ok(new TokenModel
+            return Ok(new
             {
-                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                RefreshToken = refreshToken,
-                RequiresTwoFactor = false
+                token,
+                refreshToken,
+                expiration = DateTime.Now.AddHours(3)
             });
         }
 
@@ -673,7 +671,7 @@ namespace CoreAPI.Controllers
             {
                 try
                 {
-                    // Obter jobs ativos para o grupo
+                    // Get active jobs for the group
                     var activeJobs = await _backgroundJobService.GetActiveJobsByGroupId(userGroup.GroupId);
                     if (activeJobs != null)
                     {
@@ -682,11 +680,11 @@ namespace CoreAPI.Controllers
                             await _backgroundJobService.CancelDowngrade(job.HangfireJobId);
                         }
                     }
-                    _logger.LogInformation("Cancelled existing downgrade job for group {GroupId}", userGroup.GroupId);
+                    _logger.LogInformation($"Cancelled existing downgrade job for group {userGroup.GroupId}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to cancel existing downgrade job for group {GroupId}", userGroup.GroupId);
+                    _logger.LogError(ex, $"EXTREME ERROR - Failed to cancel existing downgrade job for group {userGroup.GroupId}");
                     // Continue with plan change even if job cancellation fails
                 }
             }
@@ -697,18 +695,18 @@ namespace CoreAPI.Controllers
                 if (!result)
                     return BadRequest("Failed to assign role");
 
-                // Schedule downgrade job even on upgrade (for safety)
+                // Schedule upgrade
                 if (userGroup != null)
                 {
                     try
                     {
-                        // Agendar job de downgrade
-                        await _backgroundJobService.EnqueueUserDowngrade(userGroup.GroupId);
-                        _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan upgrade", userGroup.GroupId);
+                        // Schedule upgrade job after plan upgrade
+                        await _backgroundJobService.EnqueueUserUpgrade(userGroup.GroupId);
+                        _logger.LogInformation($"Scheduled upgrade job for group {userGroup.GroupId} after plan upgrade");
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to schedule downgrade job for user {UserId}", user.Id);
+                        _logger.LogError(ex, $"EXTREME ERROR - Failed to schedule upgrade job for user {user.Id}");
                         // Don't return error since the plan upgrade was successful
                     }
                 }
@@ -726,13 +724,13 @@ namespace CoreAPI.Controllers
                 {
                     try
                     {
-                        // Agendar job de downgrade
+                        // Schedule downgrade job after plan downgrade
                         await _backgroundJobService.EnqueueUserDowngrade(userGroup.GroupId);
-                        _logger.LogInformation("Scheduled downgrade job for group {GroupId} after plan downgrade", userGroup.GroupId);
+                        _logger.LogInformation($"Scheduled downgrade job for group {userGroup.GroupId} after plan downgrade");
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to schedule downgrade job for user {UserId}", user.Id);
+                        _logger.LogError(ex, $"EXTREME ERROR - Failed to schedule downgrade job for user {user.Id}");
                         // Don't return error since the plan downgrade was successful
                     }
                 }
@@ -764,7 +762,13 @@ namespace CoreAPI.Controllers
             if (linkedUsers == null) return NotFound("Linked user not found.");
 
             var groupPlan = await _subscriptionPlanRepository.GetByIdAsync(userGroup.SubscriptionPlanId);
-            if (linkedUsers.Count() >= groupPlan.LinkedUserLimit) return BadRequest($"You have reached your limit of linked users!");
+
+            if (groupPlan == null) return NotFound("Subscription plan not found.");
+
+            if (groupPlan != null && linkedUsers.Count() >= groupPlan.LinkedUserLimit)
+            {
+                return BadRequest($"You have reached your limit of linked users!");
+            }
 
             var userExists = await _userManager.FindByEmailAsync(model.Email);
             if (userExists != null) return BadRequest(new { Message = "User already exists!" });
@@ -983,23 +987,34 @@ namespace CoreAPI.Controllers
             return token;
         }
 
-        private string GenerateJwtToken(IdentityUser user)
+        private async Task<string> GenerateJwtToken(IdentityUser user)
         {
             var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ??
                 throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
 
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
+            // Get user role
+            var userRole = await _userManager.GetRolesAsync(user);
+
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, user.Id),
+                new(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new(ClaimTypes.Email, user.Email ?? string.Empty)
+            };
+
+            // Add role claims
+            foreach (var role in userRole)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
             var token = new JwtSecurityToken(
                 issuer: _configuration["JWT:ValidIssuer"],
                 audience: _configuration["JWT:ValidAudience"],
                 expires: DateTime.Now.AddHours(3),
-                claims: new List<Claim>
-                {
-                    new(ClaimTypes.NameIdentifier, user.Id),
-                    new(ClaimTypes.Name, user.UserName ?? string.Empty),
-                    new(ClaimTypes.Email, user.Email ?? string.Empty)
-                },
+                claims: claims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );
 

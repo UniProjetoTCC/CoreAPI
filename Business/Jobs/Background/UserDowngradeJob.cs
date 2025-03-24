@@ -176,6 +176,18 @@ namespace Business.Jobs.Background
 
                 await _linkedUserRepository.DeactivateLinkedUsersAsync(recentLinkedUsers.Select(lu => lu.Id));
                 _logger.LogInformation($"Successfully deactivated {recentLinkedUsers.Count} linked users for group {groupId}");
+
+                // Update job status to Executed
+                var activeJobs = await _backgroundJobRepository.GetActiveJobsByGroupIdAsync(groupId);
+                if (activeJobs != null)
+                {
+                    foreach (var job in activeJobs.Where(j => j.JobType == JobTypes.LinkedUsersDeactivation))
+                    {
+                        job.Status = "Executed";
+                        job.ExecutedAt = DateTime.UtcNow;
+                        await _backgroundJobRepository.UpdateAsync(job);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -185,4 +197,3 @@ namespace Business.Jobs.Background
         }
     }
 }
-

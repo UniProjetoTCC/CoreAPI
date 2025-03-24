@@ -15,5 +15,6 @@ namespace Business.DataRepositories
         Task<bool> IsLinkedUserAsync(string userId);
         Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId);
         Task DeactivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);
+        Task ActivateLinkedUsersAsync(IEnumerable<int> linkedUserIds);
     }
 }

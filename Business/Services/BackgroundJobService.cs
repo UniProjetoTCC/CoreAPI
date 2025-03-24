@@ -39,6 +39,25 @@ namespace Business.Services
             return hangfireJobId;
         }
 
+        public async Task<string> EnqueueUserUpgrade(int groupId)
+        {
+            // First job sends notification email and executes the upgrade
+            var hangfireJobId = BackgroundJob.Enqueue<UserUpgradeJob>(
+                job => job.HandleUserUpgrade(groupId));
+
+            // Save job information
+            var job = new HangJob
+            {
+                HangfireJobId = hangfireJobId,
+                JobType = JobTypes.LinkedUsersActivation,
+                GroupId = groupId,
+                Status = "Scheduled"
+            };
+
+            await _jobRepository.CreateAsync(job);
+            return hangfireJobId;
+        }
+
         public async Task<bool> CancelDowngrade(string jobId)
         {
             var job = await _jobRepository.GetByHangfireJobIdAsync(jobId);
@@ -66,6 +85,36 @@ namespace Business.Services
         public async Task<IEnumerable<HangJob>?> GetActiveJobsByGroupId(int groupId)
         {
             return await _jobRepository.GetActiveJobsByGroupIdAsync(groupId);
+        }
+
+        public async Task<bool> UpdateJobStatus(string jobId, string status)
+        {
+            var job = await _jobRepository.GetByHangfireJobIdAsync(jobId);
+            if (job == null)
+            {
+                _logger.LogError("Job {JobId} not found", jobId);
+                return false;
+            }
+
+            job.Status = status;
+            if (status == "Executed")
+            {
+                job.ExecutedAt = DateTime.UtcNow;
+            }
+            else if (status == "Cancelled")
+            {
+                job.CancelledAt = DateTime.UtcNow;
+            }
+
+            var result = await _jobRepository.UpdateAsync(job);
+            if (result == null)
+            {
+                _logger.LogError($"Failed to update job {jobId} status to {status}");
+                return false;
+            }
+
+            _logger.LogInformation($"Job {jobId} status updated to {status}");
+            return true;
         }
     }
 }

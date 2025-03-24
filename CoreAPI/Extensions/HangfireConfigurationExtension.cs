@@ -5,6 +5,10 @@ using Business.Jobs.Scheduled;
 using Business.Jobs.Background;
 using Hangfire.Dashboard;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace CoreAPI.Extensions
 {
@@ -73,17 +77,16 @@ namespace CoreAPI.Extensions
             services.AddSingleton<IRecurringJobManager>(provider => new RecurringJobManager());
         }
 
-        public static void UseHangfireDashboard(this IApplicationBuilder app)
+        public static void UseHangfireDashboard(this IApplicationBuilder app, IConfiguration configuration)
         {
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
             {
+                Authorization = new[] { new HangfireAuthorizationFilter() },
+                IsReadOnlyFunc = _ => false,
+                DisplayStorageConnectionString = false,
                 DashboardTitle = "Background Jobs",
-                StatsPollingInterval = 5000, // Update stats every 5 seconds
-                Authorization = new[]
-                {
-                    new HangfireAuthorizationFilter()
-                },
-                DisplayStorageConnectionString = false // Hide connection string for security
+                AppPath = "/",
+                StatsPollingInterval = 5000
             });
 
             // Configure recurring jobs using the service
@@ -145,9 +148,46 @@ namespace CoreAPI.Extensions
         public bool Authorize(DashboardContext context)
         {
             var httpContext = context.GetHttpContext();
+            var logger = httpContext.RequestServices.GetService<ILogger<HangfireAuthorizationFilter>>();
             
-            return httpContext.User.Identity?.IsAuthenticated == true &&
-                   httpContext.User.IsInRole("Admin");
+            try 
+            {
+                // Try to get token from query string
+                var token = httpContext.Request.Query["authorization"].ToString();
+                logger?.LogInformation($"Token from query: {token}");
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                    var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+                        throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
+
+                    var tokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                        ValidateIssuer = true,
+                        ValidIssuer = "http://localhost:5000",
+                        ValidateAudience = true,
+                        ValidAudience = "http://localhost:5000",
+                        ClockSkew = TimeSpan.Zero
+                    };
+                    
+                    tokenHandler.ValidateToken(token.Replace("Bearer ", ""), tokenValidationParameters, out SecurityToken validatedToken);
+
+                    var jwtToken = (JwtSecurityToken)validatedToken;
+                    var role = jwtToken.Claims.First(x => x.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role").Value;
+
+                    logger?.LogInformation($"Token validated successfully. Role: {role}");
+                    return role == "AdminUser";
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError($"Error validating token: {ex.Message}");
+            }
+
+            return false;
         }
     }
 }

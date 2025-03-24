@@ -36,7 +36,7 @@ namespace CoreAPI.Logging
             _options = options;
         }
 
-        public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider scopeProvider, TextWriter textWriter)
+        public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
             string? message = logEntry.Formatter?.Invoke(logEntry.State, logEntry.Exception);
             if (message is null)

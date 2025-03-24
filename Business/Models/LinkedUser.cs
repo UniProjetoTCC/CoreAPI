@@ -7,6 +7,7 @@ namespace Business.Models
         public int Id { get; set; }
         public string LinkedUserId { get; set; } = null!;
         public string ParentUserId { get; set; } = null!;
+        public int GroupId { get; set; }
         public bool IsActive { get; set; }
         public bool CanPerformTransactions { get; set; }
         public bool CanGenerateReports { get; set; }
