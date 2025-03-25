@@ -820,6 +820,46 @@ namespace CoreAPI.Controllers
         }
 
         /// <summary>
+        /// Deletes a linked user account associated with the current authenticated user
+        /// </summary>
+        /// <remarks>
+        /// This endpoint allows a primary user to delete a secondary (linked) user account that they have previously created.
+        /// The operation requires:
+        /// - Authentication as the primary user
+        /// - The linked user must exist in the system
+        /// - The linked user must belong to the current authenticated user
+        /// 
+        /// If any of these conditions are not met, the operation will fail with an appropriate error message.
+        /// </remarks>
+        /// <param name="model">The model containing the email of the linked user to delete</param>
+        /// <returns>
+        /// 200 OK - If the linked user was successfully deleted
+        /// 400 Bad Request - If the linked user doesn't exist or doesn't belong to the current user
+        /// 401 Unauthorized - If the user is not authenticated
+        /// </returns>
+        [HttpPost("DeleteLinkedUser")]
+        [Authorize]
+        public async Task<IActionResult> DeleteLinkedUserAsync([FromBody] DeleteLinkedUserModel model)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var linkedUserIdentity = await _userManager.FindByEmailAsync(model.Email);
+            if (linkedUserIdentity == null) return BadRequest("Linked user not found.");
+
+            var linkedUser = await _linkedUserRepository.GetByUserIdAsync(linkedUserIdentity.Id);
+            if (linkedUser == null) return BadRequest("Linked user not found.");
+
+            if (linkedUser.ParentUserId != currentUser.Id) 
+                return BadRequest("Linked user does not belong to the current user.");
+        
+            var deleted = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.LinkedUserId);
+            if (!deleted) return BadRequest("Failed to delete linked user.");
+
+            return Ok("Linked user deleted successfully.");
+        }
+
+        /// <summary>
         /// Creates a new linked user account associated with the current authenticated user
         /// </summary>
         /// <remarks>
@@ -893,9 +933,6 @@ namespace CoreAPI.Controllers
 
             var result = await _roleService.AssignLinkedUserAsync(user.Id, currentUser.Id, permissions);
             if (!result) return BadRequest("Failed to create linked user.");
-
-
-
 
             return Ok("Linked user created sucessfully!");
         }

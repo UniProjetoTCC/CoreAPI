@@ -123,18 +123,50 @@ namespace Data.Repositories
 
         public async Task<bool> DeleteLinkedUserAsync(string linkedUserId)
         {
-            var linkedUser = await _context.LinkedUsers
-                                   .Where(lu => lu.LinkedUserId == linkedUserId)
-                                   .FirstOrDefaultAsync();
-            if (linkedUser == null)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
+                // Get the linked user entry
+                var linkedUser = await _context.LinkedUsers
+                    .Where(lu => lu.LinkedUserId == linkedUserId)
+                    .FirstOrDefaultAsync();
+                
+                if (linkedUser == null)
+                {
+                    return false;
+                }
+
+                // Find the identity user
+                var identityUser = await _userManager.FindByIdAsync(linkedUserId);
+                if (identityUser == null)
+                {
+                    _logger.LogWarning($"Identity user not found for linked user ID: {linkedUserId}");
+                    return false;
+                }
+
+                // Remove the linked user record
+                _context.LinkedUsers.Remove(linkedUser);
+                await _context.SaveChangesAsync();
+
+                // Delete the identity user
+                var result = await _userManager.DeleteAsync(identityUser);
+                if (!result.Succeeded)
+                {
+                    _logger.LogError($"Failed to delete identity user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                // Commit the transaction
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting linked user with ID {linkedUserId}");
+                await transaction.RollbackAsync();
                 return false;
             }
-
-            _context.LinkedUsers.Remove(linkedUser);
-            await _context.SaveChangesAsync();
-
-            return true;
         }
 
         public async Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId)
@@ -216,15 +248,6 @@ namespace Data.Repositories
                         if (!deleteLinkedResult)
                         {
                             _logger.LogWarning($"Failed to delete linked user {linkedUser.LinkedUserId} from repository");
-                            await transaction.RollbackAsync();
-                            return false;
-                        }
-                        
-                        // Delete linked user from identity
-                        var deleteIdentityResult = await _userManager.DeleteAsync(linkedUserIdentity);
-                        if (!deleteIdentityResult.Succeeded)
-                        {
-                            _logger.LogWarning($"Failed to delete linked user {linkedUser.LinkedUserId} from identity: {string.Join(", ", deleteIdentityResult.Errors.Select(e => e.Description))}");
                             await transaction.RollbackAsync();
                             return false;
                         }
