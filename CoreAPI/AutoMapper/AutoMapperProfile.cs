@@ -1,5 +1,6 @@
 using AutoMapper;
 using Business.Models;
+using CoreAPI.Models;
 using Data.Models;
 
 namespace CoreAPI.AutoMapper
@@ -12,6 +13,11 @@ namespace CoreAPI.AutoMapper
             CreateMap<SubscriptionPlanModel, SubscriptionPlan>().ReverseMap();
             CreateMap<LinkedUserModel, LinkedUser>().ReverseMap();
             CreateMap<BackgroundJobsModel, HangJob>().ReverseMap();
+            CreateMap<ProductModel, ProductBusinessModel>().ReverseMap();
+            
+            // Product mappings
+            CreateMap<ProductBusinessModel, ProductCreateModel>().ReverseMap();
+            CreateMap<ProductBusinessModel, ProductUpdateModel>().ReverseMap();
         }
     }
 }
