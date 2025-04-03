@@ -8,8 +8,7 @@ namespace Data.Models
     [Table("Customers")]
     public class CustomerModel
     { 
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

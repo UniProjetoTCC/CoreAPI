@@ -9,7 +9,30 @@ namespace Business.DataRepositories
     public interface IProductRepository
     {
         Task<ProductBusinessModel?> GetById(string id, string groupId);
-        Task<ProductBusinessModel?> CreateProductAsync(ProductBusinessModel product);
-        Task<ProductBusinessModel?> UpdateProductAsync(ProductBusinessModel product);
+        
+        Task<ProductBusinessModel?> CreateProductAsync(
+            string groupId,
+            string categoryId,
+            string name,
+            string sku,
+            string barCode,
+            string? description,
+            decimal price,
+            decimal cost,
+            bool active = true
+        );
+        
+        Task<ProductBusinessModel?> UpdateProductAsync(
+            string id,
+            string groupId,
+            string categoryId,
+            string name,
+            string sku,
+            string barCode,
+            string? description,
+            decimal price,
+            decimal cost,
+            bool active
+        );
     }
 }

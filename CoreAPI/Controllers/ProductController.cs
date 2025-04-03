@@ -20,6 +20,7 @@ namespace CoreAPI.Controllers
         private readonly IProductRepository _productRepository;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IUserGroupRepository _userGroupRepository;
+        private readonly ICategoryRepository _categoryRepository;
         private readonly IMapper _mapper;
 
         public ProductController(
@@ -27,19 +28,24 @@ namespace CoreAPI.Controllers
             IProductRepository productRepository, 
             UserManager<IdentityUser> userManager, 
             IUserGroupRepository userGroupRepository,
+            ICategoryRepository categoryRepository,
             IMapper mapper)
         {
             _linkedUserService = linkedUserService;
             _productRepository = productRepository;
             _userManager = userManager;
             _userGroupRepository = userGroupRepository;
+            _categoryRepository = categoryRepository;
             _mapper = mapper;
         }
 
         [HttpGet("Get")]
         [Authorize]
-        public async Task<ActionResult> Get([FromBody] GetByID model)
+        public async Task<ActionResult> Get([FromQuery] string id)
         {
+            if (string.IsNullOrEmpty(id))
+                return BadRequest("Product ID is required");
+                
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
             
@@ -56,7 +62,7 @@ namespace CoreAPI.Controllers
                 }
             }
 
-            var product = await _productRepository.GetById(model.Id, groupId);
+            var product = await _productRepository.GetById(id, groupId);
 
             return product != null ? Ok(product) : NotFound();
         }
@@ -86,13 +92,37 @@ namespace CoreAPI.Controllers
                 }
             }
             
-            // Map from the API model to the business model
-            var productBusinessModel = _mapper.Map<ProductBusinessModel>(model);
+            // Find category by name or create a new one
+            var category = await _categoryRepository.GetByNameAsync(model.CategoryName, groupId);
+            string categoryId;
             
-            // Set the group ID from the current user's group
-            productBusinessModel.GroupId = groupId;
-
-            var product = await _productRepository.CreateProductAsync(productBusinessModel);
+            if (category == null)
+            {
+                // Create a new category and get the ID directly
+                categoryId = await _categoryRepository.CreateCategoryAsync(
+                    name: model.CategoryName,
+                    groupId: groupId,
+                    description: $"Category automatically created for product {model.Name}",
+                    active: true
+                );
+            }
+            else
+            {
+                categoryId = category.Id;
+            }
+            
+            // Create the product using individual fields
+            var product = await _productRepository.CreateProductAsync(
+                groupId: groupId,
+                categoryId: categoryId,
+                name: model.Name,
+                sku: model.SKU,
+                barCode: model.BarCode,
+                description: model.Description,
+                price: model.Price,
+                cost: model.Cost,
+                active: model.Active
+            );
 
             return product != null ? Ok(product) : BadRequest();
         }
@@ -122,13 +152,19 @@ namespace CoreAPI.Controllers
                 }
             }
             
-            // Map from the API model to the business model
-            var productBusinessModel = _mapper.Map<ProductBusinessModel>(model);
-            
-            // Set the group ID from the current user's group
-            productBusinessModel.GroupId = groupId;
-
-            var product = await _productRepository.UpdateProductAsync(productBusinessModel);
+            // Update the product using individual fields
+            var product = await _productRepository.UpdateProductAsync(
+                id: model.Id,
+                groupId: groupId,
+                categoryId: model.CategoryId,
+                name: model.Name,
+                sku: model.SKU,
+                barCode: model.BarCode,
+                description: model.Description,
+                price: model.Price,
+                cost: model.Cost,
+                active: model.Active
+            );
 
             return product != null ? Ok(product) : NotFound();
         }

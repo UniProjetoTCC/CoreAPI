@@ -8,7 +8,6 @@ namespace Data.Models
     public class ProductTaxModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

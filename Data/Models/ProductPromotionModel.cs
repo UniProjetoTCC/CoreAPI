@@ -7,7 +7,6 @@ namespace Data.Models
     public class ProductPromotionModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

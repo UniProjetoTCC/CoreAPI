@@ -13,11 +13,14 @@ namespace CoreAPI.AutoMapper
             CreateMap<SubscriptionPlanModel, SubscriptionPlan>().ReverseMap();
             CreateMap<LinkedUserModel, LinkedUser>().ReverseMap();
             CreateMap<BackgroundJobsModel, HangJob>().ReverseMap();
-            CreateMap<ProductModel, ProductBusinessModel>().ReverseMap();
-            
+
             // Product mappings
+            CreateMap<ProductModel, ProductBusinessModel>().ReverseMap();
             CreateMap<ProductBusinessModel, ProductCreateModel>().ReverseMap();
             CreateMap<ProductBusinessModel, ProductUpdateModel>().ReverseMap();
+
+            // Category mappings
+            CreateMap<CategoryModel, CategoryBusinessModel>().ReverseMap();
         }
     }
 }

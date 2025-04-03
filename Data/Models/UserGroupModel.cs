@@ -8,7 +8,6 @@ namespace Data.Models
     public class UserGroupModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [StringLength(36)]
         public string GroupId { get; set; } = Guid.NewGuid().ToString();
 

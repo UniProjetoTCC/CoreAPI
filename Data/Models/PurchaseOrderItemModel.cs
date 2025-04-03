@@ -8,8 +8,7 @@ namespace Data.Models
     public class PurchaseOrderItemModel
     { 
         // Identificadores
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

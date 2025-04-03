@@ -3,12 +3,6 @@ using System;
 
 namespace CoreAPI.Models
 {
-    public class GetByID
-    {
-        [Required]
-        public string Id { get; set; } = string.Empty;
-    }
-
     public class ProductCreateModel
     {
         [Required]
@@ -46,8 +40,8 @@ namespace CoreAPI.Models
         public string Id { get; set; } = string.Empty;
         
         [Required]
-        [StringLength(50, MinimumLength = 3)]
-        public string CategoryName { get; set; } = string.Empty;
+        [StringLength(36)]
+        public string CategoryId { get; set; } = string.Empty;
         
         [Required]
         [StringLength(50, MinimumLength = 3)]

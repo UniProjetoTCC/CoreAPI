@@ -9,7 +9,6 @@ namespace Data.Models
     public class StockModel
     { 
         [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

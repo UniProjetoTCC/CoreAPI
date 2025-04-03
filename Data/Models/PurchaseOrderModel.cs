@@ -10,7 +10,6 @@ namespace Data.Models
     { 
         // Identificadores
         [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

@@ -7,8 +7,7 @@ namespace Data.Models
     [Table("PaymentMethods")]
     public class PaymentMethodModel 
     { 
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

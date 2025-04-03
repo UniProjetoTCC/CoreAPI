@@ -7,8 +7,7 @@ namespace Data.Models
     [Table("ProductExpirations")]
     public class ProductExpirationModel
     { 
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
