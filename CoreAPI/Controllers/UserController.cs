@@ -1017,8 +1017,22 @@ namespace CoreAPI.Controllers
                 throw new InvalidOperationException($"You're already on the {planName} plan");
             }
 
-            // Return true if upgrading (target plan has higher ID), false if downgrading
-            return targetPlan.Id > currentPlan.Id;
+            // Define a hierarchy of plans based on their features/level instead of ID comparison
+            Dictionary<string, int> planHierarchy = new Dictionary<string, int>
+            {
+                {"Free", 1},
+                {"Standard", 2},
+                {"Premium", 3},
+                {"Enterprise", 4},
+                {"Admin", 5}
+            };
+
+            // Get the levels of the current and target plans
+            int currentPlanLevel = planHierarchy.TryGetValue(currentPlan.Name, out int currentLevel) ? currentLevel : 0;
+            int targetPlanLevel = planHierarchy.TryGetValue(targetPlan.Name, out int targetLevel) ? targetLevel : 0;
+
+            // Return true if upgrading (target plan has higher level), false if downgrading
+            return targetPlanLevel > currentPlanLevel;
         }
 
         private string SetInternalPlanName(string planName)

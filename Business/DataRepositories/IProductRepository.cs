@@ -8,7 +8,7 @@ namespace Business.DataRepositories
 {
     public interface IProductRepository
     {
-        Task<ProductBusinessModel?> GetById(int id, int groupId);
+        Task<ProductBusinessModel?> GetById(string id, string groupId);
         Task<ProductBusinessModel?> CreateProductAsync(ProductBusinessModel product);
         Task<ProductBusinessModel?> UpdateProductAsync(ProductBusinessModel product);
     }

@@ -41,7 +41,7 @@ namespace Data.Repositories
             return linkedUser != null ? _mapper.Map<LinkedUser>(linkedUser) : null;
         }
 
-        public async Task<LinkedUser?> GetByIdAsync(int id)
+        public async Task<LinkedUser?> GetByIdAsync(string id)
         {
             var linkedUser = await _context.LinkedUsers
                 .Include(lu => lu.UserGroup)
@@ -76,7 +76,7 @@ namespace Data.Repositories
             {
                 LinkedUserId = userId,
                 ParentUserId = createdByUserId,
-                GroupId = creatorGroup?.GroupId ?? 0,
+                GroupId = creatorGroup?.GroupId ?? string.Empty,
                 CanPerformTransactions = canPerformTransactions,
                 CanGenerateReports = canGenerateReports,
                 CanManageProducts = canManageProducts,
@@ -169,7 +169,7 @@ namespace Data.Repositories
             }
         }
 
-        public async Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(int groupId)
+        public async Task<IEnumerable<LinkedUser>> GetAllByGroupIdAsync(string groupId)
         {
             var linkedUsers = await _context.LinkedUsers
                 .Where(l => l.GroupId == groupId)
@@ -178,7 +178,7 @@ namespace Data.Repositories
             return _mapper.Map<IEnumerable<LinkedUser>>(linkedUsers);
         }
 
-        public async Task DeactivateLinkedUsersAsync(IEnumerable<int> linkedUserIds)
+        public async Task DeactivateLinkedUsersAsync(IEnumerable<string> linkedUserIds)
         {
             var linkedUsers = await _context.LinkedUsers
                 .Where(lu => linkedUserIds.Contains(lu.Id))
@@ -198,7 +198,7 @@ namespace Data.Repositories
             return await _context.LinkedUsers.AnyAsync(lu => lu.LinkedUserId == userId);
         }
 
-        public async Task ActivateLinkedUsersAsync(IEnumerable<int> linkedUserIds)
+        public async Task ActivateLinkedUsersAsync(IEnumerable<string> linkedUserIds)
         {
             var linkedUsers = await _context.LinkedUsers
                 .Where(lu => linkedUserIds.Contains(lu.Id))

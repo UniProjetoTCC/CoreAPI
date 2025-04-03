@@ -10,23 +10,28 @@ namespace Data.Models
     public class SaleModel
     { 
         [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required] 
         [ForeignKey("User")]
+        [StringLength(36)]
         public required string UserId { get; set; } 
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; } 
+        [StringLength(36)]
+        public required string GroupId { get; set; } 
 
         [Required]
         [ForeignKey("PaymentMethod")]
-        public required int PaymentMethodId { get; set; } 
+        [StringLength(36)]
+        public required string PaymentMethodId { get; set; } 
 
         [ForeignKey("Customer")]
-        public int? CustomerId { get; set; } 
+        [StringLength(36)]
+        public string? CustomerId { get; set; } 
 
         [Required]
         [Range(0, double.MaxValue)]

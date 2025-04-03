@@ -9,12 +9,14 @@ namespace Data.Models
     public class CustomerModel
     { 
         [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [ForeignKey("UserGroup")]
         [Required]
-        public required int GroupId { get; set; }
+        [StringLength(36)]
+        public required string GroupId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -34,7 +36,8 @@ namespace Data.Models
         public string? Address { get; set; }
 
         [ForeignKey("LoyaltyProgram")]
-        public int? LoyaltyProgramId { get; set; }
+        [StringLength(36)]
+        public string? LoyaltyProgramId { get; set; }
 
         [Required]
         public required bool IsActive { get; set; } = true;

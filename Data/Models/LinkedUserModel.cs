@@ -8,20 +8,24 @@ namespace Data.Models
     public class LinkedUserModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [ForeignKey("ParentUser")]
+        [StringLength(36)]
         public required string ParentUserId { get; set; }
 
         [Required]
         [ForeignKey("LinkedUser")]
+        [StringLength(36)]
         public required string LinkedUserId { get; set; }
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; }
+        [StringLength(36)]
+        public required string GroupId { get; set; }
 
         [Required]
         public required bool IsActive { get; set; }

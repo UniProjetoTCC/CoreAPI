@@ -8,20 +8,24 @@ namespace Data.Models
     public class SupplierPriceModel
     { 
         [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [ForeignKey("Supplier")]
-        public required int SupplierId { get; set; } 
+        [StringLength(36)]
+        public required string SupplierId { get; set; } 
 
         [Required]
         [ForeignKey("Product")]
-        public required int ProductId { get; set; } 
+        [StringLength(36)]
+        public required string ProductId { get; set; } 
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; }
+        [StringLength(36)]
+        public required string GroupId { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]

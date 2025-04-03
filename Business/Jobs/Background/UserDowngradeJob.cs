@@ -44,7 +44,7 @@ namespace Business.Jobs.Background
         /// <summary>
         /// Sends notification about upcoming downgrade and schedules the actual downgrade
         /// </summary>
-        public async Task HandleUserDowngrade(int groupId)
+        public async Task HandleUserDowngrade(string groupId)
         {
             try
             {
@@ -107,7 +107,7 @@ namespace Business.Jobs.Background
             }
         }
 
-        private async Task CancelDowngradeJobsForGroup(int groupId)
+        private async Task CancelDowngradeJobsForGroup(string groupId)
         {
             try
             {
@@ -163,7 +163,7 @@ namespace Business.Jobs.Background
         /// <summary>
         /// Executes the actual downgrade process
         /// </summary>
-        public async Task ExecuteDowngrade(int groupId, List<LinkedUser> recentLinkedUsers)
+        public async Task ExecuteDowngrade(string groupId, List<LinkedUser> recentLinkedUsers)
         {
             try
             {

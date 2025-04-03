@@ -32,7 +32,7 @@ namespace Data.Repositories
             return _mapper.Map<UserGroup>(group);
         }
 
-        public async Task<UserGroup?> GetByGroupIdAsync(int groupId)
+        public async Task<UserGroup?> GetByGroupIdAsync(string groupId)
         {
             var group = await _context.UserGroups
                 .Include(g => g.SubscriptionPlan)
@@ -43,7 +43,7 @@ namespace Data.Repositories
             return _mapper.Map<UserGroup>(group);
         }
 
-        public async Task<UserGroup> CreateGroupAsync(string userId, int subscriptionPlanId)
+        public async Task<UserGroup> CreateGroupAsync(string userId, string subscriptionPlanId)
         {
             var group = new UserGroupModel
             {
@@ -61,7 +61,7 @@ namespace Data.Repositories
             return _mapper.Map<UserGroup>(group);
         }
 
-        public async Task<UserGroup?> UpdateGroupAsync(int groupId, int subscriptionPlanId)
+        public async Task<UserGroup?> UpdateGroupAsync(string groupId, string subscriptionPlanId)
         {
             var group = await _context.UserGroups.FindAsync(groupId);
             if (group == null) return null;
@@ -123,7 +123,5 @@ namespace Data.Repositories
 
             return expiringGroupsByDays;
         }
-
-
     }
 }

@@ -8,16 +8,19 @@ namespace Data.Models
     public class UserGroupModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int GroupId { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [StringLength(36)]
+        public string GroupId { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [ForeignKey("User")]
+        [StringLength(36)]
         public required string UserId { get; set; }
 
         [Required]
         [ForeignKey("SubscriptionPlan")]
-        public required int SubscriptionPlanId { get; set; }
+        [StringLength(36)]
+        public required string SubscriptionPlanId { get; set; }
 
         [Required]
         public required bool IsActive { get; set; }

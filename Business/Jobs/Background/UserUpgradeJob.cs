@@ -44,7 +44,7 @@ namespace Business.Jobs.Background
         /// <summary>
         /// Sends notification about upcoming upgrade and schedules the actual upgrade
         /// </summary>
-        public async Task HandleUserUpgrade(int groupId)
+        public async Task HandleUserUpgrade(string groupId)
         {
             try
             {
@@ -98,7 +98,7 @@ namespace Business.Jobs.Background
         /// <summary>
         /// Executes the actual upgrade process
         /// </summary>
-        public async Task ExecuteUpgrade(int groupId, List<LinkedUser> usersToActivate)
+        public async Task ExecuteUpgrade(string groupId, List<LinkedUser> usersToActivate)
         {
             try
             {
@@ -176,7 +176,7 @@ namespace Business.Jobs.Background
             }
         }
 
-        private async Task CancelUpgradeJobsForGroup(int groupId)
+        private async Task CancelUpgradeJobsForGroup(string groupId)
         {
             try
             {

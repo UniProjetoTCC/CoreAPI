@@ -44,7 +44,7 @@ namespace CoreAPI.Controllers
             if (currentUser == null) return Unauthorized();
             
             var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-            int groupId = group?.GroupId ?? 0;
+            string groupId = group?.GroupId ?? string.Empty;
 
             if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
             {
@@ -74,7 +74,7 @@ namespace CoreAPI.Controllers
             if (currentUser == null) return Unauthorized();
             
             var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-            int groupId = group?.GroupId ?? 0;
+            string groupId = group?.GroupId ?? string.Empty;
 
             if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
             {
@@ -110,7 +110,7 @@ namespace CoreAPI.Controllers
             if (currentUser == null) return Unauthorized();
             
             var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-            int groupId = group?.GroupId ?? 0;
+            string groupId = group?.GroupId ?? string.Empty;
 
             if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
             {

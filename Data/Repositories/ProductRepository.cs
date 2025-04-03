@@ -20,7 +20,7 @@ namespace Data.Repositories
             _mapper = mapper;
         }
 
-        public async Task<ProductBusinessModel?> GetById(int id, int groupId)
+        public async Task<ProductBusinessModel?> GetById(string id, string groupId)
         {
             var product = await _context.Products
                 .Include(p => p.UserGroup)

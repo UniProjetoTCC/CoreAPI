@@ -8,12 +8,14 @@ namespace Data.Models
     public class PaymentMethodModel 
     { 
         [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [ForeignKey("UserGroup")]
         [Required]
-        public required int GroupId { get; set; }
+        [StringLength(36)]
+        public required string GroupId { get; set; }
 
         [Required]
         [StringLength(50)]

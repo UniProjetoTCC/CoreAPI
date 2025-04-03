@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialDataBaseMigration : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -55,8 +55,7 @@ namespace Data.Migrations
                 name: "SubscriptionPlans",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     LinkedUserLimit = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
@@ -183,9 +182,8 @@ namespace Data.Migrations
                 name: "UserPaymentCards",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     CardNumber = table.Column<string>(type: "text", nullable: false),
                     CardholderName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     ExpirationDate = table.Column<string>(type: "text", nullable: false),
@@ -207,10 +205,9 @@ namespace Data.Migrations
                 name: "UserGroups",
                 columns: table => new
                 {
-                    GroupId = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    SubscriptionPlanId = table.Column<int>(type: "integer", nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    SubscriptionPlanId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     SubscriptionStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     SubscriptionEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -235,12 +232,35 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BackgroundJobs",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    HangfireJobId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    JobType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExecutedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CancelledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BackgroundJobs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BackgroundJobs_UserGroups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "UserGroups",
+                        principalColumn: "GroupId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Categories",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Active = table.Column<bool>(type: "boolean", nullable: false),
@@ -262,11 +282,10 @@ namespace Data.Migrations
                 name: "LinkedUsers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ParentUserId = table.Column<string>(type: "text", nullable: false),
-                    LinkedUserId = table.Column<string>(type: "text", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ParentUserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    LinkedUserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CanPerformTransactions = table.Column<bool>(type: "boolean", nullable: false),
                     CanGenerateReports = table.Column<bool>(type: "boolean", nullable: false),
@@ -303,9 +322,8 @@ namespace Data.Migrations
                 name: "LoyaltyPrograms",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     PointsPerCurrency = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
@@ -331,9 +349,8 @@ namespace Data.Migrations
                 name: "PaymentMethods",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
@@ -356,9 +373,8 @@ namespace Data.Migrations
                 name: "Promotions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     DiscountPercentage = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
@@ -383,9 +399,8 @@ namespace Data.Migrations
                 name: "Suppliers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Document = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: false),
                     Email = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
@@ -412,9 +427,8 @@ namespace Data.Migrations
                 name: "Taxes",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Rate = table.Column<decimal>(type: "numeric(5,2)", nullable: false)
                 },
@@ -433,10 +447,9 @@ namespace Data.Migrations
                 name: "Products",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    CategoryId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    CategoryId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     SKU = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     BarCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
@@ -446,7 +459,7 @@ namespace Data.Migrations
                     Active = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CategoryModelId = table.Column<int>(type: "integer", nullable: true)
+                    CategoryModelId = table.Column<string>(type: "character varying(36)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -474,15 +487,14 @@ namespace Data.Migrations
                 name: "Customers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Document = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: false),
                     Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    LoyaltyProgramId = table.Column<int>(type: "integer", nullable: true),
+                    LoyaltyProgramId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -508,10 +520,9 @@ namespace Data.Migrations
                 name: "PurchaseOrders",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    SupplierId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    SupplierId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     OrderNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     OrderDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
@@ -519,7 +530,7 @@ namespace Data.Migrations
                     DeliveryDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    SupplierModelId = table.Column<int>(type: "integer", nullable: true)
+                    SupplierModelId = table.Column<string>(type: "character varying(36)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -547,11 +558,10 @@ namespace Data.Migrations
                 name: "PriceHistories",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    ChangedByUserId = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ChangedByUserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     OldPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     NewPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     ChangeDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -586,11 +596,10 @@ namespace Data.Migrations
                 name: "ProductPromotions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    PromotionId = table.Column<int>(type: "integer", nullable: false)
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    PromotionId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -619,11 +628,10 @@ namespace Data.Migrations
                 name: "ProductTaxes",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    TaxId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    TaxId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -654,10 +662,9 @@ namespace Data.Migrations
                 name: "Stock",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Quantity = table.Column<decimal>(type: "numeric", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -683,11 +690,10 @@ namespace Data.Migrations
                 name: "SupplierPrices",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    SupplierId = table.Column<int>(type: "integer", nullable: false),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    SupplierId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     MinimumQuantity = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
@@ -696,7 +702,7 @@ namespace Data.Migrations
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ValidFrom = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ValidUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    SupplierModelId = table.Column<int>(type: "integer", nullable: true)
+                    SupplierModelId = table.Column<string>(type: "character varying(36)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -730,18 +736,17 @@ namespace Data.Migrations
                 name: "Sales",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
-                    PaymentMethodId = table.Column<int>(type: "integer", nullable: false),
-                    CustomerId = table.Column<int>(type: "integer", nullable: true),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    PaymentMethodId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    CustomerId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: true),
                     Total = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     SaleDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CustomerModelId = table.Column<int>(type: "integer", nullable: true),
-                    PaymentMethodModelId = table.Column<int>(type: "integer", nullable: true)
+                    CustomerModelId = table.Column<string>(type: "character varying(36)", nullable: true),
+                    PaymentMethodModelId = table.Column<string>(type: "character varying(36)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -786,11 +791,10 @@ namespace Data.Migrations
                 name: "PurchaseOrderItems",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PurchaseOrderId = table.Column<int>(type: "integer", nullable: false),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    PurchaseOrderId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -823,11 +827,10 @@ namespace Data.Migrations
                 name: "ProductExpirations",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    StockId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    StockId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     BatchNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
@@ -863,11 +866,10 @@ namespace Data.Migrations
                 name: "StockMovements",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    StockId = table.Column<int>(type: "integer", nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    StockId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     MovementType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     Reason = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
@@ -903,11 +905,10 @@ namespace Data.Migrations
                 name: "SaleItems",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    SaleId = table.Column<int>(type: "integer", nullable: false),
-                    ProductId = table.Column<int>(type: "integer", nullable: false),
-                    GroupId = table.Column<int>(type: "integer", nullable: false),
+                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    SaleId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
+                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     DiscountAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
@@ -974,6 +975,11 @@ namespace Data.Migrations
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BackgroundJobs_GroupId",
+                table: "BackgroundJobs",
+                column: "GroupId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Categories_GroupId_Name",
@@ -1319,6 +1325,9 @@ namespace Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUserTokens");
+
+            migrationBuilder.DropTable(
+                name: "BackgroundJobs");
 
             migrationBuilder.DropTable(
                 name: "LinkedUsers");

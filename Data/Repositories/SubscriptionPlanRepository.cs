@@ -31,7 +31,7 @@ namespace Data.Repositories
             return plan != null ? _mapper.Map<SubscriptionPlan>(plan) : null;
         }
 
-        public async Task<SubscriptionPlan?> GetByIdAsync(int id)
+        public async Task<SubscriptionPlan?> GetByIdAsync(string id)
         {
             var plan = await _context.SubscriptionPlans
                 .FirstOrDefaultAsync(p => p.Id == id);
