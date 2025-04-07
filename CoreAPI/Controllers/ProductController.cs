@@ -21,6 +21,7 @@ namespace CoreAPI.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IUserGroupRepository _userGroupRepository;
         private readonly ICategoryRepository _categoryRepository;
+        private readonly ILinkedUserRepository _linkedUserRepository;
         private readonly IMapper _mapper;
 
         public ProductController(
@@ -29,6 +30,7 @@ namespace CoreAPI.Controllers
             UserManager<IdentityUser> userManager, 
             IUserGroupRepository userGroupRepository,
             ICategoryRepository categoryRepository,
+            ILinkedUserRepository linkedUserRepository,
             IMapper mapper)
         {
             _linkedUserService = linkedUserService;
@@ -36,6 +38,7 @@ namespace CoreAPI.Controllers
             _userManager = userManager;
             _userGroupRepository = userGroupRepository;
             _categoryRepository = categoryRepository;
+            _linkedUserRepository = linkedUserRepository;
             _mapper = mapper;
         }
 
@@ -49,9 +52,8 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
             
-            var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-            string groupId = group?.GroupId ?? string.Empty;
-
+            string groupId;
+            
             if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
@@ -60,6 +62,15 @@ namespace CoreAPI.Controllers
                 {
                     return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
                 }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+                
+            }else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = group?.GroupId ?? string.Empty;
             }
 
             var product = await _productRepository.GetById(id, groupId);
@@ -79,9 +90,8 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
             
-            var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-            string groupId = group?.GroupId ?? string.Empty;
-
+            string groupId;
+            
             if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
@@ -90,6 +100,15 @@ namespace CoreAPI.Controllers
                 {
                     return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
                 }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+                
+            }else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = group?.GroupId ?? string.Empty;
             }
             
             // Find category by name or create a new one
@@ -99,7 +118,7 @@ namespace CoreAPI.Controllers
             if (category == null)
             {
                 // Create a new category and get the ID directly
-                categoryId = await _categoryRepository.CreateCategoryAsync(
+                categoryId = await _categoryRepository.CreateCategoryGetIdAsync(
                     name: model.CategoryName,
                     groupId: groupId,
                     description: $"Category automatically created for product {model.Name}",
@@ -124,7 +143,9 @@ namespace CoreAPI.Controllers
                 active: model.Active
             );
 
-            return product != null ? Ok(product) : BadRequest();
+            if (product == null) return StatusCode(500, "An error occurred while creating the product.");
+
+            return CreatedAtAction(nameof(Get), new { id = product.Id }, product);
         }
 
         [HttpPost("Update")]
@@ -139,9 +160,8 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
             
-            var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-            string groupId = group?.GroupId ?? string.Empty;
-
+             string groupId;
+            
             if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
@@ -150,6 +170,29 @@ namespace CoreAPI.Controllers
                 {
                     return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
                 }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+                
+            }else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+            
+            // Verify if category exists and belongs to the group
+            if (!string.IsNullOrEmpty(model.CategoryId))
+            {
+                var category = await _categoryRepository.GetByIdAsync(model.CategoryId, groupId);
+                if (category == null)
+                {
+                    return BadRequest("The specified category does not exist or does not belong to your group.");
+                }
+            }
+            else
+            {
+                return BadRequest("Category ID is required.");
             }
             
             // Update the product using individual fields
@@ -166,7 +209,62 @@ namespace CoreAPI.Controllers
                 active: model.Active
             );
 
+
             return product != null ? Ok(product) : NotFound();
+        }
+
+        [HttpDelete("Delete")]
+        [Authorize]
+        public async Task<ActionResult> DeleteProductAsync([FromQuery] string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return BadRequest("Product ID is required");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+            
+            string groupId;
+            
+            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            {
+                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
+
+                if (!permission)
+                {
+                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+                
+            }else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(id))
+            {
+                var existingProduct = await _productRepository.GetById(id, groupId);
+                if (existingProduct == null)
+                {
+                    return BadRequest("The specified product does not exist or does not belong to your group.");
+                }
+            }
+            else
+            {
+                return BadRequest("Product ID is required.");
+            }
+
+            var deletedProduct = await _productRepository.DeleteProductAsync(id, groupId);
+
+            if (deletedProduct == null)
+            {
+                return NotFound("Product not found or deletion failed.");
+            }
+
+            return Ok(deletedProduct);
         }
     }
 }

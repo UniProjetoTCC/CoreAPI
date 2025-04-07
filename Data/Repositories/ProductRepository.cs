@@ -40,16 +40,11 @@ namespace Data.Repositories
             decimal cost,
             bool active = true)
         {
-            if (string.IsNullOrEmpty(groupId))
+            if (string.IsNullOrEmpty(groupId)||string.IsNullOrEmpty(categoryId))
             {
-                throw new ArgumentException("GroupId cannot be null or empty when creating a product");
+                return null;
             }
-            
-            if (string.IsNullOrEmpty(categoryId))
-            {
-                throw new ArgumentException("CategoryId cannot be null or empty when creating a product");
-            }
-            
+           
             // Check if a product with the same barcode already exists in this group
             if (!string.IsNullOrEmpty(barCode))
             {
@@ -58,7 +53,7 @@ namespace Data.Repositories
                     
                 if (duplicateProduct != null)
                 {
-                    throw new InvalidOperationException($"A product with barcode '{barCode}' already exists in this group");
+                    return null;
                 }
             }
             
@@ -70,7 +65,7 @@ namespace Data.Repositories
                     
                 if (duplicateProduct != null)
                 {
-                    throw new InvalidOperationException($"A product with SKU '{sku}' already exists in this group");
+                    return null;
                 }
             }
 
@@ -107,19 +102,9 @@ namespace Data.Repositories
             decimal cost,
             bool active)
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(categoryId) || string.IsNullOrEmpty(groupId))
             {
-                throw new ArgumentException("Id cannot be null or empty when updating a product");
-            }
-            
-            if (string.IsNullOrEmpty(groupId))
-            {
-                throw new ArgumentException("GroupId cannot be null or empty when updating a product");
-            }
-            
-            if (string.IsNullOrEmpty(categoryId))
-            {
-                throw new ArgumentException("CategoryId cannot be null or empty when updating a product");
+                return null;
             }
             
             var existingProduct = await _context.Products
@@ -127,7 +112,7 @@ namespace Data.Repositories
                 
             if (existingProduct == null)
             {
-                throw new ArgumentException($"Product with id {id} not found in group {groupId}");
+                return null;
             }
             
             // Check if another product already uses this barcode (only if barcode is not empty and not the same as current)
@@ -138,7 +123,7 @@ namespace Data.Repositories
                     
                 if (duplicateProduct != null)
                 {
-                    throw new InvalidOperationException($"Another product with barcode '{barCode}' already exists in this group");
+                    return null;
                 }
             }
             
@@ -150,7 +135,7 @@ namespace Data.Repositories
                     
                 if (duplicateProduct != null)
                 {
-                    throw new InvalidOperationException($"Another product with SKU '{sku}' already exists in this group");
+                    return null;
                 }
             }
 
@@ -168,6 +153,27 @@ namespace Data.Repositories
             await _context.SaveChangesAsync();
 
             return _mapper.Map<ProductBusinessModel>(existingProduct);
+        }
+
+        public async Task<ProductBusinessModel?> DeleteProductAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+            if (product == null)
+            {
+                return null;
+            }
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ProductBusinessModel>(product);
         }
     }
 }

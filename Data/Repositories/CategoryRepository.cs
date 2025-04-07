@@ -38,44 +38,12 @@ namespace Data.Repositories
             return category != null ? _mapper.Map<CategoryBusinessModel>(category) : null;
         }
 
-        public async Task<CategoryBusinessModel> CreateCategoryAsync(CategoryBusinessModel category)
+        public async Task<string?> CreateCategoryGetIdAsync(string name, string groupId, string? description = null, bool active = true)
         {
-            if (string.IsNullOrEmpty(category.GroupId))
-            {
-                throw new ArgumentException("GroupId cannot be null or empty when creating a category");
-            }
 
-            if (string.IsNullOrEmpty(category.Name))
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
             {
-                throw new ArgumentException("Name cannot be null or empty when creating a category");
-            }
-
-            var newCategory = new CategoryModel
-            {
-                GroupId = category.GroupId,
-                Name = category.Name,
-                Description = category.Description,
-                Active = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            
-            await _context.Categories.AddAsync(newCategory);
-            await _context.SaveChangesAsync();
-
-            return _mapper.Map<CategoryBusinessModel>(newCategory);
-        }
-
-        public async Task<string> CreateCategoryAsync(string name, string groupId, string? description = null, bool active = true)
-        {
-            if (string.IsNullOrEmpty(groupId))
-            {
-                throw new ArgumentException("GroupId cannot be null or empty when creating a category");
-            }
-
-            if (string.IsNullOrEmpty(name))
-            {
-                throw new ArgumentException("Name cannot be null or empty when creating a category");
+                return null;
             }
 
             var newCategory = new CategoryModel
@@ -87,11 +55,73 @@ namespace Data.Repositories
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            
+
             await _context.Categories.AddAsync(newCategory);
             await _context.SaveChangesAsync();
 
             return newCategory.Id;
+        }
+
+        public async Task<CategoryBusinessModel?> CreateCategoryAsync(string name, string groupId, string? description = null, bool active = true)
+        {
+            if (string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(name))
+            {
+                return null;
+            }
+
+            var newCategory = new CategoryModel
+            {
+                GroupId = groupId,
+                Name = name,
+                Description = description,
+                Active = active,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.Categories.AddAsync(newCategory);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(newCategory);
+        }
+
+        public async Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string? name = null, string? description = null, bool? active = null)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return null; 
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                throw new Exception("Category not found"); 
+            }
+
+            // Atualizar apenas os campos fornecidos
+            if (!string.IsNullOrEmpty(name))
+            {
+                category.Name = name;
+            }
+
+            if (!string.IsNullOrEmpty(description))
+            {
+                category.Description = description;
+            }
+
+            if (active.HasValue)
+            {
+                category.Active = active.Value;
+            }
+
+            category.UpdatedAt = DateTime.UtcNow;
+
+            _context.Categories.Update(category);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(category);
         }
 
         public async Task<List<CategoryBusinessModel>> GetAllByGroupIdAsync(string groupId)

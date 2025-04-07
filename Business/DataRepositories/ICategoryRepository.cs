@@ -10,8 +10,9 @@ namespace Business.DataRepositories
     {
         Task<CategoryBusinessModel?> GetByIdAsync(string id, string groupId);
         Task<CategoryBusinessModel?> GetByNameAsync(string name, string groupId);
-        Task<CategoryBusinessModel> CreateCategoryAsync(CategoryBusinessModel category);
-        Task<string> CreateCategoryAsync(string name, string groupId, string? description = null, bool active = true);
+        Task<string?> CreateCategoryGetIdAsync(string name, string groupId, string? description = null, bool active = true);
         Task<List<CategoryBusinessModel>> GetAllByGroupIdAsync(string groupId);
+        Task<CategoryBusinessModel?> CreateCategoryAsync(string name, string groupId, string? description = null, bool active = true);
+        Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string name, string? description = null, bool? active = null);
     }
 }

@@ -9,7 +9,7 @@ namespace Business.DataRepositories
     public interface IProductRepository
     {
         Task<ProductBusinessModel?> GetById(string id, string groupId);
-        
+
         Task<ProductBusinessModel?> CreateProductAsync(
             string groupId,
             string categoryId,
@@ -21,7 +21,7 @@ namespace Business.DataRepositories
             decimal cost,
             bool active = true
         );
-        
+
         Task<ProductBusinessModel?> UpdateProductAsync(
             string id,
             string groupId,
@@ -33,6 +33,11 @@ namespace Business.DataRepositories
             decimal price,
             decimal cost,
             bool active
+        );
+
+        Task<ProductBusinessModel?> DeleteProductAsync(
+            string id,
+            string groupId
         );
     }
 }
