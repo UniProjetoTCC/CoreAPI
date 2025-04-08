@@ -10,7 +10,7 @@ namespace Business.Services.Base
         /// </summary>
         /// <param name="groupId">The ID of the group to downgrade</param>
         /// <returns>The job ID of the scheduled downgrade (can be used to cancel)</returns>
-        Task<string> EnqueueUserDowngrade(int groupId);
+        Task<string> EnqueueUserDowngrade(string groupId);
 
         /// <summary>
         /// Enqueues a job to handle user upgrade process.
@@ -18,7 +18,7 @@ namespace Business.Services.Base
         /// </summary>
         /// <param name="groupId">The ID of the group to upgrade</param>
         /// <returns>The job ID of the scheduled upgrade</returns>
-        Task<string> EnqueueUserUpgrade(int groupId);
+        Task<string> EnqueueUserUpgrade(string groupId);
 
         /// <summary>
         /// Cancels a scheduled downgrade if it hasn't been executed yet
@@ -32,7 +32,7 @@ namespace Business.Services.Base
         /// </summary>
         /// <param name="groupId">The ID of the group</param>
         /// <returns>List of active background jobs</returns>
-        Task<IEnumerable<HangJob>?> GetActiveJobsByGroupId(int groupId);
+        Task<IEnumerable<HangJob>?> GetActiveJobsByGroupId(string groupId);
 
         /// <summary>
         /// Updates the status of a job

@@ -8,21 +8,24 @@ namespace Data.Models
     public class PurchaseOrderItemModel
     { 
         // Identificadores
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        [Key]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [ForeignKey("PurchaseOrder")]
-        public required int PurchaseOrderId { get; set; } 
+        [StringLength(36)]
+        public required string PurchaseOrderId { get; set; } 
 
         [Required]
         [ForeignKey("Product")]
-        public required int ProductId { get; set; } 
+        [StringLength(36)]
+        public required string ProductId { get; set; } 
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; } 
+        [StringLength(36)]
+        public required string GroupId { get; set; } 
 
         [Required]
         [Range(1, int.MaxValue)]

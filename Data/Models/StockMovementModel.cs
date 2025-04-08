@@ -8,21 +8,24 @@ namespace Data.Models
     [Table("StockMovements")]
     public class StockMovementModel 
     { 
-        [Key] 
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; } 
+        [Key]
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required] 
         [ForeignKey("Stock")]
-        public required int StockId { get; set; } 
+        [StringLength(36)]
+        public required string StockId { get; set; } 
 
         [Required] 
         [ForeignKey("User")]
+        [StringLength(36)]
         public required string UserId { get; set; }
 
         [Required] 
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; } 
+        [StringLength(36)]
+        public required string GroupId { get; set; } 
 
         [Required] 
         [StringLength(20)]

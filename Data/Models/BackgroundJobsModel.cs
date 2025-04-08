@@ -7,8 +7,8 @@ namespace Data.Models
     public class BackgroundJobsModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [StringLength(100)]
@@ -20,7 +20,8 @@ namespace Data.Models
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; }
+        [StringLength(36)]
+        public required string GroupId { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; }

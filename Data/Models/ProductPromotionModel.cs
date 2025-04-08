@@ -7,20 +7,23 @@ namespace Data.Models
     public class ProductPromotionModel
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        [StringLength(36)]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [ForeignKey("UserGroup")]
-        public required int GroupId { get; set; }
+        [StringLength(36)]
+        public required string GroupId { get; set; }
 
         [Required]
         [ForeignKey("Product")]
-        public required int ProductId { get; set; }
+        [StringLength(36)]
+        public required string ProductId { get; set; }
 
         [Required]
         [ForeignKey("Promotion")]
-        public required int PromotionId { get; set; }
+        [StringLength(36)]
+        public required string PromotionId { get; set; }
 
         // Propriedades de navegação
         public virtual ProductModel? Product { get; set; }

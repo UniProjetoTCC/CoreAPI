@@ -3,16 +3,11 @@ using System;
 
 namespace CoreAPI.Models
 {
-    public class GetByID
-    {
-        [Required]
-        public int Id { get; set; }
-    }
-
     public class ProductCreateModel
     {
         [Required]
-        public int CategoryId { get; set; }
+        [StringLength(50, MinimumLength = 3)]
+        public string CategoryName { get; set; } = string.Empty;
         
         [Required]
         [StringLength(50, MinimumLength = 3)]
@@ -42,10 +37,11 @@ namespace CoreAPI.Models
     public class ProductUpdateModel
     {
         [Required]
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         
         [Required]
-        public int CategoryId { get; set; }
+        [StringLength(36)]
+        public string CategoryId { get; set; } = string.Empty;
         
         [Required]
         [StringLength(50, MinimumLength = 3)]

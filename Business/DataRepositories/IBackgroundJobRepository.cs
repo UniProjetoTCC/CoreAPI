@@ -6,7 +6,7 @@ namespace Business.DataRepositories
     {
         Task<HangJob> CreateAsync(HangJob job);
         Task<HangJob?> GetByHangfireJobIdAsync(string hangfireJobId);
-        Task<IEnumerable<HangJob>?> GetActiveJobsByGroupIdAsync(int groupId);
+        Task<IEnumerable<HangJob>?> GetActiveJobsByGroupIdAsync(string groupId);
         Task<HangJob?> UpdateAsync(HangJob job);
     }
 }

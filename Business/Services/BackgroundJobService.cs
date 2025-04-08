@@ -20,7 +20,7 @@ namespace Business.Services
             _logger = logger;
         }
 
-        public async Task<string> EnqueueUserDowngrade(int groupId)
+        public async Task<string> EnqueueUserDowngrade(string groupId)
         {
             // First job sends warning email and schedules the actual downgrade
             var hangfireJobId = BackgroundJob.Enqueue<UserDowngradeJob>(
@@ -39,7 +39,7 @@ namespace Business.Services
             return hangfireJobId;
         }
 
-        public async Task<string> EnqueueUserUpgrade(int groupId)
+        public async Task<string> EnqueueUserUpgrade(string groupId)
         {
             // First job sends notification email and executes the upgrade
             var hangfireJobId = BackgroundJob.Enqueue<UserUpgradeJob>(
@@ -82,7 +82,7 @@ namespace Business.Services
             return cancelled;
         }
 
-        public async Task<IEnumerable<HangJob>?> GetActiveJobsByGroupId(int groupId)
+        public async Task<IEnumerable<HangJob>?> GetActiveJobsByGroupId(string groupId)
         {
             return await _jobRepository.GetActiveJobsByGroupIdAsync(groupId);
         }

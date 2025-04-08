@@ -2,10 +2,10 @@ namespace Business.Models
 {
     public class HangJob
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public required string HangfireJobId { get; set; }
         public required string JobType { get; set; }
-        public int GroupId { get; set; }
+        public string GroupId { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime? ExecutedAt { get; set; }
         public DateTime? CancelledAt { get; set; }

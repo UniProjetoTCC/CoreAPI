@@ -38,7 +38,7 @@ namespace Data.Repositories
             return model != null ? _mapper.Map<HangJob>(model) : null;
         }
 
-        public async Task<IEnumerable<HangJob>?> GetActiveJobsByGroupIdAsync(int groupId)
+        public async Task<IEnumerable<HangJob>?> GetActiveJobsByGroupIdAsync(string groupId)
         {
             var models = await _context.BackgroundJobs
                 .Where(j => j.GroupId == groupId && j.Status == "Scheduled")

@@ -4,10 +4,10 @@ namespace Business.Models
 {
     public class LinkedUser
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string LinkedUserId { get; set; } = null!;
         public string ParentUserId { get; set; } = null!;
-        public int GroupId { get; set; }
+        public string GroupId { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public bool CanPerformTransactions { get; set; }
         public bool CanGenerateReports { get; set; }
