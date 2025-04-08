@@ -14,5 +14,6 @@ namespace Business.DataRepositories
         Task<List<CategoryBusinessModel>> GetAllByGroupIdAsync(string groupId);
         Task<CategoryBusinessModel?> CreateCategoryAsync(string name, string groupId, string? description = null, bool active = true);
         Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string name, string? description = null, bool? active = null);
+        Task<CategoryBusinessModel?> DeleteCategoryAsync(string id, string groupId);
     }
 }
