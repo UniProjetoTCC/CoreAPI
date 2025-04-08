@@ -100,7 +100,7 @@ namespace CoreAPI.Controllers
 
                 if (!permission)
                 {
-                    return Forbid("You do not have permission to access this resource.");
+                    return StatusCode(403 ,"You do not have permission to access this resource.");
                 }
 
                 // Get the group ID from the linked user service
@@ -198,6 +198,54 @@ namespace CoreAPI.Controllers
             _logger.LogInformation($"Categoria atualizada: ID={category.Id}, GroupID={category.GroupId}");
             return Ok(category);
 
+        }
+
+        [HttpDelete("Delete")]
+        [Authorize]
+        public async Task<ActionResult> DeleteCategoryAsync([FromQuery] string id)
+        {
+            if (string.IsNullOrEmpty(id)) return BadRequest("Category ID is required");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            string groupId;
+
+            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            {
+                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
+
+                if (!permission)
+                {
+                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+
+            }
+            else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+
+            // Check if the category exists and belongs to the group
+            var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
+            if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
+
+            bool hasProducts = await _productRepository.HasProductsInCategoryAsync(id, groupId);
+            if(hasProducts)
+            {
+                return BadRequest("Cannot delete category with existing products.");
+            }
+
+            // Delete the category
+            var result = await _categoryRepository.DeleteCategoryAsync(id, groupId);
+            if (result == null) return StatusCode(500, "An error occurred while deleting the category.");
+
+            return Ok("Category deleted successfully.");
         }
     }
 }

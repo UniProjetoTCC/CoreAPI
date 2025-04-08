@@ -124,6 +124,26 @@ namespace Data.Repositories
             return _mapper.Map<CategoryBusinessModel>(category);
         }
 
+        public async Task<CategoryBusinessModel?> DeleteCategoryAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
+
+            if (category == null)
+            {
+                return null;
+            }
+
+            _context.Categories.Remove(category);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(category);
+        }
         public async Task<List<CategoryBusinessModel>> GetAllByGroupIdAsync(string groupId)
         {
             var categories = await _context.Categories

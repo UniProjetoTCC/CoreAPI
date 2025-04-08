@@ -40,29 +40,29 @@ namespace Data.Repositories
             decimal cost,
             bool active = true)
         {
-            if (string.IsNullOrEmpty(groupId)||string.IsNullOrEmpty(categoryId))
+            if (string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(categoryId))
             {
                 return null;
             }
-           
+
             // Check if a product with the same barcode already exists in this group
             if (!string.IsNullOrEmpty(barCode))
             {
                 var duplicateProduct = await _context.Products
                     .FirstOrDefaultAsync(p => p.GroupId == groupId && p.BarCode == barCode);
-                    
+
                 if (duplicateProduct != null)
                 {
                     return null;
                 }
             }
-            
+
             // Check if a product with the same SKU already exists in this group
             if (!string.IsNullOrEmpty(sku))
             {
                 var duplicateProduct = await _context.Products
                     .FirstOrDefaultAsync(p => p.GroupId == groupId && p.SKU == sku);
-                    
+
                 if (duplicateProduct != null)
                 {
                     return null;
@@ -83,7 +83,7 @@ namespace Data.Repositories
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            
+
             await _context.Products.AddAsync(newProduct);
             await _context.SaveChangesAsync();
 
@@ -106,33 +106,33 @@ namespace Data.Repositories
             {
                 return null;
             }
-            
+
             var existingProduct = await _context.Products
                 .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
-                
+
             if (existingProduct == null)
             {
                 return null;
             }
-            
+
             // Check if another product already uses this barcode (only if barcode is not empty and not the same as current)
             if (!string.IsNullOrEmpty(barCode) && existingProduct.BarCode != barCode)
             {
                 var duplicateProduct = await _context.Products
                     .FirstOrDefaultAsync(p => p.GroupId == groupId && p.BarCode == barCode && p.Id != id);
-                    
+
                 if (duplicateProduct != null)
                 {
                     return null;
                 }
             }
-            
+
             // Check if another product already uses this SKU (only if SKU is not empty and not the same as current)
             if (!string.IsNullOrEmpty(sku) && existingProduct.SKU != sku)
             {
                 var duplicateProduct = await _context.Products
                     .FirstOrDefaultAsync(p => p.GroupId == groupId && p.SKU == sku && p.Id != id);
-                    
+
                 if (duplicateProduct != null)
                 {
                     return null;
@@ -174,6 +174,17 @@ namespace Data.Repositories
             await _context.SaveChangesAsync();
 
             return _mapper.Map<ProductBusinessModel>(product);
+        }
+
+        public async Task<bool> HasProductsInCategoryAsync(string categoryId, string groupId)
+        {
+            if (string.IsNullOrEmpty(categoryId) || string.IsNullOrEmpty(groupId))
+            {
+                return false;
+            }
+
+            return await _context.Products
+                .AnyAsync(p => p.CategoryId == categoryId && p.GroupId == groupId);
         }
     }
 }

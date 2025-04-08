@@ -39,5 +39,10 @@ namespace Business.DataRepositories
             string id,
             string groupId
         );
+
+        Task<bool> HasProductsInCategoryAsync(
+            string categoryId,
+            string groupId
+        );
     }
 }
