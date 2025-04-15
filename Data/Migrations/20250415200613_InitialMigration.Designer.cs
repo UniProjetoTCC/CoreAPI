@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     [DbContext(typeof(CoreAPIContext))]
-    [Migration("20250403165913_InitialMigration")]
+    [Migration("20250415200613_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -872,8 +872,8 @@ namespace Data.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("numeric");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

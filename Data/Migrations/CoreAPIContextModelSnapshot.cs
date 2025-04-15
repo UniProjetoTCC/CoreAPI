@@ -869,8 +869,8 @@ namespace Data.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("numeric");
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

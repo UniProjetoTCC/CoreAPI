@@ -30,6 +30,7 @@ namespace CoreAPI.Controllers
         private readonly IUserGroupRepository _userGroupRepository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly ILinkedUserRepository _linkedUserRepository;
+        private readonly IStockRepository _stockRepository;
         private readonly IMapper _mapper;
         private readonly IDistributedCache _distributedCache;
         private readonly ILogger<ProductController> _logger;
@@ -41,6 +42,7 @@ namespace CoreAPI.Controllers
             IUserGroupRepository userGroupRepository,
             ICategoryRepository categoryRepository,
             ILinkedUserRepository linkedUserRepository,
+            IStockRepository stockRepository,
             IMapper mapper,
             IDistributedCache distributedCache,
             ILogger<ProductController> logger)
@@ -51,6 +53,7 @@ namespace CoreAPI.Controllers
             _userGroupRepository = userGroupRepository;
             _categoryRepository = categoryRepository;
             _linkedUserRepository = linkedUserRepository;
+            _stockRepository = stockRepository;
             _mapper = mapper;
             _distributedCache = distributedCache;
             _logger = logger;
@@ -456,6 +459,17 @@ namespace CoreAPI.Controllers
 
                 if (product == null) return StatusCode(500, "An error occurred while creating the product.");
 
+                // Add initial stock if specified and greater than zero
+                if (model.InitialStock > 0)
+                {
+                    await _stockRepository.AddStockAsync(
+                        productId: product.Id,
+                        groupId: groupId,
+                        quantity: (int)model.InitialStock,
+                        userId: currentUser.Id
+                    );
+                }
+
                 var productDto = _mapper.Map<ProductDto>(product);
                 return CreatedAtAction(nameof(Get), new { id = product.Id }, productDto);
             }
@@ -480,7 +494,7 @@ namespace CoreAPI.Controllers
                 }
                 
                 _logger.LogError(ex, "Error creating product");
-                return StatusCode(500, "An unexpected error occurred while creating the product.");
+                return StatusCode(500, "An error occurred while creating the product. Please try again.");
             }
         }
 

@@ -665,7 +665,7 @@ namespace Data.Migrations
                     Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    Quantity = table.Column<decimal>(type: "numeric", nullable: false),
+                    Quantity = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
