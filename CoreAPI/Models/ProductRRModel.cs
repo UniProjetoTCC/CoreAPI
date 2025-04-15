@@ -79,4 +79,10 @@ namespace CoreAPI.Models
         public int Pages { get; set; }
         public bool FromCache { get; set; }
     }
+
+    public class CachedProductSearch
+    {
+        public List<ProductBusinessModel> Products { get; set; } = new List<ProductBusinessModel>();
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    }
 }

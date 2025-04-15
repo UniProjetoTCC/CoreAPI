@@ -3,17 +3,19 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
-using Data.Context;
-using CoreAPI.Models;
+using Microsoft.Extensions.Logging;
+using AutoMapper;
+using Business.DataRepositories;
 using Business.Models;
 using Business.Services.Base;
-using Business.DataRepositories;
 using Business.Enums;
-using AutoMapper;
+using CoreAPI.Models;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 using Business.Utils;
 
 namespace CoreAPI.Controllers 
@@ -59,7 +61,8 @@ namespace CoreAPI.Controllers
         [Authorize]
         public async Task<ActionResult<ProductSearchResponse>> Search([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            int cacheDurationMinutes = 1;
+            const int cacheDurationMinutes = 1;
+            const int maxCachedSearchesPerUser = 5;
 
             if (string.IsNullOrEmpty(name))
                 return BadRequest("Product Name is required.");
@@ -97,14 +100,14 @@ namespace CoreAPI.Controllers
             try
             {
                 // Try to get the map of prior searches from Redis
-                Dictionary<string, List<ProductBusinessModel>>? userSearchCache = null;
+                Dictionary<string, CachedProductSearch>? userSearchCache = null;
                 var cachedSearchesBytes = await _distributedCache.GetAsync(searchesMapKey);
                 
                 if (cachedSearchesBytes != null)
                 {
                     // Deserialize the map of searches
                     var cachedSearchesJson = Encoding.UTF8.GetString(cachedSearchesBytes);
-                    userSearchCache = JsonSerializer.Deserialize<Dictionary<string, List<ProductBusinessModel>>?>(
+                    userSearchCache = JsonSerializer.Deserialize<Dictionary<string, CachedProductSearch>?>(
                         cachedSearchesJson, 
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                     
@@ -116,16 +119,23 @@ namespace CoreAPI.Controllers
                             .OrderByDescending(kv => kv.Key.Length)  // Get the longest matching prefix
                             .FirstOrDefault();
                         
-                        if (!matchingPrefixEntry.Equals(default(KeyValuePair<string, List<ProductBusinessModel>>)))
+                        if (!matchingPrefixEntry.Equals(default(KeyValuePair<string, CachedProductSearch>)))
                         {
                             // We have a cache hit with a previous search term that is a prefix of the current one
                             // Filter the cached results for this new, more specific search term
-                            var filteredResults = matchingPrefixEntry.Value
+                            var filteredResults = matchingPrefixEntry.Value.Products
                                 .Where(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
                                 .ToList();
                                 
-                            // Update the cache with this new search term
-                            userSearchCache[name] = filteredResults;
+                            // Add or update the cache with this new search term
+                            userSearchCache[name] = new CachedProductSearch
+                            {
+                                Products = filteredResults,
+                                Timestamp = DateTime.UtcNow
+                            };
+                            
+                            // Ensure we don't exceed the cache limit per user
+                            EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
                             
                             // Store the updated cache
                             var serializedCache = JsonSerializer.Serialize(userSearchCache);
@@ -158,7 +168,7 @@ namespace CoreAPI.Controllers
                 
                 // If we get here, either there was no cache or no matching prefix was found
                 // Let's do a database search with full-text capabilities
-                userSearchCache ??= new Dictionary<string, List<ProductBusinessModel>>();
+                userSearchCache ??= new Dictionary<string, CachedProductSearch>();
                 
                 var (results, totalCount) = await _productRepository.SearchByNameAsync(
                     name: name,
@@ -168,7 +178,14 @@ namespace CoreAPI.Controllers
                 );
                 
                 // Add this new search to the cache
-                userSearchCache[name] = results;
+                userSearchCache[name] = new CachedProductSearch
+                {
+                    Products = results,
+                    Timestamp = DateTime.UtcNow
+                };
+                
+                // Ensure we don't exceed the cache limit per user
+                EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
                 
                 // Update the cache
                 var newSerializedCache = JsonSerializer.Serialize(userSearchCache);
@@ -212,6 +229,28 @@ namespace CoreAPI.Controllers
                 };
                 
                 return Ok(response);
+            }
+        }
+
+        private void EnsureCacheLimitNotExceeded(Dictionary<string, CachedProductSearch> cache, int maxSize)
+        {
+            if (cache.Count <= maxSize)
+                return;
+                
+            // Calculate how many items to remove
+            int itemsToRemove = cache.Count - maxSize;
+            
+            // Get the oldest entries based on timestamp
+            var oldestEntries = cache
+                .OrderBy(kv => kv.Value.Timestamp)
+                .Take(itemsToRemove)
+                .Select(kv => kv.Key)
+                .ToList();
+                
+            // Remove the oldest entries
+            foreach (var key in oldestEntries)
+            {
+                cache.Remove(key);
             }
         }
 
@@ -284,6 +323,32 @@ namespace CoreAPI.Controllers
                 groupId = group?.GroupId ?? string.Empty;
             }
             
+            // Check if a product with the same barcode already exists in this group
+            var existingProductsByBarCode = await _productRepository.GetProductsByBarCodeAsync(model.BarCode, groupId);
+            if (existingProductsByBarCode.Any())
+            {
+                // User-friendly error message for duplicate barcode
+                return BadRequest(new 
+                { 
+                    error = "DuplicateBarcode", 
+                    message = $"A product with barcode '{model.BarCode}' already exists in your inventory.",
+                    product = existingProductsByBarCode.First()
+                });
+            }
+            
+            // Check if a product with the same SKU already exists in this group
+            var existingProductsBySKU = await _productRepository.GetProductsBySKUAsync(model.SKU, groupId);
+            if (existingProductsBySKU.Any())
+            {
+                // User-friendly error message for duplicate SKU
+                return BadRequest(new 
+                { 
+                    error = "DuplicateSKU", 
+                    message = $"A product with SKU '{model.SKU}' already exists in your inventory.",
+                    product = existingProductsBySKU.First()
+                });
+            }
+            
             // Find category by name or create a new one
             var category = await _categoryRepository.GetByNameAsync(model.CategoryName, groupId);
             string? categoryId;
@@ -308,22 +373,48 @@ namespace CoreAPI.Controllers
                 categoryId = category.Id;
             }
             
-            // Create the product using individual fields
-            var product = await _productRepository.CreateProductAsync(
-                groupId: groupId,
-                categoryId: categoryId,
-                name: model.Name,
-                sku: model.SKU,
-                barCode: model.BarCode,
-                description: model.Description,
-                price: model.Price,
-                cost: model.Cost,
-                active: model.Active
-            );
+            try
+            {
+                // Create the product using individual fields
+                var product = await _productRepository.CreateProductAsync(
+                    groupId: groupId,
+                    categoryId: categoryId,
+                    name: model.Name,
+                    sku: model.SKU,
+                    barCode: model.BarCode,
+                    description: model.Description,
+                    price: model.Price,
+                    cost: model.Cost,
+                    active: model.Active
+                );
 
-            if (product == null) return StatusCode(500, "An error occurred while creating the product.");
+                if (product == null) return StatusCode(500, "An error occurred while creating the product.");
 
-            return CreatedAtAction(nameof(Get), new { id = product.Id }, product);
+                return CreatedAtAction(nameof(Get), new { id = product.Id }, product);
+            }
+            catch (DbUpdateException ex)
+            {
+                // Handle any other database-related errors not caught by earlier checks
+                if (ex.InnerException?.Message.Contains("IX_Products_GroupId_BarCode") == true)
+                {
+                    return BadRequest(new 
+                    { 
+                        error = "DuplicateBarcode", 
+                        message = $"A product with barcode '{model.BarCode}' already exists in your inventory." 
+                    });
+                }
+                else if (ex.InnerException?.Message.Contains("IX_Products_GroupId_SKU") == true)
+                {
+                    return BadRequest(new 
+                    { 
+                        error = "DuplicateSKU", 
+                        message = $"A product with SKU '{model.SKU}' already exists in your inventory." 
+                    });
+                }
+                
+                _logger.LogError(ex, "Error creating product");
+                return StatusCode(500, "An unexpected error occurred while creating the product.");
+            }
         }
 
         [HttpPost("Update")]

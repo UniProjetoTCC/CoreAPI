@@ -187,5 +187,33 @@ namespace Data.Repositories
             return await _context.Products
                 .AnyAsync(p => p.CategoryId == categoryId && p.GroupId == groupId);
         }
+
+        public async Task<List<ProductBusinessModel>> GetProductsByBarCodeAsync(string barCode, string groupId)
+        {
+            if (string.IsNullOrEmpty(barCode) || string.IsNullOrEmpty(groupId))
+            {
+                return new List<ProductBusinessModel>();
+            }
+
+            var products = await _context.Products
+                .Where(p => p.BarCode == barCode && p.GroupId == groupId)
+                .ToListAsync();
+
+            return _mapper.Map<List<ProductBusinessModel>>(products);
+        }
+
+        public async Task<List<ProductBusinessModel>> GetProductsBySKUAsync(string sku, string groupId)
+        {
+            if (string.IsNullOrEmpty(sku) || string.IsNullOrEmpty(groupId))
+            {
+                return new List<ProductBusinessModel>();
+            }
+
+            var products = await _context.Products
+                .Where(p => p.SKU == sku && p.GroupId == groupId)
+                .ToListAsync();
+
+            return _mapper.Map<List<ProductBusinessModel>>(products);
+        }
     }
 }

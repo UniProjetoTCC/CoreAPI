@@ -51,5 +51,15 @@ namespace Business.DataRepositories
             string categoryId,
             string groupId
         );
+
+        Task<List<ProductBusinessModel>> GetProductsByBarCodeAsync(
+            string barCode,
+            string groupId
+        );
+
+        Task<List<ProductBusinessModel>> GetProductsBySKUAsync(
+            string sku,
+            string groupId
+        );
     }
 }
