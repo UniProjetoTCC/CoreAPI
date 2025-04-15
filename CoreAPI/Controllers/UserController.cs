@@ -789,7 +789,7 @@ namespace CoreAPI.Controllers
         /// Before deleting the user account, it automatically deletes all linked user accounts.
         /// This is the actual deletion operation that follows the confirmation page.
         /// </remarks>
-        /// <param name="model">The model containing the token for deletion</param>
+        /// <param name="token">Verification token</param>
         /// <response code="204">User deleted successfully (no content)</response>
         /// <response code="400">Invalid token or error during deletion</response>
         /// <response code="401">User not authenticated</response>
