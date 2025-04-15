@@ -15,6 +15,7 @@ using Hangfire;
 using Hangfire.Redis.StackExchange;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging.Console;
+using Npgsql;
 
 using Business.Services.Base;
 using Business.Extensions;

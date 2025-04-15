@@ -10,6 +10,13 @@ namespace Business.DataRepositories
     {
         Task<ProductBusinessModel?> GetById(string id, string groupId);
 
+        Task<(List<ProductBusinessModel> Items, int TotalCount)> SearchByNameAsync(
+            string name,
+            string groupId,
+            int page = 1,
+            int pageSize = 20
+        );
+
         Task<ProductBusinessModel?> CreateProductAsync(
             string groupId,
             string categoryId,

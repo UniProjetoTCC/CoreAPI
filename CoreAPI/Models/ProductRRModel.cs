@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System;
+using Business.Models;
+using System.Collections.Generic;
 
 namespace CoreAPI.Models
 {
@@ -66,5 +68,15 @@ namespace CoreAPI.Models
         public decimal Cost { get; set; }
         
         public bool Active { get; set; } = true;
+    }
+
+    public class ProductSearchResponse
+    {
+        public List<ProductBusinessModel> Items { get; set; } = new List<ProductBusinessModel>();
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int Pages { get; set; }
+        public bool FromCache { get; set; }
     }
 }

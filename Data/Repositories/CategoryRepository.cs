@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Business.Utils;
 
 namespace Data.Repositories
 {
@@ -46,11 +47,15 @@ namespace Data.Repositories
                 return null;
             }
 
+            // Normalize category name and description to remove accents
+            string normalizedName = StringUtils.RemoveDiacritics(name);
+            string? normalizedDescription = description != null ? StringUtils.RemoveDiacritics(description) : null;
+
             var newCategory = new CategoryModel
             {
                 GroupId = groupId,
-                Name = name,
-                Description = description,
+                Name = normalizedName, // Store normalized name
+                Description = normalizedDescription, // Store normalized description
                 Active = active,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -69,11 +74,15 @@ namespace Data.Repositories
                 return null;
             }
 
+            // Normalize category name and description to remove accents
+            string normalizedName = StringUtils.RemoveDiacritics(name);
+            string? normalizedDescription = description != null ? StringUtils.RemoveDiacritics(description) : null;
+
             var newCategory = new CategoryModel
             {
                 GroupId = groupId,
-                Name = name,
-                Description = description,
+                Name = normalizedName, // Store normalized name
+                Description = normalizedDescription, // Store normalized description
                 Active = active,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -103,12 +112,16 @@ namespace Data.Repositories
             // Atualizar apenas os campos fornecidos
             if (!string.IsNullOrEmpty(name))
             {
-                category.Name = name;
+                // Normalize category name to remove accents
+                string normalizedName = StringUtils.RemoveDiacritics(name);
+                category.Name = normalizedName;
             }
 
             if (!string.IsNullOrEmpty(description))
             {
-                category.Description = description;
+                // Normalize category description to remove accents
+                string normalizedDescription = StringUtils.RemoveDiacritics(description);
+                category.Description = normalizedDescription;
             }
 
             if (active.HasValue)

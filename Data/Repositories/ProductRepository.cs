@@ -4,8 +4,13 @@ using Business.Models;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Business.Utils;
 
 namespace Data.Repositories
 {
@@ -29,6 +34,42 @@ namespace Data.Repositories
             return product != null ? _mapper.Map<ProductBusinessModel>(product) : null;
         }
 
+        public async Task<(List<ProductBusinessModel> Items, int TotalCount)> SearchByNameAsync(
+            string name, 
+            string groupId, 
+            int page = 1, 
+            int pageSize = 20)
+        {
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
+            {
+                return (new List<ProductBusinessModel>(), 0);
+            }
+
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            // Use case-insensitive search with ILIKE for database-level filtering
+            // This is already built into PostgreSQL
+            var query = _context.Products
+                .Where(p => p.GroupId == groupId)
+                .Where(p => 
+                    EF.Functions.ILike(p.Name, $"%{name}%") || 
+                    (p.Description != null && EF.Functions.ILike(p.Description, $"%{name}%"))
+                );
+
+            // Get total count for pagination
+            var totalCount = await query.CountAsync();
+
+            // Apply pagination in memory-efficient way
+            var products = await query
+                .OrderBy(p => p.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (_mapper.Map<List<ProductBusinessModel>>(products), totalCount);
+        }
+
         public async Task<ProductBusinessModel?> CreateProductAsync(
             string groupId,
             string categoryId,
@@ -40,43 +81,23 @@ namespace Data.Repositories
             decimal cost,
             bool active = true)
         {
-            if (string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(categoryId))
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(categoryId))
             {
                 return null;
             }
 
-            // Check if a product with the same barcode already exists in this group
-            if (!string.IsNullOrEmpty(barCode))
-            {
-                var duplicateProduct = await _context.Products
-                    .FirstOrDefaultAsync(p => p.GroupId == groupId && p.BarCode == barCode);
-
-                if (duplicateProduct != null)
-                {
-                    return null;
-                }
-            }
-
-            // Check if a product with the same SKU already exists in this group
-            if (!string.IsNullOrEmpty(sku))
-            {
-                var duplicateProduct = await _context.Products
-                    .FirstOrDefaultAsync(p => p.GroupId == groupId && p.SKU == sku);
-
-                if (duplicateProduct != null)
-                {
-                    return null;
-                }
-            }
+            // Normalize product name and description to remove accents
+            string normalizedName = StringUtils.RemoveDiacritics(name);
+            string? normalizedDescription = description != null ? StringUtils.RemoveDiacritics(description) : null;
 
             var newProduct = new ProductModel
             {
                 GroupId = groupId,
                 CategoryId = categoryId,
-                Name = name,
+                Name = normalizedName,
                 SKU = sku,
                 BarCode = barCode,
-                Description = description,
+                Description = normalizedDescription,
                 Price = price,
                 Cost = cost,
                 Active = active,
@@ -107,52 +128,32 @@ namespace Data.Repositories
                 return null;
             }
 
-            var existingProduct = await _context.Products
+            var product = await _context.Products
                 .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
 
-            if (existingProduct == null)
+            if (product == null)
             {
                 return null;
             }
 
-            // Check if another product already uses this barcode (only if barcode is not empty and not the same as current)
-            if (!string.IsNullOrEmpty(barCode) && existingProduct.BarCode != barCode)
-            {
-                var duplicateProduct = await _context.Products
-                    .FirstOrDefaultAsync(p => p.GroupId == groupId && p.BarCode == barCode && p.Id != id);
+            // Normalize product name and description to remove accents
+            string normalizedName = StringUtils.RemoveDiacritics(name);
+            string? normalizedDescription = description != null ? StringUtils.RemoveDiacritics(description) : null;
 
-                if (duplicateProduct != null)
-                {
-                    return null;
-                }
-            }
+            product.CategoryId = categoryId;
+            product.Name = normalizedName; // Store normalized name
+            product.SKU = sku;
+            product.BarCode = barCode;
+            product.Description = normalizedDescription; // Store normalized description
+            product.Price = price;
+            product.Cost = cost;
+            product.Active = active;
+            product.UpdatedAt = DateTime.UtcNow;
 
-            // Check if another product already uses this SKU (only if SKU is not empty and not the same as current)
-            if (!string.IsNullOrEmpty(sku) && existingProduct.SKU != sku)
-            {
-                var duplicateProduct = await _context.Products
-                    .FirstOrDefaultAsync(p => p.GroupId == groupId && p.SKU == sku && p.Id != id);
-
-                if (duplicateProduct != null)
-                {
-                    return null;
-                }
-            }
-
-            existingProduct.CategoryId = categoryId;
-            existingProduct.Name = name;
-            existingProduct.SKU = sku;
-            existingProduct.BarCode = barCode;
-            existingProduct.Description = description;
-            existingProduct.Price = price;
-            existingProduct.Cost = cost;
-            existingProduct.Active = active;
-            existingProduct.UpdatedAt = DateTime.UtcNow;
-
-            _context.Products.Update(existingProduct);
+            _context.Products.Update(product);
             await _context.SaveChangesAsync();
 
-            return _mapper.Map<ProductBusinessModel>(existingProduct);
+            return _mapper.Map<ProductBusinessModel>(product);
         }
 
         public async Task<ProductBusinessModel?> DeleteProductAsync(string id, string groupId)
