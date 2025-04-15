@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System;
+using System.Collections.Generic;
+using Business.Models;
 
 namespace CoreAPI.Models
 {
@@ -27,5 +29,31 @@ namespace CoreAPI.Models
         public string? Description { get; set; }
         
         public bool? Active { get; set; } = true;
+    }
+
+    public class CategorySearchResponse
+    {
+        public List<CategoryDto> Items { get; set; } = new List<CategoryDto>();
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int Pages { get; set; }
+        public bool FromCache { get; set; }
+    }
+    
+    public class CachedCategorySearch
+    {
+        public List<CategoryBusinessModel> Categories { get; set; } = new List<CategoryBusinessModel>();
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    }
+
+    public class CategoryDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool Active { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }

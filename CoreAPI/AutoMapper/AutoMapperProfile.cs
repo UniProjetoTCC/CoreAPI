@@ -18,9 +18,17 @@ namespace CoreAPI.AutoMapper
             CreateMap<ProductModel, ProductBusinessModel>().ReverseMap();
             CreateMap<ProductBusinessModel, ProductCreateModel>().ReverseMap();
             CreateMap<ProductBusinessModel, ProductUpdateModel>().ReverseMap();
+            
+            // Product DTO mapping
+            CreateMap<ProductModel, ProductDto>();
+            CreateMap<ProductBusinessModel, ProductDto>();
 
             // Category mappings
             CreateMap<CategoryModel, CategoryBusinessModel>().ReverseMap();
+            
+            // Category DTO mappings
+            CreateMap<CategoryModel, CategoryDto>();
+            CreateMap<CategoryBusinessModel, CategoryDto>();
         }
     }
 }

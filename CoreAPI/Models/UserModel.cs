@@ -103,17 +103,7 @@ namespace CoreAPI.Models
         public string NewPassword { get; set; } = string.Empty;
     }
 
-    public class ConfirmEmailModel
-    {
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        public string Email { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Token is required")]
-        public string Token { get; set; } = string.Empty;
-    }
-
-    public class RequestDeleteUserModel
+    public class DeleteLinkedUserModel
     {
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
@@ -124,13 +114,6 @@ namespace CoreAPI.Models
     {
         [Required(ErrorMessage = "Token is required")]
         public string Token { get; set; } = string.Empty;
-    }
-
-    public class DeleteLinkedUserModel
-    {
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        public string Email { get; set; } = string.Empty;
     }
 
     public class TokenModel

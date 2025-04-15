@@ -61,5 +61,11 @@ namespace Business.DataRepositories
             string sku,
             string groupId
         );
+
+        Task<(bool IsBarcodeDuplicate, bool IsSKUDuplicate, ProductBusinessModel? Product)> CheckDuplicateProductAsync(
+            string barCode,
+            string sku,
+            string groupId
+        );
     }
 }

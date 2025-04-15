@@ -165,5 +165,43 @@ namespace Data.Repositories
 
             return _mapper.Map<List<CategoryBusinessModel>>(categories);
         }
+
+        public async Task<(List<CategoryBusinessModel> Items, int TotalCount)> SearchByNameAsync(
+            string name, 
+            string groupId, 
+            int page = 1, 
+            int pageSize = 20)
+        {
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
+            {
+                return (new List<CategoryBusinessModel>(), 0);
+            }
+
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            // Normalize the input for searching
+            string normalizedName = StringUtils.RemoveDiacritics(name);
+
+            // Use case-insensitive search with ILIKE for database-level filtering
+            var query = _context.Categories
+                .Where(c => c.GroupId == groupId)
+                .Where(c => 
+                    EF.Functions.ILike(c.Name, $"%{normalizedName}%") || 
+                    (c.Description != null && EF.Functions.ILike(c.Description, $"%{normalizedName}%"))
+                );
+
+            // Get total count for pagination
+            var totalCount = await query.CountAsync();
+
+            // Apply pagination in memory-efficient way
+            var categories = await query
+                .OrderBy(c => c.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (_mapper.Map<List<CategoryBusinessModel>>(categories), totalCount);
+        }
     }
 }

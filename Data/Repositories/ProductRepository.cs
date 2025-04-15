@@ -215,5 +215,32 @@ namespace Data.Repositories
 
             return _mapper.Map<List<ProductBusinessModel>>(products);
         }
+
+        public async Task<(bool IsBarcodeDuplicate, bool IsSKUDuplicate, ProductBusinessModel? Product)> CheckDuplicateProductAsync(string barCode, string sku, string groupId)
+        {
+            if (string.IsNullOrEmpty(groupId) || (string.IsNullOrEmpty(barCode) && string.IsNullOrEmpty(sku)))
+            {
+                return (false, false, null);
+            }
+
+            // Single query using OR condition for both barcode and SKU
+            var products = await _context.Products
+                .Where(p => p.GroupId == groupId && 
+                          ((!string.IsNullOrEmpty(barCode) && p.BarCode == barCode) || 
+                           (!string.IsNullOrEmpty(sku) && p.SKU == sku)))
+                .ToListAsync();
+
+            if (!products.Any())
+            {
+                return (false, false, null);
+            }
+
+            // Check which field caused the duplicate
+            bool isBarcodeDuplicate = !string.IsNullOrEmpty(barCode) && products.Any(p => p.BarCode == barCode);
+            bool isSKUDuplicate = !string.IsNullOrEmpty(sku) && products.Any(p => p.SKU == sku);
+
+            // Return the first matching product
+            return (isBarcodeDuplicate, isSKUDuplicate, _mapper.Map<ProductBusinessModel>(products.First()));
+        }
     }
 }

@@ -135,12 +135,16 @@ namespace CoreAPI.Controllers
             // Generate email confirmation token
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
+            // Create email confirmation link
+            var confirmationLink = $"{Request.Scheme}://{Request.Host}/User/ConfirmEmail?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(model.Email)}";
+
             var message = $@"
                 <h2>Confirm Your Email</h2>
-                <p>Hello {user.UserName},</p>
-                <p>Thank you for registering. Please use the token below to confirm your email address:</p>
-                <p style='background-color: #f5f5f5; padding: 10px; font-family: monospace;'>{token}</p>
-                <p>If you didn't create an account, you can safely ignore this email.</p>
+                <p>Hello {model.Username},</p>
+                <p>Thank you for registering with {PROJECT_NAME}!</p>
+                <p>Please confirm your email by clicking the link below:</p>
+                <p><a href='{confirmationLink}'>Confirm Email</a></p>
+                <p>If you didn't register with us, please ignore this email.</p>
                 <br>
                 <p>Best regards,</p>
                 <p>{PROJECT_NAME} Team</p>";
@@ -168,28 +172,32 @@ namespace CoreAPI.Controllers
         /// <remarks>
         /// Verifies the email confirmation token and updates the user's confirmation status.
         /// </remarks>
-        /// <param name="model">Email and confirmation token</param>
+        /// <param name="email">User's email</param>
+        /// <param name="token">Email confirmation token</param>
+        /// <param name="userId">User ID (optional)</param>
         /// <response code="200">Email confirmed successfully</response>
         /// <response code="400">Invalid token</response>
-        [HttpPost("ConfirmEmail")]
-        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailModel model)
+        [HttpGet("ConfirmEmail")]
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token, [FromQuery] string userId = "")
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
+                return BadRequest("Email and token are required.");
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
-                return BadRequest("Invalid request");
-
-            var result = await _userManager.ConfirmEmailAsync(user, model.Token);
-            if (result.Succeeded)
-                return Ok(new { Message = "Email confirmed successfully." });
-
-            return BadRequest(new
+                return BadRequest("Invalid email.");
+                
+            // Check userId if provided
+            if (!string.IsNullOrEmpty(userId) && user.Id != userId)
             {
-                Message = "Error confirming email",
-                Errors = result.Errors.Select(e => e.Description)
-            });
+                return BadRequest("User ID doesn't match the email.");
+            }
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+            if (!result.Succeeded)
+                return BadRequest("Invalid token.");
+
+            return Ok("Email confirmed successfully.");
         }
 
         /// <summary>
@@ -198,48 +206,55 @@ namespace CoreAPI.Controllers
         /// <remarks>
         /// Generates a new confirmation token and sends a new email to the user.
         /// </remarks>
-        /// <param name="model">User's email</param>
         /// <response code="200">Confirmation email sent successfully</response>
         /// <response code="400">Email not found</response>
         [HttpPost("ResendEmailConfirmation")]
-        public async Task<IActionResult> ResendEmailConfirmation([FromBody] EmailModel model)
+        [Authorize]
+        public async Task<IActionResult> ResendEmailConfirmation()
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                _logger.LogWarning("No authenticated user found.");
+                return Unauthorized();
+            }
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
-                return Ok(new { Message = "If your email is registered, you will receive a confirmation email." });
+            // No need to find the user again since we already have currentUser
+            if (currentUser.Email == null)
+                return BadRequest("Email address is not available.");
 
-            if (user.EmailConfirmed)
+            if (currentUser.EmailConfirmed)
                 return BadRequest(new { Message = "Email is already confirmed." });
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            var message = $@"
-                <h2>Confirm Your Email</h2>
-                <p>Hello {user.UserName},</p>
-                <p>Please use the token below to confirm your email address:</p>
-                <p style='background-color: #f5f5f5; padding: 10px; font-family: monospace;'>{token}</p>
-                <p>If you didn't request this confirmation, you can safely ignore this email.</p>
-                <br>
-                <p>Best regards,</p>
-                <p>{PROJECT_NAME} Team</p>";
 
             try
             {
-                await _emailSender.SendEmailAsync(
-                    email: user.Email ?? throw new ArgumentNullException(nameof(user.Email)),
-                    subject: "Confirm Your Email",
-                    message: message
-                );
-            }
-            catch
-            {
-                return Ok(new { Message = "Something went wrong. Try later to confirm your email." });
-            }
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(currentUser);
+                
+                // Create a confirmation link - removed userId from URL for consistency with Register
+                var confirmationLink = $"{Request.Scheme}://{Request.Host}/User/ConfirmEmail?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(currentUser.Email)}";
 
-            return Ok(new { Message = "If your email is registered, you will receive a confirmation email." });
+                var message = $@"
+                    <h2>Confirm Your Email</h2>
+                    <p>Hello {currentUser.UserName},</p>
+                    <p>Thank you for registering with {PROJECT_NAME}! Please confirm your email by clicking the link below:</p>
+                    <p><a href='{confirmationLink}'>Confirm Email</a></p>
+                    <p>If you didn't register, you can safely ignore this email.</p>
+                    <br>
+                    <p>Best regards,</p>
+                    <p>{PROJECT_NAME} Team</p>";
+
+                await _emailSender.SendEmailAsync(
+                    currentUser.Email,
+                    "Confirm your email",
+                    message);
+
+                return Ok("Confirmation email sent successfully. Please check your email.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending confirmation email");
+                return BadRequest($"Error sending confirmation email: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -331,7 +346,7 @@ namespace CoreAPI.Controllers
                 if (user == null)
                 {
                     // Don't reveal that the user does not exist
-                    return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                    return Ok("If your email is registered, you will receive a password reset token.");
                 }
 
                 // Generate password reset token
@@ -355,18 +370,18 @@ namespace CoreAPI.Controllers
                         subject: "Reset Your Password",
                         message: message
                     );
-
-                    return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Don't reveal the error to the user for security
-                    return Ok(new { Message = "If your email is registered, you will receive a password reset token." });
+                    _logger.LogError(ex, "Error sending password reset token");
+                    return StatusCode(500, "An error occurred while processing your request.");
                 }
+
+                return Ok("Password reset token sent successfully.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ForgotPassword");
+                _logger.LogError(ex, "Error generating password reset token");
                 return StatusCode(500, "An error occurred while processing your request.");
             }
         }
@@ -381,35 +396,25 @@ namespace CoreAPI.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
                 var user = await _userManager.FindByEmailAsync(resetPasswordModel.Email);
-                if (user == null)
-                {
-                    return BadRequest("Invalid request");
-                }
+                if (user == null) return BadRequest("User not found.");
 
-                var result = await _userManager.ResetPasswordAsync(user,
+                var resetResult = await _userManager.ResetPasswordAsync(
+                    user,
                     resetPasswordModel.Token,
                     resetPasswordModel.NewPassword);
 
-                if (result.Succeeded)
+                if (!resetResult.Succeeded)
                 {
-                    return Ok(new { Message = "Password has been reset successfully." });
+                    var errors = string.Join(", ", resetResult.Errors.Select(e => e.Description));
+                    return BadRequest($"Failed to reset password: {errors}");
                 }
 
-                return BadRequest(new
-                {
-                    Message = "Error resetting password",
-                    Errors = result.Errors.Select(e => e.Description)
-                });
+                return Ok("Password reset successfully. You can now login with your new password.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in ResetPassword: {Message}", ex.Message);
+                _logger.LogError(ex, "Error resetting password");
                 return StatusCode(500, "An error occurred while processing your request.");
             }
         }
@@ -746,27 +751,25 @@ namespace CoreAPI.Controllers
         /// The token is required to complete the account deletion process and expires after 24 hours.
         /// This is the first step in the two-step account deletion process.
         /// </remarks>
-        /// <param name="model">Model containing the user's email</param>
         /// <response code="200">Token sent successfully</response>
         /// <response code="400">Failed to generate token</response>
         /// <response code="401">User not authenticated</response>
         /// <response code="404">User not found</response>
-        [HttpPost("DeleteUser")]
+        [HttpDelete("RequestDelete")]
         [Authorize]
-        public async Task<IActionResult> DeleteUserAsync([FromBody] RequestDeleteUserModel model)
+        public async Task<IActionResult> RequestDeleteUserAsync()
         {
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || user.Email != model.Email) return NotFound("Invalid email match.");
+            if (currentUser.Email == null) return BadRequest("User email not found.");
 
-            var token = await _userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
+            var token = await _userManager.GenerateUserTokenAsync(currentUser, TokenOptions.DefaultProvider, "DeleteAccount");
             if (token == null) return BadRequest("Failed to generate delete token.");
 
             var message = $@"
                     <h2>Delete Your Account</h2>
-                    <p>Hello,</p>
+                    <p>Hello {currentUser.UserName},</p>
                     <p>We received a request to delete your account. Use the token below with the delete account endpoint:</p>
                     <p style='background-color: #f5f5f5; padding: 10px; font-family: monospace;'>{token}</p>
                     <p>If you didn't request this, you can safely ignore this email.</p>
@@ -775,23 +778,22 @@ namespace CoreAPI.Controllers
                     <p>Best regards,</p>
                     <p>{PROJECT_NAME} Team</p>";
 
-            await _emailSender.SendEmailAsync(user.Email, "Delete Your Account", message);
-            return Ok("Delete token sent successfully.");
+            await _emailSender.SendEmailAsync(currentUser.Email, "Delete Your Account", message);
+            return Accepted(new { message = "Delete request initiated. Please check your email to confirm." });
         }
 
         /// <summary>
-        /// Completes the account deletion process using the verification token
+        /// Confirms and processes the account deletion
         /// </summary>
         /// <remarks>
-        /// This endpoint verifies the token sent to the user's email and performs the account deletion.
         /// Before deleting the user account, it automatically deletes all linked user accounts.
-        /// This is the second and final step in the two-step account deletion process.
+        /// This is the actual deletion operation that follows the confirmation page.
         /// </remarks>
-        /// <param name="model">Model containing the verification token</param>
-        /// <response code="200">User deleted successfully</response>
+        /// <param name="model">The model containing the token for deletion</param>
+        /// <response code="204">User deleted successfully (no content)</response>
         /// <response code="400">Invalid token or error during deletion</response>
         /// <response code="401">User not authenticated</response>
-        [HttpPost("ConfirmDeleteUser")]
+        [HttpDelete("Delete")]
         [Authorize]
         public async Task<IActionResult> ConfirmDeleteUserAsync([FromBody] DeleteUserModel model)
         {
@@ -816,7 +818,7 @@ namespace CoreAPI.Controllers
             if (!userDeleted.Succeeded) 
                 return BadRequest($"Failed to delete user: {string.Join(", ", userDeleted.Errors.Select(e => e.Description))}");
 
-            return Ok("User account deleted successfully!");
+            return NoContent();
         }
 
         /// <summary>
@@ -837,7 +839,7 @@ namespace CoreAPI.Controllers
         /// 400 Bad Request - If the linked user doesn't exist or doesn't belong to the current user
         /// 401 Unauthorized - If the user is not authenticated
         /// </returns>
-        [HttpPost("DeleteLinkedUser")]
+        [HttpDelete("LinkedUser")]
         [Authorize]
         public async Task<IActionResult> DeleteLinkedUserAsync([FromBody] DeleteLinkedUserModel model)
         {
@@ -856,7 +858,7 @@ namespace CoreAPI.Controllers
             var deleted = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.LinkedUserId);
             if (!deleted) return BadRequest("Failed to delete linked user.");
 
-            return Ok("Linked user deleted successfully.");
+            return NoContent();
         }
 
         /// <summary>
@@ -879,7 +881,7 @@ namespace CoreAPI.Controllers
         /// <response code="400">Invalid data, linked user limit reached, or linked users cannot create other linked users</response>
         /// <response code="401">User not authenticated</response>
         /// <response code="404">User group or subscription plan not found</response>
-        [HttpPost("CreateLinkedUser")]
+        [HttpPost("LinkedUser")]
         [Authorize]
         public async Task<IActionResult> CreateLinkedUserAsync([FromBody] RegisterLinkedUserModel model)
         {
@@ -957,7 +959,7 @@ namespace CoreAPI.Controllers
         /// <response code="400">Invalid request or linked users cannot update other linked users</response>
         /// <response code="401">User not authenticated or not authorized to update this linked user</response>
         /// <response code="404">Linked user not found</response>
-        [HttpPost("UpdateLinkedUser")]
+        [HttpPut("LinkedUser")]
         [Authorize]
         public async Task<IActionResult> UpdateLinkedUserAsync([FromBody] UpdateLinkedUserModel model)
         {

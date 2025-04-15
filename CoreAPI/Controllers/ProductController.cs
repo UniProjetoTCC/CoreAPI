@@ -57,6 +57,21 @@ namespace CoreAPI.Controllers
         }
 
         
+        /// <summary>
+        /// Searches for products based on name with pagination support
+        /// </summary>
+        /// <remarks>
+        /// This endpoint performs an accent-insensitive search on product names and supports caching.
+        /// Results are limited to products belonging to the user's group.
+        /// The search results are cached for 1 minute and limited to 5 searches per user.
+        /// </remarks>
+        /// <param name="name">Product name to search for (required)</param>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Number of items per page (default: 20)</param>
+        /// <response code="200">Search results with pagination info</response>
+        /// <response code="400">Empty search term</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
         [HttpGet("Search")]
         [Authorize]
         public async Task<ActionResult<ProductSearchResponse>> Search([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
@@ -147,10 +162,11 @@ namespace CoreAPI.Controllers
                                 Encoding.UTF8.GetBytes(serializedCache), 
                                 cacheOptions);
                             
-                            // Paginate the results
+                            // Paginate the results and map to DTOs
                             var paginatedResults = filteredResults
                                 .Skip((page - 1) * pageSize)
                                 .Take(pageSize)
+                                .Select(p => _mapper.Map<ProductDto>(p))
                                 .ToList();
                                 
                             return Ok(new ProductSearchResponse 
@@ -177,6 +193,13 @@ namespace CoreAPI.Controllers
                     pageSize: pageSize
                 );
                 
+                // Map results to DTOs using AutoMapper
+                var productDtos = results
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(p => _mapper.Map<ProductDto>(p))
+                    .ToList();
+                
                 // Add this new search to the cache
                 userSearchCache[name] = new CachedProductSearch
                 {
@@ -199,7 +222,7 @@ namespace CoreAPI.Controllers
                 
                 return Ok(new ProductSearchResponse 
                 {
-                    Items = results,
+                    Items = productDtos,
                     TotalCount = totalCount,
                     Page = page,
                     PageSize = pageSize,
@@ -218,9 +241,16 @@ namespace CoreAPI.Controllers
                     pageSize: pageSize
                 );
                 
+                // Map results to DTOs using AutoMapper
+                var productDtos = results
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(p => _mapper.Map<ProductDto>(p))
+                    .ToList();
+                
                 var response = new ProductSearchResponse 
                 {
-                    Items = results,
+                    Items = productDtos,
                     TotalCount = totalCount,
                     Page = page,
                     PageSize = pageSize,
@@ -254,9 +284,22 @@ namespace CoreAPI.Controllers
             }
         }
 
-        [HttpGet("Get")]
+        /// <summary>
+        /// Gets a specific product by ID
+        /// </summary>
+        /// <remarks>
+        /// Retrieves detailed information about a product by its ID.
+        /// Only returns products that belong to the user's group.
+        /// </remarks>
+        /// <param name="id">Product ID (required)</param>
+        /// <response code="200">Product details</response>
+        /// <response code="400">Invalid or missing product ID</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpGet("{id}")]
         [Authorize]
-        public async Task<ActionResult> Get([FromQuery] string id)
+        public async Task<ActionResult> Get(string id)
         {
             if (string.IsNullOrEmpty(id))
                 return BadRequest("Product ID is required.");
@@ -287,10 +330,29 @@ namespace CoreAPI.Controllers
 
             var product = await _productRepository.GetById(id, groupId);
 
-            return product != null ? Ok(product) : NotFound();
+            if (product == null) return NotFound();
+
+            var productDto = _mapper.Map<ProductDto>(product);
+            return Ok(productDto);
         }
 
-        [HttpPost("Create")]
+        /// <summary>
+        /// Creates a new product
+        /// </summary>
+        /// <remarks>
+        /// This endpoint creates a new product with the following validation:
+        /// - Checks for duplicate products by barcode or SKU
+        /// - Verifies that the category exists and belongs to the user's group
+        /// - Associates the product with the user's group
+        /// 
+        /// The product will be associated with the user's current group and the specified category.
+        /// </remarks>
+        /// <param name="model">Product creation model with all required fields</param>
+        /// <response code="200">Created product details</response>
+        /// <response code="400">Validation errors or duplicate product</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        [HttpPost]
         [Authorize]
         public async Task<ActionResult> CreateProductAsync([FromBody] ProductCreateModel model)
         {
@@ -323,29 +385,33 @@ namespace CoreAPI.Controllers
                 groupId = group?.GroupId ?? string.Empty;
             }
             
-            // Check if a product with the same barcode already exists in this group
-            var existingProductsByBarCode = await _productRepository.GetProductsByBarCodeAsync(model.BarCode, groupId);
-            if (existingProductsByBarCode.Any())
+            // Check for duplicate barcode or SKU in a single database query
+            var (isBarcodeDuplicate, isSKUDuplicate, duplicateProduct) = 
+                await _productRepository.CheckDuplicateProductAsync(
+                    barCode: model.BarCode,
+                    sku: model.SKU,
+                    groupId: groupId
+                );
+            
+            // Handle barcode duplicates first
+            if (isBarcodeDuplicate)
             {
-                // User-friendly error message for duplicate barcode
-                return BadRequest(new 
+                return Conflict(new 
                 { 
                     error = "DuplicateBarcode", 
                     message = $"A product with barcode '{model.BarCode}' already exists in your inventory.",
-                    product = existingProductsByBarCode.First()
+                    product = duplicateProduct
                 });
             }
             
-            // Check if a product with the same SKU already exists in this group
-            var existingProductsBySKU = await _productRepository.GetProductsBySKUAsync(model.SKU, groupId);
-            if (existingProductsBySKU.Any())
+            // Then handle SKU duplicates
+            if (isSKUDuplicate)
             {
-                // User-friendly error message for duplicate SKU
-                return BadRequest(new 
+                return Conflict(new 
                 { 
                     error = "DuplicateSKU", 
                     message = $"A product with SKU '{model.SKU}' already exists in your inventory.",
-                    product = existingProductsBySKU.First()
+                    product = duplicateProduct
                 });
             }
             
@@ -390,14 +456,15 @@ namespace CoreAPI.Controllers
 
                 if (product == null) return StatusCode(500, "An error occurred while creating the product.");
 
-                return CreatedAtAction(nameof(Get), new { id = product.Id }, product);
+                var productDto = _mapper.Map<ProductDto>(product);
+                return CreatedAtAction(nameof(Get), new { id = product.Id }, productDto);
             }
             catch (DbUpdateException ex)
             {
                 // Handle any other database-related errors not caught by earlier checks
                 if (ex.InnerException?.Message.Contains("IX_Products_GroupId_BarCode") == true)
                 {
-                    return BadRequest(new 
+                    return Conflict(new 
                     { 
                         error = "DuplicateBarcode", 
                         message = $"A product with barcode '{model.BarCode}' already exists in your inventory." 
@@ -405,7 +472,7 @@ namespace CoreAPI.Controllers
                 }
                 else if (ex.InnerException?.Message.Contains("IX_Products_GroupId_SKU") == true)
                 {
-                    return BadRequest(new 
+                    return Conflict(new 
                     { 
                         error = "DuplicateSKU", 
                         message = $"A product with SKU '{model.SKU}' already exists in your inventory." 
@@ -417,7 +484,24 @@ namespace CoreAPI.Controllers
             }
         }
 
-        [HttpPost("Update")]
+        /// <summary>
+        /// Updates an existing product
+        /// </summary>
+        /// <remarks>
+        /// This endpoint updates a product with the following validations:
+        /// - Verifies the product exists and belongs to the user's group
+        /// - Checks that the category exists and belongs to the user's group
+        /// - Updates all specified product properties
+        /// 
+        /// Only products within the user's group can be updated.
+        /// </remarks>
+        /// <param name="model">Product update model with all fields to update</param>
+        /// <response code="200">Updated product details</response>
+        /// <response code="400">Validation errors or product not found in user's group</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpPut]
         [Authorize]
         public async Task<ActionResult> UpdateProductAsync([FromBody] ProductUpdateModel model)
         {
@@ -444,7 +528,8 @@ namespace CoreAPI.Controllers
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
                 groupId = linkedUser?.GroupId ?? string.Empty;
                 
-            }else
+            }
+            else
             {
                 var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
                 groupId = group?.GroupId ?? string.Empty;
@@ -478,13 +563,31 @@ namespace CoreAPI.Controllers
                 active: model.Active
             );
 
-
-            return product != null ? Ok(product) : NotFound();
+            if (product == null) return NotFound();
+            
+            var productDto = _mapper.Map<ProductDto>(product);
+            return Ok(productDto);
         }
 
-        [HttpDelete("Delete")]
+        /// <summary>
+        /// Deletes a product by ID
+        /// </summary>
+        /// <remarks>
+        /// This endpoint permanently deletes a product with the following validations:
+        /// - Verifies the product exists and belongs to the user's group
+        /// - Confirms the user has permission to delete products
+        /// 
+        /// Once deleted, a product cannot be recovered.
+        /// </remarks>
+        /// <param name="id">Product ID to delete</param>
+        /// <response code="204">Product successfully deleted (no content)</response>
+        /// <response code="400">Invalid ID or product not found in user's group</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpDelete("{id}")]
         [Authorize]
-        public async Task<ActionResult> DeleteProductAsync([FromQuery] string id)
+        public async Task<ActionResult> DeleteProductAsync(string id)
         {
             if (string.IsNullOrEmpty(id))
                 return BadRequest("Product ID is required");
@@ -533,7 +636,8 @@ namespace CoreAPI.Controllers
                 return NotFound("Product not found or deletion failed.");
             }
 
-            return Ok(deletedProduct);
+            // Return 204 No Content for successful deletion operations
+            return NoContent();
         }
     }
 }
