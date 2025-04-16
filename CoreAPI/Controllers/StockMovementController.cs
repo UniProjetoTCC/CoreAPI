@@ -85,7 +85,12 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId = await GetUserGroupId(currentUser.Id);
+            var (hasPermission, groupId) = await CheckStockPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access stock information. Talk to your access manager to get the necessary permissions.");
+            }
+            
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -241,7 +246,12 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId = await GetUserGroupId(currentUser.Id);
+            var (hasPermission, groupId) = await CheckStockPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access stock information. Talk to your access manager to get the necessary permissions.");
+            }
+
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -401,7 +411,12 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId = await GetUserGroupId(currentUser.Id);
+            var (hasPermission, groupId) = await CheckStockPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access stock information. Talk to your access manager to get the necessary permissions.");
+            }
+            
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -454,6 +469,34 @@ namespace CoreAPI.Controllers
                 var group = await _userGroupRepository.GetByUserIdAsync(userId);
                 return group?.GroupId ?? string.Empty;
             }
+        }
+        
+        // Helper method to check stock permissions and get group ID
+        private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
+        {
+            string groupId;
+            
+            if (await _linkedUserService.IsLinkedUserAsync(userId))
+            {
+                bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Stock);
+
+                if (!permission)
+                {
+                    return (false, string.Empty);
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+                
+            }
+            else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(userId);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+            
+            return (true, groupId);
         }
     }
 }
