@@ -87,25 +87,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-            
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-                
-            }else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Generate cache key for this user's search context
@@ -308,26 +293,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-                
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             var category = await _categoryRepository.GetByIdAsync(id, groupId);
@@ -361,25 +330,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403 ,"You do not have permission to access this resource.");
-                }
-
-                // Get the group ID from the linked user service
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Check if the category already exists
@@ -433,26 +387,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Verify if category exists and belongs to the group
@@ -513,26 +451,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Check if the category exists and belongs to the group
@@ -553,6 +475,31 @@ namespace CoreAPI.Controllers
             return NoContent();
         }
 
-       
+        private async Task<(bool hasPermission, string groupId)> CheckCategoryPermissionAsync(string userId)
+        {
+            string groupId;
+            
+            if (await _linkedUserService.IsLinkedUserAsync(userId))
+            {
+                bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
+
+                if (!permission)
+                {
+                    return (false, string.Empty);
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+                
+            }
+            else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(userId);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+            
+            return (true, groupId);
+        }
     }
 }

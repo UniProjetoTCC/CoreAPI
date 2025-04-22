@@ -24,7 +24,7 @@ namespace Data.Models
 
         [Required]
         [Range(0, int.MaxValue)]
-        public required decimal Quantity { get; set; } 
+        public required int Quantity { get; set; } 
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;

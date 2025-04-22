@@ -41,8 +41,6 @@ namespace Data.Models
         [Required]
         public required DateTime MovementDate { get; set; } = DateTime.UtcNow;
 
-        [StringLength(50)]
-        public string? ReferenceNumber { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;

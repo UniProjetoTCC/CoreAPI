@@ -34,6 +34,9 @@ namespace CoreAPI.Models
         public decimal Cost { get; set; }
 
         public bool Active { get; set; } = true;
+        
+        [Range(0, double.MaxValue)]
+        public decimal InitialStock { get; set; } = 0;
     }
 
     public class ProductUpdateModel
