@@ -1,10 +1,9 @@
+using Business.DataRepositories;
+using Business.Models;
+using Business.Services.Base;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Business.DataRepositories;
-using Business.Services.Base;
-using Business.Models;
-using Hangfire;
 
 namespace Business.Jobs.Background
 {

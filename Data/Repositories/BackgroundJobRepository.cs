@@ -1,8 +1,8 @@
 using AutoMapper;
 using Business.DataRepositories;
 using Business.Models;
-using Data.Models;
 using Data.Context;
+using Data.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Repositories
@@ -23,7 +23,7 @@ namespace Data.Repositories
             var model = _mapper.Map<BackgroundJobsModel>(job);
             model.CreatedAt = DateTime.UtcNow;
             model.Status = "Scheduled";
-            
+
             _context.BackgroundJobs.Add(model);
             await _context.SaveChangesAsync();
 

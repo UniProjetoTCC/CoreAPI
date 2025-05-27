@@ -1,44 +1,42 @@
-using System;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Identity;
 
 namespace Data.Models
 {
     [Table("Sales")]
     public class SaleModel
-    { 
-        [Key] 
+    {
+        [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        [Required] 
+        [Required]
         [ForeignKey("User")]
         [StringLength(36)]
-        public required string UserId { get; set; } 
+        public required string UserId { get; set; }
 
         [Required]
         [ForeignKey("UserGroup")]
         [StringLength(36)]
-        public required string GroupId { get; set; } 
+        public required string GroupId { get; set; }
 
         [Required]
         [ForeignKey("PaymentMethod")]
         [StringLength(36)]
-        public required string PaymentMethodId { get; set; } 
+        public required string PaymentMethodId { get; set; }
 
         [ForeignKey("Customer")]
         [StringLength(36)]
-        public string? CustomerId { get; set; } 
+        public string? CustomerId { get; set; }
 
         [Required]
         [Range(0, double.MaxValue)]
         [Column(TypeName = "decimal(18,2)")]
-        public required decimal Total { get; set; } 
+        public required decimal Total { get; set; }
 
         [Required]
-        public required DateTime SaleDate { get; set; } = DateTime.UtcNow; 
+        public required DateTime SaleDate { get; set; } = DateTime.UtcNow;
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -48,6 +46,6 @@ namespace Data.Models
         public virtual IdentityUser? User { get; set; }
         public virtual UserGroupModel? UserGroup { get; set; }
         public virtual PaymentMethodModel? PaymentMethod { get; set; }
-        public virtual ICollection<SaleItemModel>? SaleItems { get; set; } = new List<SaleItemModel>(); 
-    } 
+        public virtual ICollection<SaleItemModel>? SaleItems { get; set; } = new List<SaleItemModel>();
+    }
 }

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Business.Models
 {
     public class ProductBusinessModel

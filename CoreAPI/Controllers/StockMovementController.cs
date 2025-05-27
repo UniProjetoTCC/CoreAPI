@@ -1,18 +1,12 @@
+using AutoMapper;
+using Business.DataRepositories;
+using Business.Enums;
+using Business.Services.Base;
+using CoreAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Distributed;
-using AutoMapper;
-using Business.DataRepositories;
-using Business.Services.Base;
-using Business.Enums;
-using CoreAPI.Models;
-using Data.Models;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -82,6 +76,9 @@ namespace CoreAPI.Controllers
             if (string.IsNullOrEmpty(productId))
                 return BadRequest("Product ID is required");
 
+            if (page <= 0 || pageSize <= 0)
+                return BadRequest("Page number and page size must be greater than zero.");
+
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
@@ -90,7 +87,7 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to access stock information. Talk to your access manager to get the necessary permissions.");
             }
-            
+
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -114,14 +111,14 @@ namespace CoreAPI.Controllers
                     var cachedData = JsonSerializer.Deserialize<StockMovementSearchResponse>(
                         cachedResultJson,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    
+
                     return Ok(cachedData);
                 }
 
                 // No direct cache hit, try to get the map of cached queries
                 Dictionary<string, CachedStockMovementData>? userCachedQueries = null;
                 var cachedQueriesBytes = await _distributedCache.GetAsync(queriesMapKey);
-                
+
                 if (cachedQueriesBytes != null)
                 {
                     // Deserialize the map of cached queries
@@ -190,7 +187,7 @@ namespace CoreAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving stock movements for product {ProductId}", productId);
-                
+
                 // Fall back to database query if caching fails
                 var movements = await _stockMovementRepository.GetByProductIdAsync(productId, groupId, page, pageSize);
                 var totalItems = await _stockMovementRepository.GetTotalMovementsForProductAsync(productId, groupId);
@@ -243,6 +240,9 @@ namespace CoreAPI.Controllers
             if (string.IsNullOrEmpty(stockId))
                 return BadRequest("Stock ID is required");
 
+            if (page <= 0 || pageSize <= 0)
+                return BadRequest("Page number and page size must be greater than zero.");
+
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
@@ -270,14 +270,14 @@ namespace CoreAPI.Controllers
                     var cachedData = JsonSerializer.Deserialize<StockMovementSearchResponse>(
                         cachedResultJson,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    
+
                     return Ok(cachedData);
                 }
 
                 // No direct cache hit, try to get the map of cached queries
                 Dictionary<string, CachedStockMovementData>? userCachedQueries = null;
                 var cachedQueriesBytes = await _distributedCache.GetAsync(queriesMapKey);
-                
+
                 if (cachedQueriesBytes != null)
                 {
                     // Deserialize the map of cached queries
@@ -292,7 +292,7 @@ namespace CoreAPI.Controllers
 
                 // No cache hit, get data from database
                 var movements = await _stockMovementRepository.GetByStockIdAsync(stockId, page, pageSize);
-                
+
                 if (movements.Count == 0)
                     return NotFound("No stock movements found");
 
@@ -305,12 +305,12 @@ namespace CoreAPI.Controllers
 
                 // Get the stock item to count total movements (instead of direct database access)
                 var stock = await _stockRepository.GetByProductIdAsync(firstMovement.Stock.ProductId, groupId);
-                
+
                 // Use the repository method to get count
-                var totalItems = movements.Count > 0 
-                    ? await _stockMovementRepository.GetTotalMovementsForProductAsync(firstMovement.Stock.ProductId, groupId) 
+                var totalItems = movements.Count > 0
+                    ? await _stockMovementRepository.GetTotalMovementsForProductAsync(firstMovement.Stock.ProductId, groupId)
                     : 0;
-                    
+
                 var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
                 var response = new StockMovementSearchResponse
@@ -355,10 +355,10 @@ namespace CoreAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving stock movements for stock {StockId}", stockId);
-                
+
                 // Fall back to database query if caching fails
                 var movements = await _stockMovementRepository.GetByStockIdAsync(stockId, page, pageSize);
-                
+
                 if (movements.Count == 0)
                     return NotFound("No stock movements found");
 
@@ -370,10 +370,10 @@ namespace CoreAPI.Controllers
                 var movementDtos = movements.Select(m => _mapper.Map<StockMovementDto>(m)).ToList();
 
                 // Use the repository method to get count
-                var totalItems = movements.Count > 0 
-                    ? await _stockMovementRepository.GetTotalMovementsForProductAsync(firstMovement.Stock.ProductId, groupId) 
+                var totalItems = movements.Count > 0
+                    ? await _stockMovementRepository.GetTotalMovementsForProductAsync(firstMovement.Stock.ProductId, groupId)
                     : 0;
-                    
+
                 var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
                 var response = new StockMovementSearchResponse
@@ -416,7 +416,7 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to access stock information. Talk to your access manager to get the necessary permissions.");
             }
-            
+
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -438,17 +438,17 @@ namespace CoreAPI.Controllers
         {
             if (cache.Count <= maxSize)
                 return;
-                
+
             // Calculate how many items to remove
             int itemsToRemove = cache.Count - maxSize;
-            
+
             // Get the oldest entries based on timestamp
             var oldestEntries = cache
                 .OrderBy(kv => kv.Value.Timestamp)
                 .Take(itemsToRemove)
                 .Select(kv => kv.Key)
                 .ToList();
-                
+
             // Remove the oldest entries
             foreach (var key in oldestEntries)
             {
@@ -470,12 +470,12 @@ namespace CoreAPI.Controllers
                 return group?.GroupId ?? string.Empty;
             }
         }
-        
+
         // Helper method to check stock permissions and get group ID
         private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
         {
             string groupId;
-            
+
             if (await _linkedUserService.IsLinkedUserAsync(userId))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Stock);
@@ -488,14 +488,14 @@ namespace CoreAPI.Controllers
                 // Get the group ID from the linked user
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
                 groupId = linkedUser?.GroupId ?? string.Empty;
-                
+
             }
             else
             {
                 var group = await _userGroupRepository.GetByUserIdAsync(userId);
                 groupId = group?.GroupId ?? string.Empty;
             }
-            
+
             return (true, groupId);
         }
     }

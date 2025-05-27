@@ -1,10 +1,7 @@
 using Business.DataRepositories;
 using Business.Enums;
-using Business.Models;
 using Business.Services.Base;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
 
 namespace Business.Services
 {
@@ -52,7 +49,7 @@ namespace Business.Services
             try
             {
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
-                
+
                 if (linkedUser == null || !linkedUser.IsActive)
                     return false;
 
@@ -61,19 +58,19 @@ namespace Business.Services
                 {
                     case 1: // Transaction
                         return linkedUser.CanPerformTransactions;
-                        
+
                     case 2: // Report
                         return linkedUser.CanGenerateReports;
-                        
+
                     case 4: // Product
                         return linkedUser.CanManageProducts;
-                        
+
                     case 8: // Stock
                         return linkedUser.CanAlterStock;
-                        
+
                     case 16: // Promotion
                         return linkedUser.CanManagePromotions;
-                        
+
                     default:
                         _logger.LogWarning($"Unknown permission check requested: {permission}");
                         return false;
