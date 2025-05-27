@@ -1,5 +1,4 @@
 using Business.DataRepositories;
-using Data.Models;
 using Data.Context;
 
 namespace Data.Repositories

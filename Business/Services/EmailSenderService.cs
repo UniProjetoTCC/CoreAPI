@@ -4,8 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Mail;
-using System.Threading;
-using System.Collections.Generic;
 
 namespace Business.Services
 {
@@ -23,7 +21,7 @@ namespace Business.Services
         private readonly object _lockObject = new object();
 
         public EmailSenderService(
-            IConfiguration configuration, 
+            IConfiguration configuration,
             ILogger<EmailSenderService> logger,
             IMessageBrokerService messageBroker)
         {
@@ -33,11 +31,11 @@ namespace Business.Services
                 throw new InvalidOperationException("ProjectName configuration is not set in appsettings.json!");
             _smtpHost = configuration["EmailSettings:SmtpHost"] ??
                 throw new InvalidOperationException("SmtpHost configuration is not set in appsettings.json!");
-            _smtpPort = int.Parse(configuration["EmailSettings:SmtpPort"] ?? 
+            _smtpPort = int.Parse(configuration["EmailSettings:SmtpPort"] ??
                 throw new InvalidOperationException("SmtpPort configuration is not set in appsettings.json!"));
-            _smtpUser = Environment.GetEnvironmentVariable("EMAIL_USER") ?? 
+            _smtpUser = Environment.GetEnvironmentVariable("EMAIL_USER") ??
                 throw new InvalidOperationException("EMAIL_USER environment variable is not set!");
-            _smtpPassword = Environment.GetEnvironmentVariable("EMAIL_PASSWORD") ?? 
+            _smtpPassword = Environment.GetEnvironmentVariable("EMAIL_PASSWORD") ??
                 throw new InvalidOperationException("EMAIL_PASSWORD environment variable is not set!");
 
             InitializeMessageBroker();
@@ -65,7 +63,7 @@ namespace Business.Services
                 {
                     await _emailSemaphore.WaitAsync();
                     _logger.LogInformation("Processing email for {Recipient}", message.To);
-                    
+
                     using var client = new SmtpClient(_smtpHost, _smtpPort)
                     {
                         Credentials = new NetworkCredential(_smtpUser, _smtpPassword),

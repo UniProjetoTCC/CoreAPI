@@ -1,11 +1,10 @@
 using AutoMapper;
 using Business.DataRepositories;
 using Business.Models;
-using Data.Models;
 using Data.Context;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using Data.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Data.Repositories
@@ -130,7 +129,7 @@ namespace Data.Repositories
                 var linkedUser = await _context.LinkedUsers
                     .Where(lu => lu.LinkedUserId == linkedUserId)
                     .FirstOrDefaultAsync();
-                
+
                 if (linkedUser == null)
                 {
                     return false;

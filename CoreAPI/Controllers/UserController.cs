@@ -1,22 +1,14 @@
+using Business.DataRepositories;
+using Business.Services.Base;
+using CoreAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using QRCoder;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using CoreAPI.Models;
-using Microsoft.Extensions.Configuration;
-using Business.Services.Base;
-using QRCoder;
-using System.Drawing;
-using System.IO;
-using System;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Logging;
-using Business.DataRepositories;
-using Hangfire;
-using Business.Jobs.Background;
-using System.Linq;
 
 namespace CoreAPI.Controllers
 {
@@ -186,7 +178,7 @@ namespace CoreAPI.Controllers
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 return BadRequest("Invalid email.");
-                
+
             // Check userId if provided
             if (!string.IsNullOrEmpty(userId) && user.Id != userId)
             {
@@ -229,7 +221,7 @@ namespace CoreAPI.Controllers
             try
             {
                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(currentUser);
-                
+
                 // Create a confirmation link - removed userId from URL for consistency with Register
                 var confirmationLink = $"{Request.Scheme}://{Request.Host}/User/ConfirmEmail?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(currentUser.Email)}";
 
@@ -802,20 +794,20 @@ namespace CoreAPI.Controllers
 
             // Verify user token
             var isValidToken = await _userManager.VerifyUserTokenAsync(
-                currentUser, 
-                TokenOptions.DefaultProvider, 
-                "DeleteAccount", 
+                currentUser,
+                TokenOptions.DefaultProvider,
+                "DeleteAccount",
                 model.Token);
 
             if (!isValidToken) return BadRequest("Invalid or expired token.");
-            
+
             // Delete all linked users first
             bool linkedUsersDeleted = await _linkedUserRepository.DeleteAllLinkedUsersByParentIdAsync(currentUser.Id);
             if (!linkedUsersDeleted) return BadRequest("Failed to delete linked users related to the user.");
 
             // Finally delete the main user account
             var userDeleted = await _userManager.DeleteAsync(currentUser);
-            if (!userDeleted.Succeeded) 
+            if (!userDeleted.Succeeded)
                 return BadRequest($"Failed to delete user: {string.Join(", ", userDeleted.Errors.Select(e => e.Description))}");
 
             return NoContent();
@@ -852,9 +844,9 @@ namespace CoreAPI.Controllers
             var linkedUser = await _linkedUserRepository.GetByUserIdAsync(linkedUserIdentity.Id);
             if (linkedUser == null) return BadRequest("Linked user not found.");
 
-            if (linkedUser.ParentUserId != currentUser.Id) 
+            if (linkedUser.ParentUserId != currentUser.Id)
                 return BadRequest("Linked user does not belong to the current user.");
-        
+
             var deleted = await _linkedUserRepository.DeleteLinkedUserAsync(linkedUser.LinkedUserId);
             if (!deleted) return BadRequest("Failed to delete linked user.");
 
@@ -895,7 +887,7 @@ namespace CoreAPI.Controllers
             }
 
             var IsLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
-            if(IsLinkedUser) return BadRequest("Linked users can't create other linked users.");
+            if (IsLinkedUser) return BadRequest("Linked users can't create other linked users.");
 
             var userGroup = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
             if (userGroup == null) return NotFound("User group not found.");
@@ -977,7 +969,7 @@ namespace CoreAPI.Controllers
             }
 
             var IsLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
-            if(IsLinkedUser) return BadRequest("Linked users can't update other linked users.");
+            if (IsLinkedUser) return BadRequest("Linked users can't update other linked users.");
 
             var linkedUserMetadata = await _linkedUserRepository.GetByUserIdAsync(linkedUser.Id);
             if (linkedUserMetadata == null) return NotFound("Linked user not found.");

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using System;
 using Microsoft.Extensions.Configuration;
 
 namespace Data.Context
@@ -16,7 +15,7 @@ namespace Data.Context
                 .AddJsonFile("appsettings.Development.json", optional: true)
                 .AddEnvironmentVariables()
                 .Build();
-                
+
             var connectionString = configuration.GetConnectionString("SqlConnection");
 
             if (connectionString is not null)

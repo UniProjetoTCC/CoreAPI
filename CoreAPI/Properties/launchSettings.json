@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Docker Compose": {
+      "commandName": "Executable",
+      "executablePath": "docker-compose",
+      "commandLineArgs": "up --build --abort-on-container-exit",
+      "workingDirectory": ".."
+    }
+  }
+}

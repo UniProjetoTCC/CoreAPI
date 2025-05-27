@@ -1,10 +1,7 @@
-using System;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Business.Services.Base;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
-using System.Collections.Generic;
+using System.Text.Json;
 
 namespace Business.Services
 {

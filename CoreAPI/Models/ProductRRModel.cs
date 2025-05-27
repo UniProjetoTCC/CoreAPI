@@ -1,7 +1,5 @@
-using System.ComponentModel.DataAnnotations;
-using System;
-using System.Collections.Generic;
 using Business.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace CoreAPI.Models
 {
@@ -14,7 +12,7 @@ namespace CoreAPI.Models
         [Required]
         [StringLength(50, MinimumLength = 3)]
         public string Name { get; set; } = string.Empty;
-        
+
         [Required]
         [StringLength(50)]
         public string SKU { get; set; } = string.Empty;
@@ -34,7 +32,7 @@ namespace CoreAPI.Models
         public decimal Cost { get; set; }
 
         public bool Active { get; set; } = true;
-        
+
         [Range(0, double.MaxValue)]
         public decimal InitialStock { get; set; } = 0;
     }

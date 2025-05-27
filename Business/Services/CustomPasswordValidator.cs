@@ -1,8 +1,5 @@
-using Microsoft.AspNetCore.Identity;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Business.Services.Base;
+using Microsoft.AspNetCore.Identity;
 
 namespace Business.Services
 {
@@ -21,146 +18,82 @@ namespace Business.Services
 
             var errors = new List<IdentityError>();
 
-            // Check for obvious sequences
-            if (HasObviousSequence(password))
+            // Check for obvious sequences with context
+            var seq = GetObviousSequence(password);
+            if (!string.IsNullOrEmpty(seq))
             {
-                errors.Add(new IdentityError
-                {
-                    Code = "SequentialPassword",
-                    Description = "Password cannot contain obvious sequences (like 123, abc) or keyboard patterns."
-                });
+                errors.Add(new IdentityError { Code = "SequentialPassword", Description = $"Password cannot contain obvious sequence '{seq}'." });
             }
 
             // Check if password contains user info
-            if (ContainsUserInfo(user, password))
+            var personal = GetPersonalInfoSubstring(user, password);
+            if (!string.IsNullOrEmpty(personal))
             {
-                errors.Add(new IdentityError
-                {
-                    Code = "PersonalInfoInPassword",
-                    Description = "Password cannot contain personal information (such as email or username)."
-                });
+                errors.Add(new IdentityError { Code = "PersonalInfoInPassword", Description = $"Password cannot contain personal information '{personal}'." });
             }
 
-            // Check complexity score
-            int complexityScore = CalculatePasswordComplexity(password);
-            if (complexityScore < 4)
-            {
-                errors.Add(new IdentityError
-                {
-                    Code = "WeakPassword",
-                    Description = "Password is too weak. Add more variety of characters and increase length."
-                });
-            }
+            // Validações de requisitos de complexidade individuais
+            if (password.Length < 10)
+                errors.Add(new IdentityError { Code = "PasswordTooShort", Description = "Password must be at least 10 characters long." });
+            if (!password.Any(char.IsUpper))
+                errors.Add(new IdentityError { Code = "PasswordRequiresUpper", Description = "Password must contain at least one uppercase letter." });
+            if (!password.Any(char.IsLower))
+                errors.Add(new IdentityError { Code = "PasswordRequiresLower", Description = "Password must contain at least one lowercase letter." });
+            if (!password.Any(char.IsDigit))
+                errors.Add(new IdentityError { Code = "PasswordRequiresDigit", Description = "Password must contain at least one digit." });
+            if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
+                errors.Add(new IdentityError { Code = "PasswordRequiresSpecial", Description = "Password must contain at least one special character." });
 
-            return errors.Count == 0 ? 
-                await Task.FromResult(IdentityResult.Success) : 
+            return errors.Count == 0 ?
+                await Task.FromResult(IdentityResult.Success) :
                 await Task.FromResult(IdentityResult.Failed(errors.ToArray()));
         }
 
-        public bool HasObviousSequence(string password)
+        public string? GetObviousSequence(string password)
         {
-            var lowerPassword = password.ToLower();
+            var lower = password.ToLower();
 
-            // Check numeric sequences (ascending and descending)
-            for (int i = 0; i < lowerPassword.Length - 2; i++)
+            for (int i = 0; i < lower.Length - 3; i++)
             {
-                if (char.IsDigit(lowerPassword[i]))
+                if (char.IsDigit(lower[i]) && char.IsDigit(lower[i + 1]) && char.IsDigit(lower[i + 2]) && char.IsDigit(lower[i + 3]))
                 {
-                    if (i + 2 < lowerPassword.Length &&
-                        char.IsDigit(lowerPassword[i + 1]) &&
-                        char.IsDigit(lowerPassword[i + 2]))
-                    {
-                        int n1 = lowerPassword[i] - '0';
-                        int n2 = lowerPassword[i + 1] - '0';
-                        int n3 = lowerPassword[i + 2] - '0';
-                        
-                        if ((n2 == n1 + 1 && n3 == n2 + 1) || // Ascending
-                            (n2 == n1 - 1 && n3 == n2 - 1))    // Descending
-                        {
-                            return true;
-                        }
-                    }
+                    int n1 = lower[i] - '0', n2 = lower[i + 1] - '0', n3 = lower[i + 2] - '0', n4 = lower[i + 3] - '0';
+                    if ((n2 == n1 + 1 && n3 == n2 + 1 && n4 == n3 + 1) || (n2 == n1 - 1 && n3 == n2 - 1 && n4 == n3 - 1))
+                        return password.Substring(i, 4);
                 }
             }
 
-            // Check alphabetic sequences
-            for (int i = 0; i < lowerPassword.Length - 2; i++)
+            for (int i = 0; i < lower.Length - 3; i++)
             {
-                if (char.IsLetter(lowerPassword[i]))
+                if (char.IsLetter(lower[i]) && char.IsLetter(lower[i + 1]) && char.IsLetter(lower[i + 2]) && char.IsLetter(lower[i + 3]))
                 {
-                    if (i + 2 < lowerPassword.Length &&
-                        char.IsLetter(lowerPassword[i + 1]) &&
-                        char.IsLetter(lowerPassword[i + 2]))
-                    {
-                        char c1 = lowerPassword[i];
-                        char c2 = lowerPassword[i + 1];
-                        char c3 = lowerPassword[i + 2];
-                        
-                        if ((c2 == c1 + 1 && c3 == c2 + 1) || // Ascending
-                            (c2 == c1 - 1 && c3 == c2 - 1))    // Descending
-                        {
-                            return true;
-                        }
-                    }
+                    char c1 = lower[i], c2 = lower[i + 1], c3 = lower[i + 2], c4 = lower[i + 3];
+                    if ((c2 == c1 + 1 && c3 == c2 + 1 && c4 == c3 + 1) || (c2 == c1 - 1 && c3 == c2 - 1 && c4 == c3 - 1))
+                        return password.Substring(i, 4);
                 }
             }
 
-            // Check keyboard patterns
-            string[] keyboardPatterns = {
-                "qwerty", "asdfgh", "zxcvbn", // Horizontal
-                "qazwsx", "wsxedc", "edcrfv", // Vertical
-                "qweasd", "asdzxc", "wertyui" // Common
-            };
+            string[] patterns = { "qwerty", "asdfgh", "zxcvbn", "qazwsx", "wsxedc", "edcrfv", "qweasd", "asdzxc", "wertyui" };
+            foreach (var p in patterns) if (lower.Contains(p)) return p;
 
-            if (keyboardPatterns.Any(pattern => lowerPassword.Contains(pattern)))
-            {
-                return true;
-            }
-
-            // Check for repetitions
-            for (int i = 0; i < lowerPassword.Length - 2; i++)
-            {
-                if (lowerPassword[i] == lowerPassword[i + 1] && 
-                    lowerPassword[i] == lowerPassword[i + 2])
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            for (int i = 0; i < lower.Length - 2; i++) if (lower[i] == lower[i + 1] && lower[i] == lower[i + 2]) return new string(lower[i], 3);
+            return null;
         }
 
-        public bool ContainsUserInfo(IdentityUser user, string password)
+        public string? GetPersonalInfoSubstring(IdentityUser user, string password)
         {
-            var passwordLower = password.ToLower();
-            
+            var lower = password.ToLower();
             if (user.Email != null)
             {
-                // Split email and check each part
-                var emailParts = user.Email.ToLower().Split(new[] { '@', '.', '_', '-' });
-                foreach (var part in emailParts)
-                {
-                    if (part.Length > 2 && passwordLower.Contains(part))
-                    {
-                        return true;
-                    }
-                }
+                var parts = user.Email.ToLower().Split(new[] { '@', '.', '_', '-' });
+                foreach (var part in parts) if (part.Length > 2 && lower.Contains(part)) return part;
             }
-
             if (user.UserName != null)
             {
-                // Split username and check each part
-                var usernameParts = user.UserName.ToLower().Split(new[] { '.', '_', '-', ' ' });
-                foreach (var part in usernameParts)
-                {
-                    if (part.Length > 2 && passwordLower.Contains(part))
-                    {
-                        return true;
-                    }
-                }
+                var parts = user.UserName.ToLower().Split(new[] { '.', '_', '-', ' ' });
+                foreach (var part in parts) if (part.Length > 2 && lower.Contains(part)) return part;
             }
-
-            return false;
+            return null;
         }
 
         public int CalculatePasswordComplexity(string password)

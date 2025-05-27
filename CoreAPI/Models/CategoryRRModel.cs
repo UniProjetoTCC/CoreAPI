@@ -1,7 +1,5 @@
-using System.ComponentModel.DataAnnotations;
-using System;
-using System.Collections.Generic;
 using Business.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace CoreAPI.Models
 {
@@ -10,10 +8,10 @@ namespace CoreAPI.Models
         [Required]
         [StringLength(50, MinimumLength = 3)]
         public string Name { get; set; } = string.Empty;
-        
+
         [StringLength(500)]
         public string? Description { get; set; }
-        
+
         public bool Active { get; set; } = true;
     }
 
@@ -24,10 +22,10 @@ namespace CoreAPI.Models
         [Required]
         [StringLength(50, MinimumLength = 3)]
         public string Name { get; set; } = string.Empty;
-        
+
         [StringLength(500)]
         public string? Description { get; set; }
-        
+
         public bool? Active { get; set; } = true;
     }
 
@@ -40,7 +38,7 @@ namespace CoreAPI.Models
         public int Pages { get; set; }
         public bool FromCache { get; set; }
     }
-    
+
     public class CachedCategorySearch
     {
         public List<CategoryBusinessModel> Categories { get; set; } = new List<CategoryBusinessModel>();
