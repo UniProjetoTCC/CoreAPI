@@ -1,12 +1,11 @@
-using System; 
-using System.ComponentModel.DataAnnotations; 
-using System.ComponentModel.DataAnnotations.Schema; 
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
     [Table("PaymentMethods")]
-    public class PaymentMethodModel 
-    { 
+    public class PaymentMethodModel
+    {
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -38,5 +37,5 @@ namespace Data.Models
 
         public virtual ICollection<SaleModel>? Sales { get; set; } = new List<SaleModel>();
         public virtual UserGroupModel? UserGroup { get; set; }
-    } 
+    }
 }

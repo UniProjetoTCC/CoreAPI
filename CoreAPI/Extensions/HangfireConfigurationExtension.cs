@@ -1,14 +1,12 @@
-using Hangfire;
-using Hangfire.Redis.StackExchange;
-using StackExchange.Redis;
-using Business.Jobs.Scheduled;
 using Business.Jobs.Background;
+using Business.Jobs.Scheduled;
+using Hangfire;
 using Hangfire.Dashboard;
-using Microsoft.Extensions.Logging;
+using Hangfire.Redis.StackExchange;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace CoreAPI.Extensions
 {
@@ -16,11 +14,11 @@ namespace CoreAPI.Extensions
     {
         public static void AddHangfireConfiguration(this IServiceCollection services, IConfiguration configuration)
         {
-            var redisConfig = configuration["Redis:Configuration"] ?? 
+            var redisConfig = configuration["Redis:Configuration"] ??
                 throw new InvalidOperationException("Redis configuration is not set!");
 
-            var multiplexer = ConnectionMultiplexer.Connect(new ConfigurationOptions 
-            { 
+            var multiplexer = ConnectionMultiplexer.Connect(new ConfigurationOptions
+            {
                 EndPoints = { redisConfig },
                 AbortOnConnectFail = false
             });
@@ -149,8 +147,8 @@ namespace CoreAPI.Extensions
         {
             var httpContext = context.GetHttpContext();
             var logger = httpContext.RequestServices.GetService<ILogger<HangfireAuthorizationFilter>>();
-            
-            try 
+
+            try
             {
                 // Try to get token from query string
                 var token = httpContext.Request.Query["authorization"].ToString();
@@ -159,7 +157,7 @@ namespace CoreAPI.Extensions
                 if (!string.IsNullOrEmpty(token))
                 {
                     var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                    var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
+                    var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ??
                         throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
 
                     var tokenValidationParameters = new TokenValidationParameters
@@ -172,7 +170,7 @@ namespace CoreAPI.Extensions
                         ValidAudience = "http://localhost:5000",
                         ClockSkew = TimeSpan.Zero
                     };
-                    
+
                     tokenHandler.ValidateToken(token.Replace("Bearer ", ""), tokenValidationParameters, out SecurityToken validatedToken);
 
                     var jwtToken = (JwtSecurityToken)validatedToken;

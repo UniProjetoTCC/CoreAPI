@@ -1,16 +1,10 @@
 using AutoMapper;
 using Business.DataRepositories;
 using Business.Models;
+using Business.Utils;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Business.Utils;
 
 namespace Data.Repositories
 {
@@ -35,27 +29,30 @@ namespace Data.Repositories
         }
 
         public async Task<(List<ProductBusinessModel> Items, int TotalCount)> SearchByNameAsync(
-            string name, 
-            string groupId, 
-            int page = 1, 
+            string name,
+            string groupId,
+            int page = 1,
             int pageSize = 20)
         {
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
-            {
+            // Only bail out if missing groupId; empty name will match all products
+            if (string.IsNullOrEmpty(groupId))
                 return (new List<ProductBusinessModel>(), 0);
-            }
 
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            // Use case-insensitive search with ILIKE for database-level filtering
-            // This is already built into PostgreSQL
-            var query = _context.Products
-                .Where(p => p.GroupId == groupId)
-                .Where(p => 
-                    EF.Functions.ILike(p.Name, $"%{name}%") || 
-                    (p.Description != null && EF.Functions.ILike(p.Description, $"%{name}%"))
+            // Normalize input; empty name becomes empty string
+            string normalizedName = StringUtils.RemoveDiacritics(name ?? "");
+
+            // Build query: filter by group; optionally filter by name if provided
+            var query = _context.Products.Where(p => p.GroupId == groupId);
+            if (!string.IsNullOrWhiteSpace(normalizedName))
+            {
+                query = query.Where(p =>
+                    EF.Functions.ILike(p.Name, $"%{normalizedName}%") ||
+                    (p.Description != null && EF.Functions.ILike(p.Description, $"%{normalizedName}%"))
                 );
+            }
 
             // Get total count for pagination
             var totalCount = await query.CountAsync();
@@ -225,8 +222,8 @@ namespace Data.Repositories
 
             // Single query using OR condition for both barcode and SKU
             var products = await _context.Products
-                .Where(p => p.GroupId == groupId && 
-                          ((!string.IsNullOrEmpty(barCode) && p.BarCode == barCode) || 
+                .Where(p => p.GroupId == groupId &&
+                          ((!string.IsNullOrEmpty(barCode) && p.BarCode == barCode) ||
                            (!string.IsNullOrEmpty(sku) && p.SKU == sku)))
                 .ToListAsync();
 

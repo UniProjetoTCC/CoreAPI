@@ -1,12 +1,11 @@
-using System; 
-using System.ComponentModel.DataAnnotations; 
-using System.ComponentModel.DataAnnotations.Schema; 
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
     [Table("SupplierPrices")]
     public class SupplierPriceModel
-    { 
+    {
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -14,12 +13,12 @@ namespace Data.Models
         [Required]
         [ForeignKey("Supplier")]
         [StringLength(36)]
-        public required string SupplierId { get; set; } 
+        public required string SupplierId { get; set; }
 
         [Required]
         [ForeignKey("Product")]
         [StringLength(36)]
-        public required string ProductId { get; set; } 
+        public required string ProductId { get; set; }
 
         [Required]
         [ForeignKey("UserGroup")]
@@ -28,11 +27,11 @@ namespace Data.Models
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        public required decimal UnitPrice { get; set; } 
+        public required decimal UnitPrice { get; set; }
 
         [Required]
         [Range(1, int.MaxValue)]
-        public required int MinimumQuantity { get; set; } 
+        public required int MinimumQuantity { get; set; }
 
         [Required]
         public required bool IsActive { get; set; } = true;
@@ -52,5 +51,5 @@ namespace Data.Models
         public virtual SupplierModel? Supplier { get; set; }
         public virtual ProductModel? Product { get; set; }
         public virtual UserGroupModel? UserGroup { get; set; }
-    } 
+    }
 }
