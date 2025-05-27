@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Business.DataRepositories;
 using Business.Services.Base;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
+using Business.Models;
 
 namespace Business.Jobs.Scheduled
 {

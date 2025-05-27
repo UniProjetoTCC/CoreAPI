@@ -1,22 +1,30 @@
-using AspNetCoreRateLimit;
-using Business.Extensions;
-using Business.Services;
-using Business.Services.Base;
-using CoreAPI.Extensions;
-using CoreAPI.Logging;
-using Data.Context;
-using Data.Extensions;
-using Hangfire;
-using Hangfire.Redis.StackExchange;
+using System.Text;
+using System.Threading.RateLimiting;
+using System.Reflection;
+using System.IO;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using AspNetCoreRateLimit;
 using StackExchange.Redis;
-using System.Reflection;
-using System.Text;
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging.Console;
+using Npgsql;
+
+using Business.Services.Base;
+using Business.Extensions;
+using Business.Services;
+using Business.DataRepositories;
+using Data.Extensions;
+using Data.Context;
+using CoreAPI.Logging;
+using CoreAPI.Extensions;
 
 namespace CoreAPI
 {
@@ -27,9 +35,9 @@ namespace CoreAPI
             var builder = WebApplication.CreateBuilder(args);
 
             // Configure Redis Cache
-            var redisConfig = builder.Configuration["Redis:Configuration"] ??
+            var redisConfig = builder.Configuration["Redis:Configuration"] ?? 
                 throw new InvalidOperationException("Redis configuration is not set!");
-            var redisInstanceName = builder.Configuration["Redis:InstanceName"] ??
+            var redisInstanceName = builder.Configuration["Redis:InstanceName"] ?? 
                 throw new InvalidOperationException("Redis instance name is not set!");
 
             builder.Services.AddStackExchangeRedisCache(options =>
@@ -77,7 +85,7 @@ namespace CoreAPI
                 });
 
             // Set the connection string with .env variables
-            var connectionString = builder.Configuration.GetConnectionString("SqlConnection") ??
+            var connectionString = builder.Configuration.GetConnectionString("SqlConnection") ?? 
             throw new InvalidOperationException("Connection string 'SqlConnection' not found in configuration.");
 
             if (connectionString is not null)
@@ -104,14 +112,14 @@ namespace CoreAPI
                 options.SignIn.RequireConfirmedAccount = false;
                 options.SignIn.RequireConfirmedEmail = false;
                 options.SignIn.RequireConfirmedPhoneNumber = false;
-
+                
                 // Configuração de senha
                 options.Password.RequireDigit = true;
                 options.Password.RequireLowercase = true;
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequireUppercase = true;
                 options.Password.RequiredLength = 8;
-
+                
                 // Configurações de lockout
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 options.Lockout.MaxFailedAccessAttempts = 5;
@@ -140,12 +148,12 @@ namespace CoreAPI
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
-                    ValidAudience = builder.Configuration["JWT:ValidAudience"] ??
+                    ValidAudience = builder.Configuration["JWT:ValidAudience"] ?? 
                         throw new InvalidOperationException("JWT:ValidAudience not configured"),
-                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"] ??
+                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"] ?? 
                         throw new InvalidOperationException("JWT:ValidIssuer not configured"),
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                        Environment.GetEnvironmentVariable("JWT_SECRET") ??
+                        Environment.GetEnvironmentVariable("JWT_SECRET") ?? 
                         throw new InvalidOperationException("JWT_SECRET environment variable is not set!")
                     ))
                 };
@@ -154,7 +162,7 @@ namespace CoreAPI
             builder.Services.AddSingleton(provider =>
             {
                 var jwtSecret = builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT:Secret not found in configuration");
-
+                
                 return new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
@@ -169,7 +177,7 @@ namespace CoreAPI
 
             // Add Auto Mapper, the class mapper to database classes and vice versa
             builder.Services.AddAutoMapper(typeof(Program));
-
+            
             // Register repositories
             builder.Services.AddRepositories();
             builder.Services.AddBusinessServices();
@@ -242,7 +250,7 @@ namespace CoreAPI
                     // Setup default roles and subscription plans
                     var roleService = services.GetRequiredService<IRoleService>();
                     await roleService.SetupRolesAndPlansAsync();
-
+                    
                     logger.LogInformation("Database migration and initial setup completed successfully.");
                 }
                 catch (Exception ex)

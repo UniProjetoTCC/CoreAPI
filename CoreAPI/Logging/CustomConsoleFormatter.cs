@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace CoreAPI.Logging
 {
@@ -46,17 +48,17 @@ namespace CoreAPI.Logging
             var category = GetSimplifiedCategory(logEntry.Category);
             var logLevel = GetLogLevelString(logEntry.LogLevel);
             var levelColor = GetLogLevelColor(logLevel);
-
+            
             // Alinhar as colunas
             var timeCol = $"{time} ".PadRight(TIME_COL_WIDTH); // Dois espaços após o horário
-            var levelCol = logLevel == "ERROR"
+            var levelCol = logLevel == "ERROR" 
                 ? $" {logLevel}" // No padding for ERROR
                 : $" {logLevel} ".PadRight(LEVEL_COL_WIDTH); // Espaço antes e depois do nível para outros casos
 
             // Centralizar a categoria
             var categoryPadding = (CATEGORY_COL_WIDTH - category.Length) / 2;
-            var categoryCol = category.Length > CATEGORY_COL_WIDTH
-                ? category[..(CATEGORY_COL_WIDTH - 2)] + ".."
+            var categoryCol = category.Length > CATEGORY_COL_WIDTH 
+                ? category[..(CATEGORY_COL_WIDTH-2)] + ".." 
                 : new string(' ', categoryPadding) + category.PadRight(CATEGORY_COL_WIDTH - categoryPadding);
 
             // Resetar a cor no final
@@ -80,7 +82,7 @@ namespace CoreAPI.Logging
             var processedMessage = ProcessMultilineMessage(message);
 
             textWriter.Write($"{timeCol}{dim}│{reset}{levelColor}{levelCol}{reset}{dim}│{reset} {categoryCol}{dim}│{reset} {processedMessage}");
-
+            
             if (logEntry.Exception != null)
             {
                 textWriter.WriteLine();

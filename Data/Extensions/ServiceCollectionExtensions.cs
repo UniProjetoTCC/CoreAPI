@@ -1,6 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
 using Business.DataRepositories;
 using Data.Repositories;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Data.Extensions
 {

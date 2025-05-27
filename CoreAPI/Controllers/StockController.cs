@@ -1,14 +1,21 @@
-using AutoMapper;
-using Business.DataRepositories;
-using Business.Enums;
-using Business.Services.Base;
-using CoreAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Distributed;
+using AutoMapper;
+using Business.DataRepositories;
+using Business.Services.Base;
+using Business.Enums;
+using CoreAPI.Models;
+using Data.Models;
+using Business.Utils;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 
 namespace CoreAPI.Controllers
 {
@@ -76,7 +83,7 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to manage stock. Talk to your access manager to get the necessary permissions.");
             }
-
+            
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -140,7 +147,7 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to manage stock. Talk to your access manager to get the necessary permissions.");
             }
-
+            
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -194,7 +201,7 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to manage stock. Talk to your access manager to get the necessary permissions.");
             }
-
+            
             if (string.IsNullOrEmpty(groupId))
                 return BadRequest("User group not found");
 
@@ -326,14 +333,14 @@ namespace CoreAPI.Controllers
                     var cachedData = JsonSerializer.Deserialize<List<StockDto>>(
                         cachedResultJson,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
+                    
                     return Ok(cachedData);
                 }
 
                 // No direct cache hit, try to get previously cached queries
                 Dictionary<int, CachedStockData>? userCachedQueries = null;
                 var cachedQueriesBytes = await _distributedCache.GetAsync(queriesMapKey);
-
+                
                 if (cachedQueriesBytes != null)
                 {
                     // Deserialize the map of cached queries
@@ -348,7 +355,7 @@ namespace CoreAPI.Controllers
 
                 // Get low stock products from database
                 var lowStockItems = await _stockRepository.GetLowStockProductsAsync(groupId, (int)threshold);
-
+                
                 var lowStockDtos = new List<StockDto>();
                 foreach (var item in lowStockItems)
                 {
@@ -398,10 +405,10 @@ namespace CoreAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving low stock products");
-
+                
                 // Fall back to database query if caching fails
                 var lowStockItems = await _stockRepository.GetLowStockProductsAsync(groupId, (int)threshold);
-
+                
                 var lowStockDtos = new List<StockDto>();
                 foreach (var item in lowStockItems)
                 {
@@ -473,17 +480,17 @@ namespace CoreAPI.Controllers
         {
             if (cache.Count <= maxSize)
                 return;
-
+                
             // Calculate how many items to remove
             int itemsToRemove = cache.Count - maxSize;
-
+            
             // Get the oldest entries based on timestamp
             var oldestEntries = cache
                 .OrderBy(kv => kv.Value.Timestamp)
                 .Take(itemsToRemove)
                 .Select(kv => kv.Key)
                 .ToList();
-
+                
             // Remove the oldest entries
             foreach (var key in oldestEntries)
             {
@@ -505,11 +512,11 @@ namespace CoreAPI.Controllers
                 return group?.GroupId ?? string.Empty;
             }
         }
-
+        
         private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
         {
             string groupId;
-
+            
             if (await _linkedUserService.IsLinkedUserAsync(userId))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Stock);
@@ -522,14 +529,14 @@ namespace CoreAPI.Controllers
                 // Get the group ID from the linked user
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
                 groupId = linkedUser?.GroupId ?? string.Empty;
-
+                
             }
             else
             {
                 var group = await _userGroupRepository.GetByUserIdAsync(userId);
                 groupId = group?.GroupId ?? string.Empty;
             }
-
+            
             return (true, groupId);
         }
     }

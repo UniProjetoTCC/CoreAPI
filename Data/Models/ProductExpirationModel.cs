@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -5,7 +6,7 @@ namespace Data.Models
 {
     [Table("ProductExpirations")]
     public class ProductExpirationModel
-    {
+    { 
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -13,7 +14,7 @@ namespace Data.Models
         [Required]
         [ForeignKey("Product")]
         [StringLength(36)]
-        public required string ProductId { get; set; }
+        public required string ProductId { get; set; } 
 
         [Required]
         [ForeignKey("Stock")]
@@ -26,7 +27,7 @@ namespace Data.Models
         public required string GroupId { get; set; }
 
         [Required]
-        public required DateTime ExpirationDate { get; set; }
+        public required DateTime ExpirationDate { get; set; } 
 
         [Required]
         [Range(0, int.MaxValue)]
@@ -37,7 +38,7 @@ namespace Data.Models
         public required string BatchNumber { get; set; }
 
         [StringLength(50)]
-        public required string? Location { get; set; }
+        public required string? Location{get; set;}
 
         [Required]
         public required bool IsActive { get; set; } = false;

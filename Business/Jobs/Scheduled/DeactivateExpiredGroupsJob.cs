@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Business.DataRepositories;
 using Hangfire;
-using Microsoft.Extensions.Logging;
 
 namespace Business.Jobs.Scheduled
 {

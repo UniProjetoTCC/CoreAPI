@@ -4,6 +4,10 @@ using Business.Models;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Data.Repositories
 {
@@ -24,7 +28,7 @@ namespace Data.Repositories
                 .Include(sm => sm.Stock)
                 .ThenInclude(s => s != null ? s.Product : null)
                 .FirstOrDefaultAsync(sm => sm.Id == id);
-
+                
             return _mapper.Map<StockMovementBusinessModel>(movementModel);
         }
 
@@ -38,7 +42,7 @@ namespace Data.Repositories
                 .Include(sm => sm.Stock)
                 .ThenInclude(s => s != null ? s.Product : null)
                 .ToListAsync();
-
+                
             return _mapper.Map<List<StockMovementBusinessModel>>(movementModels);
         }
 
@@ -51,7 +55,7 @@ namespace Data.Repositories
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-
+                
             return _mapper.Map<List<StockMovementBusinessModel>>(movementModels);
         }
 

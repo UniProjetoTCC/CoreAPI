@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Identity;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Identity;
 
 namespace Data.Models
 {
@@ -14,7 +15,7 @@ namespace Data.Models
         [ForeignKey("User")]
         [StringLength(36)]
         public required string UserId { get; set; }
-
+        
         [Required]
         [CreditCard]
         [ProtectedPersonalData]

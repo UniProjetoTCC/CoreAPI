@@ -1,11 +1,13 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System; 
+using System.ComponentModel.DataAnnotations; 
+using System.ComponentModel.DataAnnotations.Schema; 
+using System.Collections.Generic;
 
 namespace Data.Models
 {
     [Table("Customers")]
     public class CustomerModel
-    {
+    { 
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();

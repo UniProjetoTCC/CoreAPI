@@ -1,15 +1,22 @@
-using AutoMapper;
-using Business.DataRepositories;
-using Business.Enums;
-using Business.Services.Base;
-using Business.Utils;
-using CoreAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Data.Context;
+using CoreAPI.Models;
+using Business.Models;
+using Business.Services.Base;
+using Business.DataRepositories;
+using Business.Enums;
+using AutoMapper;
+using Business.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace CoreAPI.Controllers
 {
@@ -57,7 +64,7 @@ namespace CoreAPI.Controllers
         /// Results are limited to categories belonging to the user's group.
         /// The search results are cached for 1 minute and limited to 5 searches per user.
         /// </remarks>
-        /// <param name="name">Category name to search for (optional)</param>
+        /// <param name="name">Category name to search for (required)</param>
         /// <param name="page">Page number (default: 1)</param>
         /// <param name="pageSize">Number of items per page (default: 20)</param>
         /// <response code="200">Search results with pagination info</response>
@@ -66,13 +73,13 @@ namespace CoreAPI.Controllers
         /// <response code="403">Insufficient permissions</response>
         [HttpGet("Search")]
         [Authorize]
-        public async Task<ActionResult<CategorySearchResponse>> Search([FromQuery] string name = "", [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<ActionResult<CategorySearchResponse>> Search([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             const int cacheDurationMinutes = 1;
             const int maxCachedSearchesPerUser = 5;
 
-            if (page <= 0 || pageSize <= 0)
-                return BadRequest("Page number and page size must be greater than zero.");
+            if (string.IsNullOrEmpty(name))
+                return BadRequest("Category Name is required.");
 
             // Normalize input for accent-insensitive search
             name = StringUtils.RemoveDiacritics(name);
@@ -86,39 +93,23 @@ namespace CoreAPI.Controllers
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
-            // If name is empty, return all categories paginated without using cache prefix logic
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                var (allItems, totalCount) = await _categoryRepository.SearchByNameAsync("", groupId, page, pageSize);
-                var dtos = allItems.Select(c => _mapper.Map<CategoryDto>(c)).ToList();
-                return Ok(new CategorySearchResponse
-                {
-                    Items = dtos,
-                    TotalCount = totalCount,
-                    Page = page,
-                    PageSize = pageSize,
-                    Pages = (int)Math.Ceiling((double)totalCount / pageSize),
-                    FromCache = false
-                });
-            }
-
             // Generate cache key for this user's search context
             string searchesMapKey = $"category_searches:{currentUser.Id}:{groupId}";
-
+            
             try
             {
                 // Try to get the map of prior searches from Redis
                 Dictionary<string, CachedCategorySearch>? userSearchCache = null;
                 var cachedSearchesBytes = await _distributedCache.GetAsync(searchesMapKey);
-
+                
                 if (cachedSearchesBytes != null)
                 {
                     // Deserialize the map of searches
                     var cachedSearchesJson = Encoding.UTF8.GetString(cachedSearchesBytes);
                     userSearchCache = JsonSerializer.Deserialize<Dictionary<string, CachedCategorySearch>?>(
-                        cachedSearchesJson,
+                        cachedSearchesJson, 
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
+                    
                     if (userSearchCache != null)
                     {
                         // Find a previous search that is a prefix of the current search
@@ -126,44 +117,44 @@ namespace CoreAPI.Controllers
                             .Where(kv => name.StartsWith(kv.Key, StringComparison.OrdinalIgnoreCase) && kv.Key.Length > 0)
                             .OrderByDescending(kv => kv.Key.Length)  // Get the longest matching prefix
                             .FirstOrDefault();
-
+                        
                         if (!matchingPrefixEntry.Equals(default(KeyValuePair<string, CachedCategorySearch>)))
                         {
                             // We have a cache hit with a previous search term that is a prefix of the current one
                             // Filter the cached results for this new, more specific search term
                             var filteredResults = matchingPrefixEntry.Value.Categories
-                                .Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase) ||
+                                .Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase) || 
                                        (c.Description != null && c.Description.Contains(name, StringComparison.OrdinalIgnoreCase)))
                                 .ToList();
-
+                                
                             // Add or update the cache with this new search term
                             userSearchCache[name] = new CachedCategorySearch
                             {
                                 Categories = filteredResults,
                                 Timestamp = DateTime.UtcNow
                             };
-
+                            
                             // Ensure we don't exceed the cache limit per user
                             EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
-
+                            
                             // Store the updated cache
                             var serializedCache = JsonSerializer.Serialize(userSearchCache);
                             var cacheOptions = new DistributedCacheEntryOptions()
                                 .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
-
+                                
                             await _distributedCache.SetAsync(
-                                searchesMapKey,
-                                Encoding.UTF8.GetBytes(serializedCache),
+                                searchesMapKey, 
+                                Encoding.UTF8.GetBytes(serializedCache), 
                                 cacheOptions);
-
+                            
                             // Paginate the results and map to DTOs
                             var paginatedResults = filteredResults
                                 .Skip((page - 1) * pageSize)
                                 .Take(pageSize)
                                 .Select(c => _mapper.Map<CategoryDto>(c))
                                 .ToList();
-
-                            return Ok(new CategorySearchResponse
+                                
+                            return Ok(new CategorySearchResponse 
                             {
                                 Items = paginatedResults,
                                 TotalCount = filteredResults.Count,
@@ -175,46 +166,46 @@ namespace CoreAPI.Controllers
                         }
                     }
                 }
-
+                
                 // If we get here, either there was no cache or no matching prefix was found
                 // Let's do a database search with full-text capabilities
                 userSearchCache ??= new Dictionary<string, CachedCategorySearch>();
-
+                
                 var (results, totalCount) = await _categoryRepository.SearchByNameAsync(
                     name: name,
                     groupId: groupId,
                     page: page,
                     pageSize: pageSize
                 );
-
+                
                 // Add this new search to the cache
                 userSearchCache[name] = new CachedCategorySearch
                 {
                     Categories = results,
                     Timestamp = DateTime.UtcNow
                 };
-
+                
                 // Ensure we don't exceed the cache limit per user
                 EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
-
+                
                 // Update the cache
                 var newSerializedCache = JsonSerializer.Serialize(userSearchCache);
                 var newCacheOptions = new DistributedCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
-
+                    
                 await _distributedCache.SetAsync(
-                    searchesMapKey,
-                    Encoding.UTF8.GetBytes(newSerializedCache),
+                    searchesMapKey, 
+                    Encoding.UTF8.GetBytes(newSerializedCache), 
                     newCacheOptions);
-
+                
                 // Map results to DTOs using AutoMapper
                 var categoryDtos = results
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .Select(c => _mapper.Map<CategoryDto>(c))
                     .ToList();
-
-                return Ok(new CategorySearchResponse
+                
+                return Ok(new CategorySearchResponse 
                 {
                     Items = categoryDtos,
                     TotalCount = totalCount,
@@ -234,15 +225,15 @@ namespace CoreAPI.Controllers
                     page: page,
                     pageSize: pageSize
                 );
-
+                
                 // Map results to DTOs using AutoMapper
                 var categoryDtos = results
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .Select(c => _mapper.Map<CategoryDto>(c))
                     .ToList();
-
-                var response = new CategorySearchResponse
+                
+                var response = new CategorySearchResponse 
                 {
                     Items = categoryDtos,
                     TotalCount = totalCount,
@@ -251,7 +242,7 @@ namespace CoreAPI.Controllers
                     Pages = (int)Math.Ceiling((double)totalCount / pageSize),
                     FromCache = false
                 };
-
+                
                 return Ok(response);
             }
         }
@@ -261,17 +252,17 @@ namespace CoreAPI.Controllers
         {
             if (cache.Count <= maxSize)
                 return;
-
+                
             // Calculate how many items to remove
             int itemsToRemove = cache.Count - maxSize;
-
+            
             // Get the oldest entries based on timestamp
             var oldestEntries = cache
                 .OrderBy(kv => kv.Value.Timestamp)
                 .Take(itemsToRemove)
                 .Select(kv => kv.Key)
                 .ToList();
-
+                
             // Remove the oldest entries
             foreach (var key in oldestEntries)
             {
@@ -471,7 +462,7 @@ namespace CoreAPI.Controllers
             if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
 
             bool hasProducts = await _productRepository.HasProductsInCategoryAsync(id, groupId);
-            if (hasProducts)
+            if(hasProducts)
             {
                 return BadRequest("Cannot delete category with existing products.");
             }
@@ -487,7 +478,7 @@ namespace CoreAPI.Controllers
         private async Task<(bool hasPermission, string groupId)> CheckCategoryPermissionAsync(string userId)
         {
             string groupId;
-
+            
             if (await _linkedUserService.IsLinkedUserAsync(userId))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
@@ -500,14 +491,14 @@ namespace CoreAPI.Controllers
                 // Get the group ID from the linked user
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
                 groupId = linkedUser?.GroupId ?? string.Empty;
-
+                
             }
             else
             {
                 var group = await _userGroupRepository.GetByUserIdAsync(userId);
                 groupId = group?.GroupId ?? string.Empty;
             }
-
+            
             return (true, groupId);
         }
     }

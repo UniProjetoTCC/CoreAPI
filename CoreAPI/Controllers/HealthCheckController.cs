@@ -1,7 +1,8 @@
-using Data.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Data.Context;
 
 namespace CoreAPI.Controllers
 {
@@ -55,16 +56,15 @@ namespace CoreAPI.Controllers
             try
             {
                 await _context.Database.CanConnectAsync();
-                return Ok(new
-                {
-                    Status = "Database Connection Successful",
+                return Ok(new { 
+                    Status = "Database Connection Successful", 
                     Timestamp = DateTime.UtcNow
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
+                return StatusCode(500, new 
+                { 
                     Status = "Database Connection Failed",
                     Message = ex.Message,
                     Timestamp = DateTime.UtcNow
@@ -89,18 +89,16 @@ namespace CoreAPI.Controllers
             try
             {
                 var currentUserName = User.Identity?.Name;
-                var currentUser = currentUserName != null
+                var currentUser = currentUserName != null 
                     ? await _userManager.FindByNameAsync(currentUserName)
                     : null;
 
                 if (currentUser == null)
                     return NotFound(new { Status = "Error", Message = "User not found" });
 
-                return Ok(new
-                {
+                return Ok(new { 
                     Status = "Success",
-                    User = new
-                    {
+                    User = new {
                         Email = currentUser.Email,
                         Username = currentUser.UserName,
                         Id = currentUser.Id

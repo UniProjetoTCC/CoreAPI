@@ -4,6 +4,10 @@ using Business.Models;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Data.Repositories
 {
@@ -22,7 +26,7 @@ namespace Data.Repositories
         {
             var stockModel = await _context.Stocks
                 .FirstOrDefaultAsync(s => s.ProductId == productId && s.GroupId == groupId);
-
+            
             return _mapper.Map<StockBusinessModel>(stockModel);
         }
 
@@ -167,7 +171,7 @@ namespace Data.Repositories
                 .Where(s => s.GroupId == groupId && s.Quantity <= threshold)
                 .Include(s => s.Product)
                 .ToListAsync();
-
+                
             return _mapper.Map<List<StockBusinessModel>>(stockModels);
         }
     }

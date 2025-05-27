@@ -1,38 +1,39 @@
-using Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System; 
+using System.ComponentModel.DataAnnotations; 
+using System.ComponentModel.DataAnnotations.Schema; 
+using Microsoft.AspNetCore.Identity; 
 
 namespace Data.Models
 {
     [Table("StockMovements")]
-    public class StockMovementModel
-    {
+    public class StockMovementModel 
+    { 
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        [Required]
+        [Required] 
         [ForeignKey("Stock")]
         [StringLength(36)]
-        public required string StockId { get; set; }
+        public required string StockId { get; set; } 
 
-        [Required]
+        [Required] 
         [ForeignKey("User")]
         [StringLength(36)]
         public required string UserId { get; set; }
 
-        [Required]
+        [Required] 
         [ForeignKey("UserGroup")]
         [StringLength(36)]
-        public required string GroupId { get; set; }
+        public required string GroupId { get; set; } 
 
-        [Required]
+        [Required] 
         [StringLength(20)]
-        public required string MovementType { get; set; }
+        public required string MovementType { get; set; } 
 
-        [Required]
+        [Required] 
         [Range(1, int.MaxValue)]
-        public required int Quantity { get; set; }
+        public required int Quantity { get; set; } 
 
         [StringLength(200)]
         public string? Reason { get; set; }
@@ -48,5 +49,5 @@ namespace Data.Models
         public virtual StockModel? Stock { get; set; }
         public virtual IdentityUser? User { get; set; }
         public virtual UserGroupModel? UserGroup { get; set; }
-    }
+    } 
 }

@@ -1,8 +1,8 @@
-using Business.DataRepositories;
-using Business.Jobs.Background;
-using Business.Models;
-using Business.Services.Base;
 using Hangfire;
+using Business.Services.Base;
+using Business.Jobs.Background;
+using Business.DataRepositories;
+using Business.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Business.Services

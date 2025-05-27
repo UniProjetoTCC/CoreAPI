@@ -1,3 +1,5 @@
+using System;
+
 namespace Business.Models
 {
     public class UserGroup

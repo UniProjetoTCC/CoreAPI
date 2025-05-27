@@ -1,18 +1,24 @@
-using AutoMapper;
-using Business.DataRepositories;
-using Business.Enums;
-using Business.Services.Base;
-using Business.Utils;
-using CoreAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using AutoMapper;
+using Business.DataRepositories;
+using Business.Models;
+using Business.Services.Base;
+using Business.Enums;
+using CoreAPI.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Business.Utils;
 
-namespace CoreAPI.Controllers
+namespace CoreAPI.Controllers 
 {
     [ApiController]
     [Route("[controller]")]
@@ -30,9 +36,9 @@ namespace CoreAPI.Controllers
         private readonly ILogger<ProductController> _logger;
 
         public ProductController(
-            ILinkedUserService linkedUserService,
-            IProductRepository productRepository,
-            UserManager<IdentityUser> userManager,
+            ILinkedUserService linkedUserService, 
+            IProductRepository productRepository, 
+            UserManager<IdentityUser> userManager, 
             IUserGroupRepository userGroupRepository,
             ICategoryRepository categoryRepository,
             ILinkedUserRepository linkedUserRepository,
@@ -53,7 +59,7 @@ namespace CoreAPI.Controllers
             _logger = logger;
         }
 
-
+        
         /// <summary>
         /// Searches for products based on name with pagination support
         /// </summary>
@@ -62,7 +68,7 @@ namespace CoreAPI.Controllers
         /// Results are limited to products belonging to the user's group.
         /// The search results are cached for 1 minute and limited to 5 searches per user.
         /// </remarks>
-        /// <param name="name">Product name to search for (optional)</param>
+        /// <param name="name">Product name to search for (required)</param>
         /// <param name="page">Page number (default: 1)</param>
         /// <param name="pageSize">Number of items per page (default: 20)</param>
         /// <response code="200">Search results with pagination info</response>
@@ -71,60 +77,43 @@ namespace CoreAPI.Controllers
         /// <response code="403">Insufficient permissions</response>
         [HttpGet("Search")]
         [Authorize]
-        public async Task<ActionResult<ProductSearchResponse>> Search([FromQuery] string name = "", [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<ActionResult<ProductSearchResponse>> Search([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             const int cacheDurationMinutes = 1;
             const int maxCachedSearchesPerUser = 5;
 
-            // Allow empty name as wildcard; only validate pagination
-            if (page <= 0 || pageSize <= 0)
-                return BadRequest("Page number and page size must be greater than zero.");
+            if (string.IsNullOrEmpty(name))
+                return BadRequest("Product Name is required.");
 
             // Normalize input for accent-insensitive search
             name = StringUtils.RemoveDiacritics(name);
 
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
-
+            
             var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
             if (!hasPermission)
             {
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
-            // If name is empty, return all products paginated without cache prefix logic
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                var (allItems, totalCount) = await _productRepository.SearchByNameAsync("", groupId, page, pageSize);
-                var dtos = allItems.Select(p => _mapper.Map<ProductDto>(p)).ToList();
-                return Ok(new ProductSearchResponse
-                {
-                    Items = dtos,
-                    TotalCount = totalCount,
-                    Page = page,
-                    PageSize = pageSize,
-                    Pages = (int)Math.Ceiling((double)totalCount / pageSize),
-                    FromCache = false
-                });
-            }
-
             // Generate cache key for this user's search context
             string searchesMapKey = $"product_searches:{currentUser.Id}:{groupId}";
-
+            
             try
             {
                 // Try to get the map of prior searches from Redis
                 Dictionary<string, CachedProductSearch>? userSearchCache = null;
                 var cachedSearchesBytes = await _distributedCache.GetAsync(searchesMapKey);
-
+                
                 if (cachedSearchesBytes != null)
                 {
                     // Deserialize the map of searches
                     var cachedSearchesJson = Encoding.UTF8.GetString(cachedSearchesBytes);
                     userSearchCache = JsonSerializer.Deserialize<Dictionary<string, CachedProductSearch>?>(
-                        cachedSearchesJson,
+                        cachedSearchesJson, 
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
+                    
                     if (userSearchCache != null)
                     {
                         // Find a previous search that is a prefix of the current search
@@ -132,7 +121,7 @@ namespace CoreAPI.Controllers
                             .Where(kv => name.StartsWith(kv.Key, StringComparison.OrdinalIgnoreCase) && kv.Key.Length > 0)
                             .OrderByDescending(kv => kv.Key.Length)  // Get the longest matching prefix
                             .FirstOrDefault();
-
+                        
                         if (!matchingPrefixEntry.Equals(default(KeyValuePair<string, CachedProductSearch>)))
                         {
                             // We have a cache hit with a previous search term that is a prefix of the current one
@@ -140,35 +129,35 @@ namespace CoreAPI.Controllers
                             var filteredResults = matchingPrefixEntry.Value.Products
                                 .Where(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
                                 .ToList();
-
+                                
                             // Add or update the cache with this new search term
                             userSearchCache[name] = new CachedProductSearch
                             {
                                 Products = filteredResults,
                                 Timestamp = DateTime.UtcNow
                             };
-
+                            
                             // Ensure we don't exceed the cache limit per user
                             EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
-
+                            
                             // Store the updated cache
                             var serializedCache = JsonSerializer.Serialize(userSearchCache);
                             var cacheOptions = new DistributedCacheEntryOptions()
                                 .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
-
+                                
                             await _distributedCache.SetAsync(
-                                searchesMapKey,
-                                Encoding.UTF8.GetBytes(serializedCache),
+                                searchesMapKey, 
+                                Encoding.UTF8.GetBytes(serializedCache), 
                                 cacheOptions);
-
+                            
                             // Paginate the results and map to DTOs
                             var paginatedResults = filteredResults
                                 .Skip((page - 1) * pageSize)
                                 .Take(pageSize)
                                 .Select(p => _mapper.Map<ProductDto>(p))
                                 .ToList();
-
-                            return Ok(new ProductSearchResponse
+                                
+                            return Ok(new ProductSearchResponse 
                             {
                                 Items = paginatedResults,
                                 TotalCount = filteredResults.Count,
@@ -180,46 +169,46 @@ namespace CoreAPI.Controllers
                         }
                     }
                 }
-
+                
                 // If we get here, either there was no cache or no matching prefix was found
                 // Let's do a database search with full-text capabilities
                 userSearchCache ??= new Dictionary<string, CachedProductSearch>();
-
+                
                 var (results, totalCount) = await _productRepository.SearchByNameAsync(
                     name: name,
                     groupId: groupId,
                     page: page,
                     pageSize: pageSize
                 );
-
+                
                 // Map results to DTOs using AutoMapper
                 var productDtos = results
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .Select(p => _mapper.Map<ProductDto>(p))
                     .ToList();
-
+                
                 // Add this new search to the cache
                 userSearchCache[name] = new CachedProductSearch
                 {
                     Products = results,
                     Timestamp = DateTime.UtcNow
                 };
-
+                
                 // Ensure we don't exceed the cache limit per user
                 EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
-
+                
                 // Update the cache
                 var newSerializedCache = JsonSerializer.Serialize(userSearchCache);
                 var newCacheOptions = new DistributedCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
-
+                    
                 await _distributedCache.SetAsync(
-                    searchesMapKey,
-                    Encoding.UTF8.GetBytes(newSerializedCache),
+                    searchesMapKey, 
+                    Encoding.UTF8.GetBytes(newSerializedCache), 
                     newCacheOptions);
-
-                return Ok(new ProductSearchResponse
+                
+                return Ok(new ProductSearchResponse 
                 {
                     Items = productDtos,
                     TotalCount = totalCount,
@@ -239,15 +228,15 @@ namespace CoreAPI.Controllers
                     page: page,
                     pageSize: pageSize
                 );
-
+                
                 // Map results to DTOs using AutoMapper
                 var productDtos = results
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .Select(p => _mapper.Map<ProductDto>(p))
                     .ToList();
-
-                var response = new ProductSearchResponse
+                
+                var response = new ProductSearchResponse 
                 {
                     Items = productDtos,
                     TotalCount = totalCount,
@@ -256,7 +245,7 @@ namespace CoreAPI.Controllers
                     Pages = (int)Math.Ceiling((double)totalCount / pageSize),
                     FromCache = false
                 };
-
+                
                 return Ok(response);
             }
         }
@@ -265,17 +254,17 @@ namespace CoreAPI.Controllers
         {
             if (cache.Count <= maxSize)
                 return;
-
+                
             // Calculate how many items to remove
             int itemsToRemove = cache.Count - maxSize;
-
+            
             // Get the oldest entries based on timestamp
             var oldestEntries = cache
                 .OrderBy(kv => kv.Value.Timestamp)
                 .Take(itemsToRemove)
                 .Select(kv => kv.Key)
                 .ToList();
-
+                
             // Remove the oldest entries
             foreach (var key in oldestEntries)
             {
@@ -302,11 +291,11 @@ namespace CoreAPI.Controllers
         {
             if (string.IsNullOrEmpty(id))
                 return BadRequest("Product ID is required.");
-
+                
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
-
-
+            
+            
             var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
             if (!hasPermission)
             {
@@ -348,7 +337,7 @@ namespace CoreAPI.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
-
+            
             var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
             if (!hasPermission)
             {
@@ -356,41 +345,41 @@ namespace CoreAPI.Controllers
             }
 
             var (canSetInitialStock, _) = await CheckStockPermissionAsync(currentUser.Id);
-
+            
             // Check for duplicate barcode or SKU in a single database query
-            var (isBarcodeDuplicate, isSKUDuplicate, duplicateProduct) =
+            var (isBarcodeDuplicate, isSKUDuplicate, duplicateProduct) = 
                 await _productRepository.CheckDuplicateProductAsync(
                     barCode: model.BarCode,
                     sku: model.SKU,
                     groupId: groupId
                 );
-
+            
             // Handle barcode duplicates first
             if (isBarcodeDuplicate)
             {
-                return Conflict(new
-                {
-                    error = "DuplicateBarcode",
+                return Conflict(new 
+                { 
+                    error = "DuplicateBarcode", 
                     message = $"A product with barcode '{model.BarCode}' already exists in your inventory.",
                     product = duplicateProduct
                 });
             }
-
+            
             // Then handle SKU duplicates
             if (isSKUDuplicate)
             {
-                return Conflict(new
-                {
-                    error = "DuplicateSKU",
+                return Conflict(new 
+                { 
+                    error = "DuplicateSKU", 
                     message = $"A product with SKU '{model.SKU}' already exists in your inventory.",
                     product = duplicateProduct
                 });
             }
-
+            
             // Find category by name or create a new one
             var category = await _categoryRepository.GetByNameAsync(model.CategoryName, groupId);
             string? categoryId;
-
+            
             if (category == null)
             {
                 // Create a new category and get the ID directly
@@ -400,7 +389,7 @@ namespace CoreAPI.Controllers
                     description: $"Category automatically created for product {model.Name}",
                     active: true
                 );
-
+                
                 if (categoryId == null)
                 {
                     return BadRequest("Failed to create category");
@@ -410,7 +399,7 @@ namespace CoreAPI.Controllers
             {
                 categoryId = category.Id;
             }
-
+            
             try
             {
                 // Create the product using individual fields
@@ -447,21 +436,21 @@ namespace CoreAPI.Controllers
                 // Handle any other database-related errors not caught by earlier checks
                 if (ex.InnerException?.Message.Contains("IX_Products_GroupId_BarCode") == true)
                 {
-                    return Conflict(new
-                    {
-                        error = "DuplicateBarcode",
-                        message = $"A product with barcode '{model.BarCode}' already exists in your inventory."
+                    return Conflict(new 
+                    { 
+                        error = "DuplicateBarcode", 
+                        message = $"A product with barcode '{model.BarCode}' already exists in your inventory." 
                     });
                 }
                 else if (ex.InnerException?.Message.Contains("IX_Products_GroupId_SKU") == true)
                 {
-                    return Conflict(new
-                    {
-                        error = "DuplicateSKU",
-                        message = $"A product with SKU '{model.SKU}' already exists in your inventory."
+                    return Conflict(new 
+                    { 
+                        error = "DuplicateSKU", 
+                        message = $"A product with SKU '{model.SKU}' already exists in your inventory." 
                     });
                 }
-
+                
                 _logger.LogError(ex, "Error creating product");
                 return StatusCode(500, "An error occurred while creating the product. Please try again.");
             }
@@ -495,13 +484,13 @@ namespace CoreAPI.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
-
+            
             var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
             if (!hasPermission)
             {
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
-
+            
             // Verify if category exists and belongs to the group
             if (!string.IsNullOrEmpty(model.CategoryId))
             {
@@ -515,7 +504,7 @@ namespace CoreAPI.Controllers
             {
                 return BadRequest("Category ID is required.");
             }
-
+            
             // Update the product using individual fields
             var product = await _productRepository.UpdateProductAsync(
                 id: model.Id,
@@ -531,7 +520,7 @@ namespace CoreAPI.Controllers
             );
 
             if (product == null) return NotFound();
-
+            
             var productDto = _mapper.Map<ProductDto>(product);
             return Ok(productDto);
         }
@@ -561,7 +550,7 @@ namespace CoreAPI.Controllers
 
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
-
+            
             var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
             if (!hasPermission)
             {
@@ -591,11 +580,11 @@ namespace CoreAPI.Controllers
             // Return 204 No Content for successful deletion operations
             return NoContent();
         }
-
+        
         private async Task<(bool hasPermission, string groupId)> CheckProductPermissionAsync(string userId)
         {
             string groupId;
-
+            
             if (await _linkedUserService.IsLinkedUserAsync(userId))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
@@ -608,21 +597,21 @@ namespace CoreAPI.Controllers
                 // Get the group ID from the linked user
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
                 groupId = linkedUser?.GroupId ?? string.Empty;
-
+                
             }
             else
             {
                 var group = await _userGroupRepository.GetByUserIdAsync(userId);
                 groupId = group?.GroupId ?? string.Empty;
             }
-
+            
             return (true, groupId);
         }
 
         private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
         {
             string groupId;
-
+            
             if (await _linkedUserService.IsLinkedUserAsync(userId))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Stock);
@@ -635,14 +624,14 @@ namespace CoreAPI.Controllers
                 // Get the group ID from the linked user
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
                 groupId = linkedUser?.GroupId ?? string.Empty;
-
+                
             }
             else
             {
                 var group = await _userGroupRepository.GetByUserIdAsync(userId);
                 groupId = group?.GroupId ?? string.Empty;
             }
-
+            
             return (true, groupId);
         }
     }

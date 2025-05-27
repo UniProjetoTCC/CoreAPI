@@ -1,12 +1,14 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
 
 namespace Data.Models
 {
     [Table("Promotions")]
-    public class PromotionModel
-    {
-        [Key]
+    public class PromotionModel 
+    { 
+        [Key] 
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
@@ -42,5 +44,5 @@ namespace Data.Models
 
         public virtual UserGroupModel? UserGroup { get; set; }
         public virtual ICollection<ProductPromotionModel>? ProductPromotions { get; set; } = new List<ProductPromotionModel>();
-    }
+    } 
 }

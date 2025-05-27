@@ -1,10 +1,14 @@
 using AutoMapper;
 using Business.DataRepositories;
 using Business.Models;
-using Business.Utils;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Business.Utils;
 
 namespace Data.Repositories
 {
@@ -94,7 +98,7 @@ namespace Data.Repositories
         {
             if (string.IsNullOrEmpty(id))
             {
-                return null;
+                return null; 
             }
 
             var category = await _context.Categories
@@ -102,7 +106,7 @@ namespace Data.Repositories
 
             if (category == null)
             {
-                throw new Exception("Category not found");
+                throw new Exception("Category not found"); 
             }
 
             // Atualizar apenas os campos fornecidos
@@ -163,30 +167,29 @@ namespace Data.Repositories
         }
 
         public async Task<(List<CategoryBusinessModel> Items, int TotalCount)> SearchByNameAsync(
-            string name,
-            string groupId,
-            int page = 1,
+            string name, 
+            string groupId, 
+            int page = 1, 
             int pageSize = 20)
         {
-
-            if (string.IsNullOrEmpty(groupId))
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
+            {
                 return (new List<CategoryBusinessModel>(), 0);
+            }
 
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            // Normalize the input; empty name becomes empty string
-            string normalizedName = StringUtils.RemoveDiacritics(name ?? "");
+            // Normalize the input for searching
+            string normalizedName = StringUtils.RemoveDiacritics(name);
 
-            // Build query: filter by group; optionally filter by name if provided
-            var query = _context.Categories.Where(c => c.GroupId == groupId);
-            if (!string.IsNullOrWhiteSpace(normalizedName))
-            {
-                query = query.Where(c =>
-                    EF.Functions.ILike(c.Name, $"%{normalizedName}%") ||
+            // Use case-insensitive search with ILIKE for database-level filtering
+            var query = _context.Categories
+                .Where(c => c.GroupId == groupId)
+                .Where(c => 
+                    EF.Functions.ILike(c.Name, $"%{normalizedName}%") || 
                     (c.Description != null && EF.Functions.ILike(c.Description, $"%{normalizedName}%"))
                 );
-            }
 
             // Get total count for pagination
             var totalCount = await query.CountAsync();

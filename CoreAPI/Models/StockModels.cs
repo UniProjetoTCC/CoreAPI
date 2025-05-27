@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace CoreAPI.Models
@@ -20,7 +22,7 @@ namespace CoreAPI.Models
         [Required]
         [Range(0, int.MaxValue, ErrorMessage = "Quantity must be greater than or equal to 0")]
         public int Quantity { get; set; }
-
+        
         public string? Reason { get; set; }
     }
 

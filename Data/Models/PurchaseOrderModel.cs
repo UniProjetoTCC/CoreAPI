@@ -1,13 +1,15 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System; 
+using System.Collections.Generic; 
+using System.ComponentModel.DataAnnotations; 
+using System.ComponentModel.DataAnnotations.Schema; 
 
 namespace Data.Models
 {
     [Table("PurchaseOrders")]
     public class PurchaseOrderModel
-    {
+    { 
         // Identificadores
-        [Key]
+        [Key] 
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
@@ -41,8 +43,8 @@ namespace Data.Models
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public virtual SupplierModel? Supplier { get; set; }
+        public virtual SupplierModel? Supplier { get; set; } 
         public virtual UserGroupModel? UserGroup { get; set; }
-        public virtual ICollection<PurchaseOrderItemModel>? Items { get; set; } = new List<PurchaseOrderItemModel>();
-    }
+        public virtual ICollection<PurchaseOrderItemModel>? Items { get; set; } = new List<PurchaseOrderItemModel>(); 
+    } 
 }
