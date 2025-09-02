@@ -11,7 +11,10 @@ using System.Text;
 using System.Text.Json;
 
 namespace CoreAPI.Controllers
-{
+{   
+    /// <summary>
+    /// Controller responsible for managing stock movements.
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class StockMovementController : ControllerBase

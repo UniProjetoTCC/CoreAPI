@@ -116,7 +116,6 @@ namespace Data.Repositories
             string sku,
             string barCode,
             string? description,
-            decimal price,
             decimal cost,
             bool active)
         {
@@ -142,7 +141,6 @@ namespace Data.Repositories
             product.SKU = sku;
             product.BarCode = barCode;
             product.Description = normalizedDescription; // Store normalized description
-            product.Price = price;
             product.Cost = cost;
             product.Active = active;
             product.UpdatedAt = DateTime.UtcNow;
@@ -238,6 +236,70 @@ namespace Data.Repositories
 
             // Return the first matching product
             return (isBarcodeDuplicate, isSKUDuplicate, _mapper.Map<ProductBusinessModel>(products.First()));
+        }
+
+        public async Task<ProductBusinessModel?> UpdateProductPriceAsync(
+            string id,
+            string groupId,
+            decimal newPrice,
+            string userId,
+            string? reason = null)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(userId))
+            {
+                return null;
+            }
+
+            // Use a transaction to ensure both the product update and price history creation are atomic
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Get the product
+                var product = await _context.Products
+                    .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+                if (product == null)
+                {
+                    return null;
+                }
+
+                // Store the old price for history
+                decimal oldPrice = product.Price;
+
+                // Create a price history record
+                var priceHistory = new PriceHistoryModel
+                {
+                    ProductId = id,
+                    GroupId = groupId,
+                    ChangedByUserId = userId,
+                    OldPrice = oldPrice,
+                    NewPrice = newPrice,
+                    ChangeDate = DateTime.UtcNow,
+                    Reason = reason,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                // Update the product price
+                product.Price = newPrice;
+                product.UpdatedAt = DateTime.UtcNow;
+
+                // Save both changes
+                await _context.PriceHistories.AddAsync(priceHistory);
+                _context.Products.Update(product);
+                await _context.SaveChangesAsync();
+
+                // Commit the transaction
+                await transaction.CommitAsync();
+
+                return _mapper.Map<ProductBusinessModel>(product);
+            }
+            catch (Exception)
+            {
+                // Rollback the transaction if any error occurs
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

@@ -46,6 +46,25 @@ namespace CoreAPI.AutoMapper
             CreateMap<StockMovementBusinessModel, StockMovementDto>()
                 .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.Stock != null ? src.Stock.ProductId : string.Empty))
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Stock != null && src.Stock.Product != null ? src.Stock.Product.Name : string.Empty));
+
+            // Product Expiration mappings
+            CreateMap<ProductExpirationModel, ProductExpirationBusinessModel>()
+                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
+                .ForMember(dest => dest.Stock, opt => opt.MapFrom(src => src.Stock))
+                .ReverseMap();
+
+            CreateMap<ProductExpirationBusinessModel, ProductExpirationDto>();
+            CreateMap<CreateProductExpirationModel, ProductExpirationBusinessModel>();
+            CreateMap<UpdateProductExpirationModel, ProductExpirationBusinessModel>();
+
+            // Payment Method mappings
+            CreateMap<PaymentMethodModel, PaymentMethodBusinessModel>()
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Active))
+                .ReverseMap()
+                .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsActive));
+            
+            CreateMap<PaymentMethodBusinessModel, PaymentMethodResponse>();
+            CreateMap<PaymentMethodRequest, PaymentMethodBusinessModel>();
         }
     }
 }

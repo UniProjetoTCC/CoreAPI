@@ -33,7 +33,6 @@ namespace Business.DataRepositories
             string sku,
             string barCode,
             string? description,
-            decimal price,
             decimal cost,
             bool active
         );
@@ -62,6 +61,14 @@ namespace Business.DataRepositories
             string barCode,
             string sku,
             string groupId
+        );
+
+        Task<ProductBusinessModel?> UpdateProductPriceAsync(
+            string id,
+            string groupId,
+            decimal newPrice,
+            string userId,
+            string? reason = null
         );
     }
 }

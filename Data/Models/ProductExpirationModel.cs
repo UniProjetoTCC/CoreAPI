@@ -28,14 +28,6 @@ namespace Data.Models
         [Required]
         public required DateTime ExpirationDate { get; set; }
 
-        [Required]
-        [Range(0, int.MaxValue)]
-        public required int Quantity { get; set; }
-
-        [Required]
-        [StringLength(100)]
-        public required string BatchNumber { get; set; }
-
         [StringLength(50)]
         public required string? Location { get; set; }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -178,29 +179,6 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserPaymentCards",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    UserId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    CardNumber = table.Column<string>(type: "text", nullable: false),
-                    CardholderName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    ExpirationDate = table.Column<string>(type: "text", nullable: false),
-                    CVV = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
-                    Type = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserPaymentCards", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_UserPaymentCards_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "UserGroups",
                 columns: table => new
                 {
@@ -325,9 +303,8 @@ namespace Data.Migrations
                     GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    PointsPerCurrency = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    RedemptionRate = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    Points = table.Column<int>(type: "integer", nullable: false),
+                    CentsToPoints = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    PointsToCents = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     DiscountPercentage = table.Column<decimal>(type: "numeric", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -423,26 +400,6 @@ namespace Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Taxes",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Rate = table.Column<decimal>(type: "numeric(5,2)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Taxes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Taxes_UserGroups_GroupId",
-                        column: x => x.GroupId,
-                        principalTable: "UserGroups",
-                        principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Products",
                 columns: table => new
                 {
@@ -494,6 +451,7 @@ namespace Data.Migrations
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     LoyaltyProgramId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: true),
+                    LoyaltyPoints = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -617,40 +575,6 @@ namespace Data.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ProductPromotions_UserGroups_GroupId",
-                        column: x => x.GroupId,
-                        principalTable: "UserGroups",
-                        principalColumn: "GroupId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ProductTaxes",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    ProductId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    TaxId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ProductTaxes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ProductTaxes_Products_ProductId",
-                        column: x => x.ProductId,
-                        principalTable: "Products",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ProductTaxes_Taxes_TaxId",
-                        column: x => x.TaxId,
-                        principalTable: "Taxes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ProductTaxes_UserGroups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "UserGroups",
                         principalColumn: "GroupId",
@@ -831,8 +755,6 @@ namespace Data.Migrations
                     StockId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     GroupId = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                     ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Quantity = table.Column<int>(type: "integer", nullable: false),
-                    BatchNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Location = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -873,7 +795,6 @@ namespace Data.Migrations
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     Reason = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     MovementDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ReferenceNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -1108,22 +1029,6 @@ namespace Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductTaxes_GroupId_ProductId_TaxId",
-                table: "ProductTaxes",
-                columns: new[] { "GroupId", "ProductId", "TaxId" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductTaxes_ProductId",
-                table: "ProductTaxes",
-                column: "ProductId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductTaxes_TaxId",
-                table: "ProductTaxes",
-                column: "TaxId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Promotions_GroupId",
                 table: "Promotions",
                 column: "GroupId");
@@ -1286,12 +1191,6 @@ namespace Data.Migrations
                 columns: new[] { "GroupId", "Name" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Taxes_GroupId_Name",
-                table: "Taxes",
-                columns: new[] { "GroupId", "Name" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_UserGroups_SubscriptionPlanId",
                 table: "UserGroups",
                 column: "SubscriptionPlanId");
@@ -1299,11 +1198,6 @@ namespace Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_UserGroups_UserId",
                 table: "UserGroups",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserPaymentCards_UserId",
-                table: "UserPaymentCards",
                 column: "UserId");
         }
 
@@ -1341,9 +1235,6 @@ namespace Data.Migrations
                 name: "ProductPromotions");
 
             migrationBuilder.DropTable(
-                name: "ProductTaxes");
-
-            migrationBuilder.DropTable(
                 name: "PurchaseOrderItems");
 
             migrationBuilder.DropTable(
@@ -1356,16 +1247,10 @@ namespace Data.Migrations
                 name: "SupplierPrices");
 
             migrationBuilder.DropTable(
-                name: "UserPaymentCards");
-
-            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Promotions");
-
-            migrationBuilder.DropTable(
-                name: "Taxes");
 
             migrationBuilder.DropTable(
                 name: "PurchaseOrders");

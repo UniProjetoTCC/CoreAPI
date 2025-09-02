@@ -62,10 +62,6 @@ namespace CoreAPI.Models
 
         [Required]
         [Range(0.01, 1000000)]
-        public decimal Price { get; set; }
-
-        [Required]
-        [Range(0.01, 1000000)]
         public decimal Cost { get; set; }
 
         public bool Active { get; set; } = true;
@@ -100,5 +96,18 @@ namespace CoreAPI.Models
     {
         public List<ProductBusinessModel> Products { get; set; } = new List<ProductBusinessModel>();
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    }
+
+    public class ProductPriceUpdateModel
+    {
+        [Required]
+        public required string Id { get; set; }
+
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
+        public required decimal NewPrice { get; set; }
+
+        [StringLength(200)]
+        public string? Reason { get; set; }
     }
 }

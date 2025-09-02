@@ -25,15 +25,12 @@ namespace Data.Models
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         [Range(0, double.MaxValue)]
-        public required decimal PointsPerCurrency { get; set; }
+        public required decimal CentsToPoints { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         [Range(0, double.MaxValue)]
-        public required decimal RedemptionRate { get; set; }
-
-        [Range(0, int.MaxValue)]
-        public int Points { get; set; }
+        public required decimal PointsToCents { get; set; }
 
         [Range(0, 100)]
         public decimal DiscountPercentage { get; set; }

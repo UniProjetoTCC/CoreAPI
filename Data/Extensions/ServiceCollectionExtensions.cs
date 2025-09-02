@@ -17,7 +17,6 @@ namespace Data.Extensions
             services.AddScoped<IProductExpirationRepository, ProductExpirationRepository>();
             services.AddScoped<IProductPromotionRepository, ProductPromotionRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
-            services.AddScoped<IProductTaxRepository, ProductTaxRepository>();
             services.AddScoped<IPromotionRepository, PromotionRepository>();
             services.AddScoped<IPurchaseOrderItemRepository, PurchaseOrderItemRepository>();
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
@@ -28,9 +27,7 @@ namespace Data.Extensions
             services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             services.AddScoped<ISupplierPriceRepository, SupplierPriceRepository>();
             services.AddScoped<ISupplierRepository, SupplierRepository>();
-            services.AddScoped<ITaxRepository, TaxRepository>();
             services.AddScoped<IUserGroupRepository, UserGroupRepository>();
-            services.AddScoped<IUserPaymentCardRepository, UserPaymentCardRepository>();
             services.AddScoped<IBackgroundJobRepository, BackgroundJobRepository>();
 
             return services;

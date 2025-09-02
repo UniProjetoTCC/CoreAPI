@@ -131,6 +131,9 @@ namespace Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("LoyaltyPoints")
+                        .HasColumnType("integer");
+
                     b.Property<string>("LoyaltyProgramId")
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
@@ -227,6 +230,9 @@ namespace Data.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
+                    b.Property<decimal>("CentsToPoints")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -251,13 +257,7 @@ namespace Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("Points")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PointsPerCurrency")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("RedemptionRate")
+                    b.Property<decimal>("PointsToCents")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -374,11 +374,6 @@ namespace Data.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<string>("BatchNumber")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -401,9 +396,6 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
 
                     b.Property<string>("StockId")
                         .IsRequired()
@@ -532,48 +524,6 @@ namespace Data.Migrations
                         .HasDatabaseName("IX_ProductPromotions_GroupId_ProductId_PromotionId");
 
                     b.ToTable("ProductPromotions");
-                });
-
-            modelBuilder.Entity("Data.Models.ProductTaxModel", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("GroupId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("ProductId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("TaxId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId")
-                        .HasDatabaseName("IX_ProductTaxes_ProductId");
-
-                    b.HasIndex("TaxId")
-                        .HasDatabaseName("IX_ProductTaxes_TaxId");
-
-                    b.HasIndex("GroupId", "ProductId", "TaxId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ProductTaxes_GroupId_ProductId_TaxId");
-
-                    b.ToTable("ProductTaxes");
                 });
 
             modelBuilder.Entity("Data.Models.PromotionModel", b =>
@@ -915,10 +865,6 @@ namespace Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("ReferenceNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<string>("StockId")
                         .IsRequired()
                         .HasMaxLength(36)
@@ -1124,34 +1070,6 @@ namespace Data.Migrations
                     b.ToTable("SupplierPrices");
                 });
 
-            modelBuilder.Entity("Data.Models.TaxModel", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("GroupId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<decimal>("Rate")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroupId", "Name")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Taxes_GroupId_Name");
-
-                    b.ToTable("Taxes");
-                });
-
             modelBuilder.Entity("Data.Models.UserGroupModel", b =>
                 {
                     b.Property<string>("GroupId")
@@ -1190,45 +1108,6 @@ namespace Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("UserGroups");
-                });
-
-            modelBuilder.Entity("Data.Models.UserPaymentCardModel", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("CVV")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<string>("CardNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("CardholderName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ExpirationDate")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserPaymentCards");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1620,33 +1499,6 @@ namespace Data.Migrations
                     b.Navigation("UserGroup");
                 });
 
-            modelBuilder.Entity("Data.Models.ProductTaxModel", b =>
-                {
-                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.ProductModel", "Product")
-                        .WithMany("ProductTaxes")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Data.Models.TaxModel", "Tax")
-                        .WithMany("ProductTaxes")
-                        .HasForeignKey("TaxId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Tax");
-
-                    b.Navigation("UserGroup");
-                });
-
             modelBuilder.Entity("Data.Models.PromotionModel", b =>
                 {
                     b.HasOne("Data.Models.UserGroupModel", "UserGroup")
@@ -1865,17 +1717,6 @@ namespace Data.Migrations
                     b.Navigation("UserGroup");
                 });
 
-            modelBuilder.Entity("Data.Models.TaxModel", b =>
-                {
-                    b.HasOne("Data.Models.UserGroupModel", "UserGroup")
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserGroup");
-                });
-
             modelBuilder.Entity("Data.Models.UserGroupModel", b =>
                 {
                     b.HasOne("Data.Models.SubscriptionPlanModel", "SubscriptionPlan")
@@ -1891,17 +1732,6 @@ namespace Data.Migrations
                         .IsRequired();
 
                     b.Navigation("SubscriptionPlan");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Data.Models.UserPaymentCardModel", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1985,8 +1815,6 @@ namespace Data.Migrations
 
                     b.Navigation("ProductPromotions");
 
-                    b.Navigation("ProductTaxes");
-
                     b.Navigation("PurchaseOrderItems");
 
                     b.Navigation("SaleItems");
@@ -2028,11 +1856,6 @@ namespace Data.Migrations
                     b.Navigation("PurchaseOrders");
 
                     b.Navigation("SupplierPrices");
-                });
-
-            modelBuilder.Entity("Data.Models.TaxModel", b =>
-                {
-                    b.Navigation("ProductTaxes");
                 });
 
             modelBuilder.Entity("Data.Models.UserGroupModel", b =>

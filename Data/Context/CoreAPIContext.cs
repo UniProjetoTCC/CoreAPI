@@ -22,7 +22,6 @@ namespace Data.Context
         public DbSet<CategoryModel> Categories { get; set; }
         public DbSet<ProductModel> Products { get; set; }
         public DbSet<ProductExpirationModel> ProductExpirations { get; set; }
-        public DbSet<ProductTaxModel> ProductTaxes { get; set; }
         public DbSet<ProductPromotionModel> ProductPromotions { get; set; }
         public DbSet<PromotionModel> Promotions { get; set; }
         public DbSet<SupplierModel> Suppliers { get; set; }
@@ -40,16 +39,14 @@ namespace Data.Context
         public DbSet<StockModel> Stocks { get; set; }
         public DbSet<StockMovementModel> StockMovements { get; set; }
 
-        // Pricing and tax-related entities
+        // Pricing-related entities
         public DbSet<PriceHistoryModel> PriceHistories { get; set; }
-        public DbSet<TaxModel> Taxes { get; set; }
 
         // Subscription-related entities
         public DbSet<SubscriptionPlanModel> SubscriptionPlans { get; set; }
 
         // Payment-related entities
         public DbSet<PaymentMethodModel> PaymentMethods { get; set; }
-        public DbSet<UserPaymentCardModel> UserPaymentCards { get; set; }
 
         // Background job-related entities
         public DbSet<BackgroundJobsModel> BackgroundJobs { get; set; }
@@ -229,66 +226,6 @@ namespace Data.Context
             modelBuilder.Entity<PriceHistoryModel>()
                 .HasIndex(ph => new { ph.GroupId, ph.ProductId, ph.ChangeDate })
                 .HasDatabaseName("IX_PriceHistory_GroupId_ProductId_Date");
-
-            //=================================================================
-            // Tax relationships and indexes
-            //=================================================================
-            // Configure the relationship between Tax and UserGroup.
-            // Each tax belongs to a specific user group.
-            modelBuilder.Entity<TaxModel>()
-                .HasOne(t => t.UserGroup)
-                .WithMany() // No navigation property on the UserGroup side.
-                .HasForeignKey(t => t.GroupId)
-                .OnDelete(DeleteBehavior.Cascade); // Delete when UserGroup is deleted.
-
-            // Create a unique index to optimize tax searches by Name within a user group.
-            modelBuilder.Entity<TaxModel>()
-                .HasIndex(t => new { t.GroupId, t.Name })
-                .HasDatabaseName("IX_Taxes_GroupId_Name")
-                .IsUnique();
-
-            //=================================================================
-            // Product Tax relationships and indexes
-            //=================================================================
-            // Configure the relationship between ProductTax and Product.
-            // Each product-tax association links one product with one tax rate.
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasOne(pt => pt.Product)
-                .WithMany(p => p.ProductTaxes)
-                .HasForeignKey(pt => pt.ProductId)
-                .OnDelete(DeleteBehavior.Cascade); // Delete ProductTax when Product is deleted
-
-            // Configure the relationship between ProductTax and Tax.
-            // Each product-tax association links one tax with one product.
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasOne(pt => pt.Tax)
-                .WithMany(t => t.ProductTaxes)
-                .HasForeignKey(pt => pt.TaxId)
-                .OnDelete(DeleteBehavior.Cascade); // Delete ProductTax when Tax is deleted
-
-            // Configure the relationship between ProductTax and UserGroup.
-            // Each product-tax association belongs to a specific user group.
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasOne(pt => pt.UserGroup)
-                .WithMany() // No navigation property on the UserGroup side.
-                .HasForeignKey(pt => pt.GroupId)
-                .OnDelete(DeleteBehavior.Cascade); // Delete when UserGroup is deleted.
-
-            // Create an index to optimize queries filtering by ProductId
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasIndex(pt => pt.ProductId)
-                .HasDatabaseName("IX_ProductTaxes_ProductId");
-
-            // Create an index to optimize queries filtering by TaxId
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasIndex(pt => pt.TaxId)
-                .HasDatabaseName("IX_ProductTaxes_TaxId");
-
-            // Create a unique index to optimize queries filtering by GroupId, ProductId, and TaxId.
-            modelBuilder.Entity<ProductTaxModel>()
-                .HasIndex(pt => new { pt.GroupId, pt.ProductId, pt.TaxId })
-                .HasDatabaseName("IX_ProductTaxes_GroupId_ProductId_TaxId")
-                .IsUnique();
 
             //=================================================================
             // Product Promotion relationships and indexes
@@ -637,21 +574,6 @@ namespace Data.Context
                 .HasIndex(lp => new { lp.GroupId, lp.Name })
                 .HasDatabaseName("IX_LoyaltyPrograms_GroupId_Name")
                 .IsUnique();
-
-            //=================================================================
-            // Payment Card relationships and indexes
-            //=================================================================
-            // Configure the relationship between PaymentCard and IdentityUser.
-            // Each PaymentCard is associated with one IdentityUser (owner of the card).
-            modelBuilder.Entity<UserPaymentCardModel>()
-                .HasOne(upc => upc.User) // A card belongs to a single user
-                .WithMany() // Assuming you don't have a collection of cards in IdentityUser
-                .HasForeignKey(upc => upc.UserId) // Defines UserId as the foreign key
-                .OnDelete(DeleteBehavior.Cascade); // When a user is deleted, the associated cards are also deleted
-
-            // Index for UserId to improve query performance
-            modelBuilder.Entity<UserPaymentCardModel>()
-                .HasIndex(upc => upc.UserId); // Creates an index on UserId
         }
     }
 }

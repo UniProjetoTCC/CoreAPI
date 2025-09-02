@@ -36,6 +36,9 @@ namespace Data.Models
         [StringLength(36)]
         public string? LoyaltyProgramId { get; set; }
 
+        [Range(0, int.MaxValue)]
+        public int LoyaltyPoints { get; set; } = 0;
+
         [Required]
         public required bool IsActive { get; set; } = true;
 

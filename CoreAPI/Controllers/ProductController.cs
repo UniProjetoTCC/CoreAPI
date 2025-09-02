@@ -14,6 +14,9 @@ using System.Text.Json;
 
 namespace CoreAPI.Controllers
 {
+    /// <summary>
+    /// Controller responsible for managing products.
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class ProductController : ControllerBase
@@ -474,7 +477,8 @@ namespace CoreAPI.Controllers
         /// This endpoint updates a product with the following validations:
         /// - Verifies the product exists and belongs to the user's group
         /// - Checks that the category exists and belongs to the user's group
-        /// - Updates all specified product properties
+        /// - Updates all specified product properties EXCEPT price
+        /// - Price changes are only allowed through the dedicated price update endpoint
         /// 
         /// Only products within the user's group can be updated.
         /// </remarks>
@@ -482,7 +486,7 @@ namespace CoreAPI.Controllers
         /// <response code="200">Updated product details</response>
         /// <response code="400">Validation errors or product not found in user's group</response>
         /// <response code="401">Unauthorized</response>
-        /// <response code="403">Insufficient permissions</response>
+        /// <response code="403">Insufficient permissions or attempting to change price</response>
         /// <response code="404">Product not found</response>
         [HttpPut]
         [Authorize]
@@ -525,7 +529,6 @@ namespace CoreAPI.Controllers
                 sku: model.SKU,
                 barCode: model.BarCode,
                 description: model.Description,
-                price: model.Price,
                 cost: model.Cost,
                 active: model.Active
             );
@@ -617,6 +620,65 @@ namespace CoreAPI.Controllers
             }
 
             return (true, groupId);
+        }
+
+        /// <summary>
+        /// Updates a product's price and records the change in price history
+        /// </summary>
+        /// <remarks>
+        /// This endpoint is the only way to update a product's price. It performs the following:
+        /// - Verifies the product exists and belongs to the user's group
+        /// - Updates the product's price
+        /// - Records the price change in the PriceHistory table with the old and new prices
+        /// - Optionally records a reason for the price change
+        /// </remarks>
+        /// <param name="model">Price update model with product ID, new price, and optional reason</param>
+        /// <response code="200">Updated product details</response>
+        /// <response code="400">Validation errors or product not found in user's group</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpPut("UpdatePrice")]
+        [Authorize]
+        public async Task<ActionResult> UpdateProductPriceAsync([FromBody] ProductPriceUpdateModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Get the existing product
+            var existingProduct = await _productRepository.GetById(model.Id, groupId);
+            if (existingProduct == null)
+            {
+                return NotFound("Product not found or does not belong to your group.");
+            }
+
+            // Store the old price for history
+            decimal oldPrice = existingProduct.Price;
+
+            // Update the product price
+            var updatedProduct = await _productRepository.UpdateProductPriceAsync(
+                id: model.Id,
+                groupId: groupId,
+                newPrice: model.NewPrice,
+                userId: currentUser.Id,
+                reason: model.Reason
+            );
+
+            if (updatedProduct == null) return NotFound();
+
+            var productDto = _mapper.Map<ProductDto>(updatedProduct);
+            return Ok(productDto);
         }
 
         private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
