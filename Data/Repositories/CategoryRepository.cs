@@ -90,7 +90,7 @@ namespace Data.Repositories
             return _mapper.Map<CategoryBusinessModel>(newCategory);
         }
 
-        public async Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string? name = null, string? description = null, bool? active = null)
+        public async Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string? name = null, string? description = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -118,11 +118,6 @@ namespace Data.Repositories
                 // Normalize category description to remove accents
                 string normalizedDescription = StringUtils.RemoveDiacritics(description);
                 category.Description = normalizedDescription;
-            }
-
-            if (active.HasValue)
-            {
-                category.Active = active.Value;
             }
 
             category.UpdatedAt = DateTime.UtcNow;
@@ -199,6 +194,56 @@ namespace Data.Repositories
                 .ToListAsync();
 
             return (_mapper.Map<List<CategoryBusinessModel>>(categories), totalCount);
+        }
+
+        public async Task<CategoryBusinessModel?> ActivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
+
+            if (category == null)
+            {
+                return null;
+            }
+
+            // Set category as active
+            category.Active = true;
+            category.UpdatedAt = DateTime.UtcNow;
+
+            _context.Categories.Update(category);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(category);
+        }
+
+        public async Task<CategoryBusinessModel?> DeactivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
+
+            if (category == null)
+            {
+                return null;
+            }
+
+            // Set category as inactive
+            category.Active = false;
+            category.UpdatedAt = DateTime.UtcNow;
+
+            _context.Categories.Update(category);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(category);
         }
     }
 }

@@ -65,6 +65,23 @@ namespace CoreAPI.AutoMapper
             
             CreateMap<PaymentMethodBusinessModel, PaymentMethodResponse>();
             CreateMap<PaymentMethodRequest, PaymentMethodBusinessModel>();
+
+            // Loyalty Program mappings
+            CreateMap<LoyaltyProgramModel, LoyaltyProgramBusinessModel>()
+                .ReverseMap();
+            
+            CreateMap<LoyaltyProgramBusinessModel, LoyaltyProgramResponse>();
+            CreateMap<LoyaltyProgramRequest, LoyaltyProgramBusinessModel>();
+
+            // Customer mappings
+            CreateMap<CustomerModel, CustomerBusinessModel>()
+                .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsActive))
+                .ReverseMap()
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Active));
+                
+            // Customer DTO mappings
+            CreateMap<CustomerBusinessModel, CustomerDto>();
+            CreateMap<CustomerModel, CustomerDto>();
         }
     }
 }

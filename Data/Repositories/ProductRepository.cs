@@ -116,8 +116,8 @@ namespace Data.Repositories
             string sku,
             string barCode,
             string? description,
-            decimal cost,
-            bool active)
+            decimal cost
+        )
         {
             if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(categoryId) || string.IsNullOrEmpty(groupId))
             {
@@ -142,7 +142,6 @@ namespace Data.Repositories
             product.BarCode = barCode;
             product.Description = normalizedDescription; // Store normalized description
             product.Cost = cost;
-            product.Active = active;
             product.UpdatedAt = DateTime.UtcNow;
 
             _context.Products.Update(product);
@@ -300,6 +299,56 @@ namespace Data.Repositories
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<ProductBusinessModel?> ActivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+            if (product == null)
+            {
+                return null;
+            }
+
+            // Set product as active
+            product.Active = true;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ProductBusinessModel>(product);
+        }
+
+        public async Task<ProductBusinessModel?> DeactivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+            if (product == null)
+            {
+                return null;
+            }
+
+            // Set product as inactive
+            product.Active = false;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ProductBusinessModel>(product);
         }
     }
 }

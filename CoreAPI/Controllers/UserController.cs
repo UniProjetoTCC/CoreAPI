@@ -653,6 +653,16 @@ namespace CoreAPI.Controllers
             {
                 return BadRequest("User not found");
             }
+            
+            // Standardize planName: trim spaces and capitalize first letter only
+            if (!string.IsNullOrEmpty(planName))
+            {
+                planName = planName.Trim();
+                if (planName.Length > 0)
+                {
+                    planName = char.ToUpper(planName[0]) + (planName.Length > 1 ? planName.Substring(1).ToLower() : string.Empty);
+                }
+            }
 
             string internalPlanName = SetInternalPlanName(planName);
 

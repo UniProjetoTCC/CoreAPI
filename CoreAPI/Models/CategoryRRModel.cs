@@ -25,8 +25,6 @@ namespace CoreAPI.Models
 
         [StringLength(500)]
         public string? Description { get; set; }
-
-        public bool? Active { get; set; } = true;
     }
 
     public class CategorySearchResponse

@@ -86,12 +86,42 @@ namespace CoreAPI.Controllers
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
-            // If name is empty, return all categories paginated without using cache prefix logic
+            // If name is empty, return all categories paginated with caching
             if (string.IsNullOrWhiteSpace(name))
             {
+                // Generate cache key for all categories
+                string allCategoriesCacheKey = $"all_categories:{groupId}:{page}:{pageSize}";
+
+                // Try to get from cache first
+                var cachedResultBytes = await _distributedCache.GetAsync(allCategoriesCacheKey);
+                if (cachedResultBytes != null)
+                {
+                    try
+                    {
+                        // Deserialize the cached result
+                        var cachedResultJson = Encoding.UTF8.GetString(cachedResultBytes);
+                        var cachedResponse = JsonSerializer.Deserialize<CategorySearchResponse>(
+                            cachedResultJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (cachedResponse != null)
+                        {
+                            cachedResponse.FromCache = true;
+                            return Ok(cachedResponse);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error deserializing cached all categories result");
+                        // Continue to fetch from database on error
+                    }
+                }
+
+                // If not in cache or error occurred, get from database
                 var (allItems, totalCount) = await _categoryRepository.SearchByNameAsync("", groupId, page, pageSize);
                 var dtos = allItems.Select(c => _mapper.Map<CategoryDto>(c)).ToList();
-                return Ok(new CategorySearchResponse
+
+                var response = new CategorySearchResponse
                 {
                     Items = dtos,
                     TotalCount = totalCount,
@@ -99,7 +129,27 @@ namespace CoreAPI.Controllers
                     PageSize = pageSize,
                     Pages = (int)Math.Ceiling((double)totalCount / pageSize),
                     FromCache = false
-                });
+                };
+
+                // Cache the result
+                try
+                {
+                    var serializedResponse = JsonSerializer.Serialize(response);
+                    var cacheOptions = new DistributedCacheEntryOptions()
+                        .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
+
+                    await _distributedCache.SetAsync(
+                        allCategoriesCacheKey,
+                        Encoding.UTF8.GetBytes(serializedResponse),
+                        cacheOptions);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error caching all categories result");
+                    // Continue without caching on error
+                }
+
+                return Ok(response);
             }
 
             // Generate cache key for this user's search context
@@ -420,8 +470,7 @@ namespace CoreAPI.Controllers
             var category = await _categoryRepository.UpdateCategoryAsync(
                 id: model.Id,
                 name: model.Name,
-                description: model.Description,
-                active: model.Active);
+                description: model.Description);
 
             if (category == null)
             {
@@ -482,6 +531,106 @@ namespace CoreAPI.Controllers
 
             // Return 204 No Content for successful deletion operations
             return NoContent();
+        }
+
+        /// <summary>
+        /// Activates a category
+        /// </summary>
+        /// <remarks>
+        /// This endpoint activates a category with the following validations:
+        /// - Verifies the category exists and belongs to the user's group
+        /// - Sets the category status to active
+        /// 
+        /// Only categories within the user's group can be activated.
+        /// </remarks>
+        /// <param name="id">Category ID to activate</param>
+        /// <response code="200">Category successfully activated</response>
+        /// <response code="400">Invalid ID or validation errors</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Category not found</response>
+        [HttpPost("{id}/Activate")]
+        [Authorize]
+        public async Task<ActionResult> ActivateCategoryAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return BadRequest("Category ID is required");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Check if the category exists and belongs to the group
+            var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
+            if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
+            
+            // Check if the category is already active
+            if (existingCategory.Active)
+            {
+                return BadRequest("Category is already active.");
+            }
+
+            // Activate the category
+            var activatedCategory = await _categoryRepository.ActivateAsync(id, groupId);
+            if (activatedCategory == null) return NotFound();
+
+            _logger.LogInformation($"Category activated: ID={activatedCategory.Id}, GroupID={activatedCategory.GroupId}");
+            var categoryDto = _mapper.Map<CategoryDto>(activatedCategory);
+            return Ok(categoryDto);
+        }
+
+        /// <summary>
+        /// Deactivates a category
+        /// </summary>
+        /// <remarks>
+        /// This endpoint deactivates a category with the following validations:
+        /// - Verifies the category exists and belongs to the user's group
+        /// - Sets the category status to inactive
+        /// 
+        /// Only categories within the user's group can be deactivated.
+        /// </remarks>
+        /// <param name="id">Category ID to deactivate</param>
+        /// <response code="200">Category successfully deactivated</response>
+        /// <response code="400">Invalid ID or validation errors</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Category not found</response>
+        [HttpPost("{id}/Deactivate")]
+        [Authorize]
+        public async Task<ActionResult> DeactivateCategoryAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return BadRequest("Category ID is required");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Check if the category exists and belongs to the group
+            var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
+            if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
+            
+            // Check if the category is already inactive
+            if (!existingCategory.Active)
+            {
+                return BadRequest("Category is already inactive.");
+            }
+
+            // Deactivate the category
+            var deactivatedCategory = await _categoryRepository.DeactivateAsync(id, groupId);
+            if (deactivatedCategory == null) return NotFound();
+
+            _logger.LogInformation($"Category deactivated: ID={deactivatedCategory.Id}, GroupID={deactivatedCategory.GroupId}");
+            var categoryDto = _mapper.Map<CategoryDto>(deactivatedCategory);
+            return Ok(categoryDto);
         }
 
         private async Task<(bool hasPermission, string groupId)> CheckCategoryPermissionAsync(string userId)

@@ -63,8 +63,6 @@ namespace CoreAPI.Models
         [Required]
         [Range(0.01, 1000000)]
         public decimal Cost { get; set; }
-
-        public bool Active { get; set; } = true;
     }
 
     public class ProductSearchResponse

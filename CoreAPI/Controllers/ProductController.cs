@@ -95,12 +95,42 @@ namespace CoreAPI.Controllers
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
-            // If name is empty, return all products paginated without cache prefix logic
+            // If name is empty, return all products paginated with caching
             if (string.IsNullOrWhiteSpace(name))
             {
+                // Generate cache key for all products
+                string allProductsCacheKey = $"all_products:{groupId}:{page}:{pageSize}";
+
+                // Try to get from cache first
+                var cachedResultBytes = await _distributedCache.GetAsync(allProductsCacheKey);
+                if (cachedResultBytes != null)
+                {
+                    try
+                    {
+                        // Deserialize the cached result
+                        var cachedResultJson = Encoding.UTF8.GetString(cachedResultBytes);
+                        var cachedResponse = JsonSerializer.Deserialize<ProductSearchResponse>(
+                            cachedResultJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (cachedResponse != null)
+                        {
+                            cachedResponse.FromCache = true;
+                            return Ok(cachedResponse);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error deserializing cached all products result");
+                        // Continue to fetch from database on error
+                    }
+                }
+
+                // If not in cache or error occurred, get from database
                 var (allItems, totalCount) = await _productRepository.SearchByNameAsync("", groupId, page, pageSize);
                 var dtos = allItems.Select(p => _mapper.Map<ProductDto>(p)).ToList();
-                return Ok(new ProductSearchResponse
+
+                var response = new ProductSearchResponse
                 {
                     Items = dtos,
                     TotalCount = totalCount,
@@ -108,7 +138,27 @@ namespace CoreAPI.Controllers
                     PageSize = pageSize,
                     Pages = (int)Math.Ceiling((double)totalCount / pageSize),
                     FromCache = false
-                });
+                };
+
+                // Cache the result
+                try
+                {
+                    var serializedResponse = JsonSerializer.Serialize(response);
+                    var cacheOptions = new DistributedCacheEntryOptions()
+                        .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
+
+                    await _distributedCache.SetAsync(
+                        allProductsCacheKey,
+                        Encoding.UTF8.GetBytes(serializedResponse),
+                        cacheOptions);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error caching all products result");
+                    // Continue without caching on error
+                }
+
+                return Ok(response);
             }
 
             // Generate cache key for this user's search context
@@ -477,8 +527,9 @@ namespace CoreAPI.Controllers
         /// This endpoint updates a product with the following validations:
         /// - Verifies the product exists and belongs to the user's group
         /// - Checks that the category exists and belongs to the user's group
-        /// - Updates all specified product properties EXCEPT price
+        /// - Updates all specified product properties EXCEPT price and active status
         /// - Price changes are only allowed through the dedicated price update endpoint
+        /// - Active status changes are only allowed through the dedicated Activate/Deactivate endpoints
         /// 
         /// Only products within the user's group can be updated.
         /// </remarks>
@@ -520,7 +571,7 @@ namespace CoreAPI.Controllers
                 return BadRequest("Category ID is required.");
             }
 
-            // Update the product using individual fields
+            // Update the product using individual fields, preserving the active status
             var product = await _productRepository.UpdateProductAsync(
                 id: model.Id,
                 groupId: groupId,
@@ -529,8 +580,7 @@ namespace CoreAPI.Controllers
                 sku: model.SKU,
                 barCode: model.BarCode,
                 description: model.Description,
-                cost: model.Cost,
-                active: model.Active
+                cost: model.Cost
             );
 
             if (product == null) return NotFound();
@@ -595,32 +645,6 @@ namespace CoreAPI.Controllers
             return NoContent();
         }
 
-        private async Task<(bool hasPermission, string groupId)> CheckProductPermissionAsync(string userId)
-        {
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(userId))
-            {
-                bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return (false, string.Empty);
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(userId);
-                groupId = group?.GroupId ?? string.Empty;
-            }
-
-            return (true, groupId);
-        }
 
         /// <summary>
         /// Updates a product's price and records the change in price history
@@ -681,6 +705,114 @@ namespace CoreAPI.Controllers
             return Ok(productDto);
         }
 
+        
+
+        /// <summary>
+        /// Activates a product
+        /// </summary>
+        /// <remarks>
+        /// This endpoint activates a product that is currently inactive.
+        /// If the product is already active, it returns a BadRequest with an error message.
+        /// </remarks>
+        /// <param name="id">Product ID to activate</param>
+        /// <response code="200">Product successfully activated</response>
+        /// <response code="400">Product is already active or invalid ID</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpPatch("{id}/Activate")]
+        [Authorize]
+        public async Task<ActionResult> ActivateProductAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return BadRequest("Product ID is required.");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Check if product exists and get its current state
+            var existingProduct = await _productRepository.GetById(id, groupId);
+            if (existingProduct == null)
+            {
+                return NotFound("Product not found or does not belong to your group.");
+            }
+
+            // Check if product is already active
+            if (existingProduct.Active)
+            {
+                return BadRequest("This product is already active.");
+            }
+
+            // Activate the product
+            var activatedProduct = await _productRepository.ActivateAsync(id, groupId);
+            if (activatedProduct == null)
+            {
+                return StatusCode(500, "An error occurred while activating the product.");
+            }
+
+            var productDto = _mapper.Map<ProductDto>(activatedProduct);
+            return Ok(productDto);
+        }
+
+        /// <summary>
+        /// Deactivates a product
+        /// </summary>
+        /// <remarks>
+        /// This endpoint deactivates a product that is currently active.
+        /// If the product is already inactive, it returns a BadRequest with an error message.
+        /// </remarks>
+        /// <param name="id">Product ID to deactivate</param>
+        /// <response code="200">Product successfully deactivated</response>
+        /// <response code="400">Product is already inactive or invalid ID</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpPatch("{id}/Deactivate")]
+        [Authorize]
+        public async Task<ActionResult> DeactivateProductAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return BadRequest("Product ID is required.");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Check if product exists and get its current state
+            var existingProduct = await _productRepository.GetById(id, groupId);
+            if (existingProduct == null)
+            {
+                return NotFound("Product not found or does not belong to your group.");
+            }
+
+            // Check if product is already inactive
+            if (!existingProduct.Active)
+            {
+                return BadRequest("This product is already inactive.");
+            }
+
+            // Deactivate the product
+            var deactivatedProduct = await _productRepository.DeactivateAsync(id, groupId);
+            if (deactivatedProduct == null)
+            {
+                return StatusCode(500, "An error occurred while deactivating the product.");
+            }
+
+            var productDto = _mapper.Map<ProductDto>(deactivatedProduct);
+            return Ok(productDto);
+        }
+
         private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
         {
             string groupId;
@@ -688,6 +820,33 @@ namespace CoreAPI.Controllers
             if (await _linkedUserService.IsLinkedUserAsync(userId))
             {
                 bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Stock);
+
+                if (!permission)
+                {
+                    return (false, string.Empty);
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+
+            }
+            else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(userId);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+
+            return (true, groupId);
+        }
+
+        private async Task<(bool hasPermission, string groupId)> CheckProductPermissionAsync(string userId)
+        {
+            string groupId;
+
+            if (await _linkedUserService.IsLinkedUserAsync(userId))
+            {
+                bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
 
                 if (!permission)
                 {

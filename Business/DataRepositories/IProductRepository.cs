@@ -33,8 +33,7 @@ namespace Business.DataRepositories
             string sku,
             string barCode,
             string? description,
-            decimal cost,
-            bool active
+            decimal cost
         );
 
         Task<ProductBusinessModel?> DeleteProductAsync(
@@ -69,6 +68,16 @@ namespace Business.DataRepositories
             decimal newPrice,
             string userId,
             string? reason = null
+        );
+
+        Task<ProductBusinessModel?> ActivateAsync(
+            string id,
+            string groupId
+        );
+
+        Task<ProductBusinessModel?> DeactivateAsync(
+            string id,
+            string groupId
         );
     }
 }
