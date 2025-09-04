@@ -40,9 +40,6 @@ namespace CoreAPI.Models
     public class ProductUpdateModel
     {
         [Required]
-        public string Id { get; set; } = string.Empty;
-
-        [Required]
         [StringLength(36)]
         public string CategoryId { get; set; } = string.Empty;
 
@@ -98,9 +95,6 @@ namespace CoreAPI.Models
 
     public class ProductPriceUpdateModel
     {
-        [Required]
-        public required string Id { get; set; }
-
         [Required]
         [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
         public required decimal NewPrice { get; set; }

@@ -15,9 +15,6 @@ namespace CoreAPI.Models
     public class StockUpdateModel
     {
         [Required]
-        public string ProductId { get; set; } = string.Empty;
-
-        [Required]
         [Range(0, int.MaxValue, ErrorMessage = "Quantity must be greater than or equal to 0")]
         public int Quantity { get; set; }
 

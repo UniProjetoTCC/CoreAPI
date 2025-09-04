@@ -428,15 +428,16 @@ namespace CoreAPI.Controllers
         /// 
         /// Only categories within the user's group can be updated.
         /// </remarks>
+        /// <param name="id">Category ID to update</param>
         /// <param name="model">Category update model with all fields to update</param>
         /// <response code="200">Updated category details</response>
         /// <response code="400">Validation errors or category not found in user's group</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions</response>
         /// <response code="404">Category not found</response>
-        [HttpPut]
+        [HttpPut("{id}")]
         [Authorize]
-        public async Task<ActionResult> UpdateCategoryAsync([FromBody] CategoryUpdateModel model)
+        public async Task<ActionResult> UpdateCategoryAsync(string id, CategoryUpdateModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -453,9 +454,9 @@ namespace CoreAPI.Controllers
             }
 
             // Verify if category exists and belongs to the group
-            if (!string.IsNullOrEmpty(model.Id))
+            if (!string.IsNullOrEmpty(id))
             {
-                var existingCategory = await _categoryRepository.GetByIdAsync(model.Id, groupId);
+                var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
                 if (existingCategory == null)
                 {
                     return BadRequest("The specified category does not exist or does not belong to your group.");
@@ -468,7 +469,7 @@ namespace CoreAPI.Controllers
 
             // Update the product using individual fields
             var category = await _categoryRepository.UpdateCategoryAsync(
-                id: model.Id,
+                id: id,
                 name: model.Name,
                 description: model.Description);
 

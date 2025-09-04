@@ -352,7 +352,7 @@ namespace CoreAPI.Controllers
             
             return Ok(new {
                 Program = response,
-                Message = $"Loyalty program '{deactivatedLoyaltyProgram.Name}' has been deactivated and {unlinkCount} customers have been unlinked from it."
+                Message = $"Loyalty program '{deactivatedLoyaltyProgram?.Name ?? "Unknown"}' has been deactivated and {unlinkCount} customers have been unlinked from it."
             });
         }
 

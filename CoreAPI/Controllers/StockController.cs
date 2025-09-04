@@ -123,14 +123,15 @@ namespace CoreAPI.Controllers
         /// This will override any existing stock level, so use with caution.
         /// For relative adjustments, use the Add or Deduct endpoints instead.
         /// </remarks>
+        /// <param name="productId">ID of the product to update stock for</param>
         /// <param name="model">Stock update model with product ID and new quantity</param>
         /// <response code="200">Updated stock information</response>
         /// <response code="400">Invalid input or product not found</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions</response>
-        [HttpPut]
+        [HttpPut("{productId}")]
         [Authorize]
-        public async Task<ActionResult> UpdateStock([FromBody] StockUpdateModel model)
+        public async Task<ActionResult> UpdateStock(string productId, StockUpdateModel model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -148,19 +149,19 @@ namespace CoreAPI.Controllers
                 return BadRequest("User group not found");
 
             // Check if product exists and belongs to the user's group
-            var product = await _productRepository.GetById(model.ProductId, groupId);
+            var product = await _productRepository.GetById(productId, groupId);
             if (product == null)
                 return BadRequest("Product not found or does not belong to your group");
 
             // Update stock
-            var stock = await _stockRepository.UpdateStockAsync(model.ProductId, groupId, (int)model.Quantity, currentUser.Id, model.Reason);
+            var stock = await _stockRepository.UpdateStockAsync(productId, groupId, (int)model.Quantity, currentUser.Id, model.Reason);
             if (stock == null)
                 return BadRequest("Failed to update stock");
 
             var stockDto = new StockDto
             {
                 Id = stock.Id,
-                ProductId = stock.ProductId,
+                ProductId = productId,
                 ProductName = product.Name,
                 Quantity = stock.Quantity,
                 CreatedAt = stock.CreatedAt,

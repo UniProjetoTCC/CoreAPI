@@ -533,15 +533,16 @@ namespace CoreAPI.Controllers
         /// 
         /// Only products within the user's group can be updated.
         /// </remarks>
+        /// <param name="id">Product ID to update</param>
         /// <param name="model">Product update model with all fields to update</param>
         /// <response code="200">Updated product details</response>
         /// <response code="400">Validation errors or product not found in user's group</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions or attempting to change price</response>
         /// <response code="404">Product not found</response>
-        [HttpPut]
+        [HttpPut("{id}")]
         [Authorize]
-        public async Task<ActionResult> UpdateProductAsync([FromBody] ProductUpdateModel model)
+        public async Task<ActionResult> UpdateProductAsync(string id, ProductUpdateModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -573,7 +574,7 @@ namespace CoreAPI.Controllers
 
             // Update the product using individual fields, preserving the active status
             var product = await _productRepository.UpdateProductAsync(
-                id: model.Id,
+                id: id,
                 groupId: groupId,
                 categoryId: model.CategoryId,
                 name: model.Name,
@@ -656,15 +657,16 @@ namespace CoreAPI.Controllers
         /// - Records the price change in the PriceHistory table with the old and new prices
         /// - Optionally records a reason for the price change
         /// </remarks>
+        /// <param name="id">Product ID to update price for</param>
         /// <param name="model">Price update model with product ID, new price, and optional reason</param>
         /// <response code="200">Updated product details</response>
         /// <response code="400">Validation errors or product not found in user's group</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions</response>
         /// <response code="404">Product not found</response>
-        [HttpPut("UpdatePrice")]
+        [HttpPut("UpdatePrice/{id}")]
         [Authorize]
-        public async Task<ActionResult> UpdateProductPriceAsync([FromBody] ProductPriceUpdateModel model)
+        public async Task<ActionResult> UpdateProductPriceAsync(string id, ProductPriceUpdateModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -681,7 +683,7 @@ namespace CoreAPI.Controllers
             }
 
             // Get the existing product
-            var existingProduct = await _productRepository.GetById(model.Id, groupId);
+            var existingProduct = await _productRepository.GetById(id, groupId);
             if (existingProduct == null)
             {
                 return NotFound("Product not found or does not belong to your group.");
@@ -692,7 +694,7 @@ namespace CoreAPI.Controllers
 
             // Update the product price
             var updatedProduct = await _productRepository.UpdateProductPriceAsync(
-                id: model.Id,
+                id: id,
                 groupId: groupId,
                 newPrice: model.NewPrice,
                 userId: currentUser.Id,
