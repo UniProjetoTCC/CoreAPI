@@ -28,6 +28,7 @@ namespace CoreAPI.Controllers
         private readonly ICategoryRepository _categoryRepository;
         private readonly ILinkedUserRepository _linkedUserRepository;
         private readonly IStockRepository _stockRepository;
+        private readonly IProductPromotionRepository _productPromotionRepository;
         private readonly IMapper _mapper;
         private readonly IDistributedCache _distributedCache;
         private readonly ILogger<ProductController> _logger;
@@ -40,6 +41,7 @@ namespace CoreAPI.Controllers
             ICategoryRepository categoryRepository,
             ILinkedUserRepository linkedUserRepository,
             IStockRepository stockRepository,
+            IProductPromotionRepository productPromotionRepository,
             IMapper mapper,
             IDistributedCache distributedCache,
             ILogger<ProductController> logger)
@@ -51,6 +53,7 @@ namespace CoreAPI.Controllers
             _categoryRepository = categoryRepository;
             _linkedUserRepository = linkedUserRepository;
             _stockRepository = stockRepository;
+            _productPromotionRepository = productPromotionRepository;
             _mapper = mapper;
             _distributedCache = distributedCache;
             _logger = logger;
@@ -815,6 +818,55 @@ namespace CoreAPI.Controllers
             return Ok(productDto);
         }
 
+        /// <summary>
+        /// Gets all promotions a specific product is part of.
+        /// </summary>
+        /// <remarks>
+        /// Retrieves a list of all promotions linked to the specified product ID.
+        /// Only returns promotions from the user's group.
+        /// </remarks>
+        /// <param name="id">Product ID (required)</param>
+        /// <response code="200">List of promotions for the product</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Product not found</response>
+        [HttpGet("{id}/Promotions")]
+        [Authorize]
+        [ProducesResponseType(typeof(List<PromotionDto>), 200)]
+        public async Task<ActionResult<IEnumerable<PromotionDto>>> GetPromotionsForProductAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+                return BadRequest("Product ID is required.");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckPromotionAndProductPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource.");
+            }
+
+            // First, check if the product exists and belongs to the user's group
+            var product = await _productRepository.GetById(id, groupId);
+            if (product == null)
+            {
+                return NotFound("Product not found or does not belong to your group.");
+            }
+            
+            // Se precisar injetar o IProductPromotionRepository, adicione-o no construtor.
+            // Assumindo que ele já está injetado.
+            var promotions = await _productPromotionRepository.GetPromotionsByProductIdAsync(id, groupId);
+
+            if (promotions == null || !promotions.Any())
+            {
+                return Ok(new List<PromotionDto>()); // Return an empty list if no promotions are found
+            }
+
+            var promotionDtos = _mapper.Map<List<PromotionDto>>(promotions);
+            return Ok(promotionDtos);
+        }
+
         private async Task<(bool hasPermission, string groupId)> CheckStockPermissionAsync(string userId)
         {
             string groupId;
@@ -859,6 +911,38 @@ namespace CoreAPI.Controllers
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
                 groupId = linkedUser?.GroupId ?? string.Empty;
 
+            }
+            else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(userId);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+
+            return (true, groupId);
+        }
+
+        private async Task<(bool hasPermission, string groupId)> CheckPromotionAndProductPermissionAsync(string userId)
+        {
+            string groupId;
+
+            if (await _linkedUserService.IsLinkedUserAsync(userId))
+            {
+                bool hasProductPermission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
+                bool hasPromotionPermission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Promotion);
+                
+                if (!hasProductPermission)
+                {
+                    return (false, string.Empty);
+                }
+
+                if (!hasPromotionPermission)
+                {
+                    return (false, string.Empty);
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+                groupId = linkedUser?.GroupId ?? string.Empty;
             }
             else
             {

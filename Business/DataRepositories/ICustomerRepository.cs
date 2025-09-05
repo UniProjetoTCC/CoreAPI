@@ -6,6 +6,7 @@ namespace Business.DataRepositories
     {        
         Task<CustomerBusinessModel?> GetByDocumentAsync(string document, string groupId);
         Task<CustomerBusinessModel?> GetByIdAsync(string id, string groupId);
+        Task<CustomerBusinessModel?> GetByEmailAsync(string email, string groupId);
         
         Task<(IEnumerable<CustomerBusinessModel> Items, int TotalCount)> SearchByNameAsync(
             string name,
@@ -49,10 +50,6 @@ namespace Business.DataRepositories
         Task<CustomerBusinessModel?> LinkToLoyaltyProgramAsync(string id, string groupId, string loyaltyProgramId);
         
         Task<CustomerBusinessModel?> UnlinkFromLoyaltyProgramAsync(string id, string groupId);
-        
-        Task<CustomerBusinessModel?> AddLoyaltyPointsAsync(string id, string groupId, float amount);
-        
-        Task<CustomerBusinessModel?> RemoveLoyaltyPointsAsync(string id, string groupId, float amount);
         
         Task<CustomerBusinessModel?> AddPointsAsync(string id, string groupId, decimal points, string description);
         

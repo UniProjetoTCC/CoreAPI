@@ -4,6 +4,6 @@ namespace Business.Services.Base
     {
         Task<bool> IsLinkedUserAsync(string userId);
 
-        Task<bool> HasPermissionAsync(string userId, Business.Enums.LinkedUserPermissionsEnum permission);
+        Task<bool> HasPermissionAsync(string userId, Enums.LinkedUserPermissionsEnum permission);
     }
 }

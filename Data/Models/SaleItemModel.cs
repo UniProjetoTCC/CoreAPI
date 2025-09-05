@@ -44,6 +44,9 @@ namespace Data.Models
         [Range(0, double.MaxValue)]
         public required decimal TotalAmount { get; set; }
 
+        [StringLength(500)]
+        public required decimal Observation { get; set; }
+
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }

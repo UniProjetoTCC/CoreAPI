@@ -359,7 +359,7 @@ namespace CoreAPI.Controllers
         /// <response code="404">Customer not found</response>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(CustomerDto), 200)]
-        public async Task<IActionResult> GetCustomerByIdAsync(string id)
+        public async Task<IActionResult> GetCustomerById(string id)
         {
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
@@ -402,7 +402,7 @@ namespace CoreAPI.Controllers
         /// <response code="403">No permission to create customers</response>
         [HttpPost]
         [ProducesResponseType(typeof(CustomerDto), 201)]
-        public async Task<IActionResult> CreateCustomerAsync([FromBody] CreateCustomerRequest model)
+        public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerRequest model)
         {
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
@@ -421,6 +421,15 @@ namespace CoreAPI.Controllers
                 {
                     return BadRequest($"A customer with document '{model.Document}' already exists in this group.");
                 }
+
+                if (!string.IsNullOrEmpty(model.Email))
+                {
+                    var existingCustomerByEmail = await _customerRepository.GetByEmailAsync(model.Email, groupId);
+                    if (existingCustomerByEmail != null)
+                    {
+                        return BadRequest($"A customer with email '{model.Email}' already exists in this group.");
+                    }
+                }
                 
                 var customer = await _customerRepository.CreateCustomerAsync(
                     groupId: groupId,
@@ -432,7 +441,7 @@ namespace CoreAPI.Controllers
                 );
 
                 var customerDto = _mapper.Map<CustomerDto>(customer);
-                return CreatedAtAction(nameof(GetCustomerByIdAsync), new { id = customer.Id }, customerDto);
+                return CreatedAtAction(nameof(GetCustomerById), new { id = customer.Id }, customerDto);
             }
             catch (Exception ex)
             {
@@ -486,6 +495,15 @@ namespace CoreAPI.Controllers
                         return BadRequest($"Another customer with document '{model.Document}' already exists in this group.");
                     }
                 }
+                
+                if (existingCustomer.Email != model.Email && !string.IsNullOrEmpty(model.Email))
+                {
+                    var customerWithSameEmail = await _customerRepository.GetByEmailAsync(model.Email, groupId);
+                    if (customerWithSameEmail != null)
+                    {
+                        return BadRequest($"Another customer with email '{model.Email}' already exists in this group.");
+                    }
+                } 
 
                 var customer = await _customerRepository.UpdateCustomerAsync(
                     id: model.Id,
@@ -1221,10 +1239,16 @@ namespace CoreAPI.Controllers
                 bool hasTransactionPermission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Transaction);
                 bool hasPromotionPermission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Promotion);
                 
-                if (!hasTransactionPermission && !hasPromotionPermission)
+                if (!hasTransactionPermission)
                 {
                     return (false, string.Empty);
                 }
+
+                if (!hasPromotionPermission)
+                {
+                    return (false, string.Empty);
+                }
+
 
                 // Get the group ID from the linked user
                 var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);

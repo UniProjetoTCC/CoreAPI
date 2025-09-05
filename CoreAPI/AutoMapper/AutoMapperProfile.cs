@@ -82,6 +82,21 @@ namespace CoreAPI.AutoMapper
             // Customer DTO mappings
             CreateMap<CustomerBusinessModel, CustomerDto>();
             CreateMap<CustomerModel, CustomerDto>();
+            
+            // Promotion mappings
+            CreateMap<PromotionModel, PromotionBusinessModel>().ReverseMap();
+            CreateMap<PromotionBusinessModel, PromotionDto>();
+            CreateMap<PromotionModel, PromotionDto>();
+            
+            // Product in Promotion mapping
+            CreateMap<ProductBusinessModel, ProductInPromotionDto>()
+                .ForMember(dest => dest.PromotionalPrice, opt => opt.Ignore()); // Will be calculated in controller
+                
+            // ProductPromotion mappings
+            CreateMap<ProductPromotionModel, ProductPromotionBusinessModel>()
+                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
+                .ForMember(dest => dest.Promotion, opt => opt.MapFrom(src => src.Promotion))
+                .ReverseMap();
         }
     }
 }

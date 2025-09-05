@@ -200,55 +200,6 @@ namespace Data.Repositories
             return _mapper.Map<CustomerBusinessModel>(customer);
         }
 
-        public async Task<CustomerBusinessModel?> AddLoyaltyPointsAsync(string id, string groupId, float amount)
-        {
-            var customer = await _context.Customers
-                .Include(c => c.LoyaltyProgram)
-                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
-
-            if (customer == null || customer.LoyaltyProgram == null)
-            {
-                return null;
-            }
-
-            // Calculate points based on conversion rate
-            int pointsToAdd = (int)((decimal)amount * customer.LoyaltyProgram.CentsToPoints);
-            customer.LoyaltyPoints += pointsToAdd;
-            customer.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return _mapper.Map<CustomerBusinessModel>(customer);
-        }
-
-        public async Task<CustomerBusinessModel?> RemoveLoyaltyPointsAsync(string id, string groupId, float amount)
-        {
-            var customer = await _context.Customers
-                .Include(c => c.LoyaltyProgram)
-                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
-
-            if (customer == null || customer.LoyaltyProgram == null)
-            {
-                return null;
-            }
-
-            // Calculate points based on conversion rate
-            int pointsToRemove = (int)((decimal)amount * customer.LoyaltyProgram.CentsToPoints);
-            
-            // Check if customer has enough points
-            if (customer.LoyaltyPoints < pointsToRemove)
-            {
-                return null;
-            }
-
-            customer.LoyaltyPoints -= pointsToRemove;
-            customer.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return _mapper.Map<CustomerBusinessModel>(customer);
-        }
-
         public async Task<CustomerBusinessModel?> RemoveLoyaltyPointsDirectAsync(string id, string groupId, int points)
         {
             var customer = await _context.Customers
@@ -286,6 +237,15 @@ namespace Data.Repositories
             var customer = await _context.Customers
                 .Include(c => c.LoyaltyProgram)
                 .FirstOrDefaultAsync(c => c.Document == document && c.GroupId == groupId);
+
+            return customer == null ? null : _mapper.Map<CustomerBusinessModel>(customer);
+        }
+
+        public async Task<CustomerBusinessModel?> GetByEmailAsync(string email, string groupId)
+        {
+            var customer = await _context.Customers
+                .Include(c => c.LoyaltyProgram)
+                .FirstOrDefaultAsync(c => c.Email == email && c.GroupId == groupId);
 
             return customer == null ? null : _mapper.Map<CustomerBusinessModel>(customer);
         }

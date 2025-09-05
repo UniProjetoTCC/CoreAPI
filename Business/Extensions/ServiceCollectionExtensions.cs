@@ -13,6 +13,7 @@ namespace Business.Extensions
             services.AddScoped<IEmailSenderService, EmailSenderService>();
             services.AddScoped<IBackgroundJobService, BackgroundJobService>();
             services.AddScoped<ILinkedUserService, LinkedUserService>();
+            services.AddScoped<ILoyaltyPointsService, LoyaltyPointsService>();
 
             return services;
         }
