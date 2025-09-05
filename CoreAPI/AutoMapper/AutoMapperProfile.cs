@@ -30,19 +30,58 @@ namespace CoreAPI.AutoMapper
             CreateMap<CategoryModel, CategoryDto>();
             CreateMap<CategoryBusinessModel, CategoryDto>();
 
-            // Supplier mappings
-            CreateMap<SupplierModel, SupplierBusinessModel>().ReverseMap();
-            CreateMap<SupplierBusinessModel, SupplierDto>().ReverseMap();
-            CreateMap<SupplierCreateModel, SupplierBusinessModel>();
-            CreateMap<SupplierUpdateModel, SupplierBusinessModel>();
-
-            // Supplier Price mappings
-            CreateMap<SupplierPriceModel, SupplierPriceBusinessModel>().ReverseMap();
-            CreateMap<SupplierPriceCreateModel, SupplierPriceBusinessModel>();
-            CreateMap<SupplierPriceUpdateModel, SupplierPriceBusinessModel>();
-            CreateMap<SupplierPriceBusinessModel, SupplierPriceDto>()
+            // Stock mappings - proper layering: Business to DTO only
+            CreateMap<StockBusinessModel, StockDto>()
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty));
 
+            // Data to Business Model mappings            
+            CreateMap<StockModel, StockBusinessModel>()
+                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
+                .ReverseMap();
+            CreateMap<StockMovementModel, StockMovementBusinessModel>()
+                .ForMember(dest => dest.Stock, opt => opt.MapFrom(src => src.Stock))
+                .ReverseMap();
+
+            // Stock movement mappings - proper layering: Business to DTO only
+            CreateMap<StockMovementBusinessModel, StockMovementDto>()
+                .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.Stock != null ? src.Stock.ProductId : string.Empty))
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Stock != null && src.Stock.Product != null ? src.Stock.Product.Name : string.Empty));
+
+            // Product Expiration mappings
+            CreateMap<ProductExpirationModel, ProductExpirationBusinessModel>()
+                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
+                .ForMember(dest => dest.Stock, opt => opt.MapFrom(src => src.Stock))
+                .ReverseMap();
+
+            CreateMap<ProductExpirationBusinessModel, ProductExpirationDto>();
+            CreateMap<CreateProductExpirationModel, ProductExpirationBusinessModel>();
+            CreateMap<UpdateProductExpirationModel, ProductExpirationBusinessModel>();
+
+            // Payment Method mappings
+            CreateMap<PaymentMethodModel, PaymentMethodBusinessModel>()
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Active))
+                .ReverseMap()
+                .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsActive));
+            
+            CreateMap<PaymentMethodBusinessModel, PaymentMethodResponse>();
+            CreateMap<PaymentMethodRequest, PaymentMethodBusinessModel>();
+
+            // Loyalty Program mappings
+            CreateMap<LoyaltyProgramModel, LoyaltyProgramBusinessModel>()
+                .ReverseMap();
+            
+            CreateMap<LoyaltyProgramBusinessModel, LoyaltyProgramResponse>();
+            CreateMap<LoyaltyProgramRequest, LoyaltyProgramBusinessModel>();
+
+            // Customer mappings
+            CreateMap<CustomerModel, CustomerBusinessModel>()
+                .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsActive))
+                .ReverseMap()
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Active));
+                
+            // Customer DTO mappings
+            CreateMap<CustomerBusinessModel, CustomerDto>();
+            CreateMap<CustomerModel, CustomerDto>();
         }
     }
 }

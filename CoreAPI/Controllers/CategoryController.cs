@@ -1,22 +1,15 @@
+using AutoMapper;
+using Business.DataRepositories;
+using Business.Enums;
+using Business.Services.Base;
+using Business.Utils;
+using CoreAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
-using Data.Context;
-using CoreAPI.Models;
-using Business.Models;
-using Business.Services.Base;
-using Business.DataRepositories;
-using Business.Enums;
-using AutoMapper;
-using Business.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace CoreAPI.Controllers
 {
@@ -64,7 +57,7 @@ namespace CoreAPI.Controllers
         /// Results are limited to categories belonging to the user's group.
         /// The search results are cached for 1 minute and limited to 5 searches per user.
         /// </remarks>
-        /// <param name="name">Category name to search for (required)</param>
+        /// <param name="name">Category name to search for (optional)</param>
         /// <param name="page">Page number (default: 1)</param>
         /// <param name="pageSize">Number of items per page (default: 20)</param>
         /// <response code="200">Search results with pagination info</response>
@@ -73,13 +66,13 @@ namespace CoreAPI.Controllers
         /// <response code="403">Insufficient permissions</response>
         [HttpGet("Search")]
         [Authorize]
-        public async Task<ActionResult<CategorySearchResponse>> Search([FromQuery] string name, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        public async Task<ActionResult<CategorySearchResponse>> Search([FromQuery] string name = "", [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             const int cacheDurationMinutes = 1;
             const int maxCachedSearchesPerUser = 5;
 
-            if (string.IsNullOrEmpty(name))
-                return BadRequest("Category Name is required.");
+            if (page <= 0 || pageSize <= 0)
+                return BadRequest("Page number and page size must be greater than zero.");
 
             // Normalize input for accent-insensitive search
             name = StringUtils.RemoveDiacritics(name);
@@ -87,44 +80,95 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-            
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
 
-                if (!permission)
+            // If name is empty, return all categories paginated with caching
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                // Generate cache key for all categories
+                string allCategoriesCacheKey = $"all_categories:{groupId}:{page}:{pageSize}";
+
+                // Try to get from cache first
+                var cachedResultBytes = await _distributedCache.GetAsync(allCategoriesCacheKey);
+                if (cachedResultBytes != null)
                 {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+                    try
+                    {
+                        // Deserialize the cached result
+                        var cachedResultJson = Encoding.UTF8.GetString(cachedResultBytes);
+                        var cachedResponse = JsonSerializer.Deserialize<CategorySearchResponse>(
+                            cachedResultJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (cachedResponse != null)
+                        {
+                            cachedResponse.FromCache = true;
+                            return Ok(cachedResponse);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error deserializing cached all categories result");
+                        // Continue to fetch from database on error
+                    }
                 }
 
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-                
-            }else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                // If not in cache or error occurred, get from database
+                var (allItems, totalCount) = await _categoryRepository.SearchByNameAsync("", groupId, page, pageSize);
+                var dtos = allItems.Select(c => _mapper.Map<CategoryDto>(c)).ToList();
+
+                var response = new CategorySearchResponse
+                {
+                    Items = dtos,
+                    TotalCount = totalCount,
+                    Page = page,
+                    PageSize = pageSize,
+                    Pages = (int)Math.Ceiling((double)totalCount / pageSize),
+                    FromCache = false
+                };
+
+                // Cache the result
+                try
+                {
+                    var serializedResponse = JsonSerializer.Serialize(response);
+                    var cacheOptions = new DistributedCacheEntryOptions()
+                        .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
+
+                    await _distributedCache.SetAsync(
+                        allCategoriesCacheKey,
+                        Encoding.UTF8.GetBytes(serializedResponse),
+                        cacheOptions);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error caching all categories result");
+                    // Continue without caching on error
+                }
+
+                return Ok(response);
             }
 
             // Generate cache key for this user's search context
             string searchesMapKey = $"category_searches:{currentUser.Id}:{groupId}";
-            
+
             try
             {
                 // Try to get the map of prior searches from Redis
                 Dictionary<string, CachedCategorySearch>? userSearchCache = null;
                 var cachedSearchesBytes = await _distributedCache.GetAsync(searchesMapKey);
-                
+
                 if (cachedSearchesBytes != null)
                 {
                     // Deserialize the map of searches
                     var cachedSearchesJson = Encoding.UTF8.GetString(cachedSearchesBytes);
                     userSearchCache = JsonSerializer.Deserialize<Dictionary<string, CachedCategorySearch>?>(
-                        cachedSearchesJson, 
+                        cachedSearchesJson,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    
+
                     if (userSearchCache != null)
                     {
                         // Find a previous search that is a prefix of the current search
@@ -132,44 +176,44 @@ namespace CoreAPI.Controllers
                             .Where(kv => name.StartsWith(kv.Key, StringComparison.OrdinalIgnoreCase) && kv.Key.Length > 0)
                             .OrderByDescending(kv => kv.Key.Length)  // Get the longest matching prefix
                             .FirstOrDefault();
-                        
+
                         if (!matchingPrefixEntry.Equals(default(KeyValuePair<string, CachedCategorySearch>)))
                         {
                             // We have a cache hit with a previous search term that is a prefix of the current one
                             // Filter the cached results for this new, more specific search term
                             var filteredResults = matchingPrefixEntry.Value.Categories
-                                .Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase) || 
+                                .Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase) ||
                                        (c.Description != null && c.Description.Contains(name, StringComparison.OrdinalIgnoreCase)))
                                 .ToList();
-                                
+
                             // Add or update the cache with this new search term
                             userSearchCache[name] = new CachedCategorySearch
                             {
                                 Categories = filteredResults,
                                 Timestamp = DateTime.UtcNow
                             };
-                            
+
                             // Ensure we don't exceed the cache limit per user
                             EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
-                            
+
                             // Store the updated cache
                             var serializedCache = JsonSerializer.Serialize(userSearchCache);
                             var cacheOptions = new DistributedCacheEntryOptions()
                                 .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
-                                
+
                             await _distributedCache.SetAsync(
-                                searchesMapKey, 
-                                Encoding.UTF8.GetBytes(serializedCache), 
+                                searchesMapKey,
+                                Encoding.UTF8.GetBytes(serializedCache),
                                 cacheOptions);
-                            
+
                             // Paginate the results and map to DTOs
                             var paginatedResults = filteredResults
                                 .Skip((page - 1) * pageSize)
                                 .Take(pageSize)
                                 .Select(c => _mapper.Map<CategoryDto>(c))
                                 .ToList();
-                                
-                            return Ok(new CategorySearchResponse 
+
+                            return Ok(new CategorySearchResponse
                             {
                                 Items = paginatedResults,
                                 TotalCount = filteredResults.Count,
@@ -181,46 +225,46 @@ namespace CoreAPI.Controllers
                         }
                     }
                 }
-                
+
                 // If we get here, either there was no cache or no matching prefix was found
                 // Let's do a database search with full-text capabilities
                 userSearchCache ??= new Dictionary<string, CachedCategorySearch>();
-                
+
                 var (results, totalCount) = await _categoryRepository.SearchByNameAsync(
                     name: name,
                     groupId: groupId,
                     page: page,
                     pageSize: pageSize
                 );
-                
+
                 // Add this new search to the cache
                 userSearchCache[name] = new CachedCategorySearch
                 {
                     Categories = results,
                     Timestamp = DateTime.UtcNow
                 };
-                
+
                 // Ensure we don't exceed the cache limit per user
                 EnsureCacheLimitNotExceeded(userSearchCache, maxCachedSearchesPerUser);
-                
+
                 // Update the cache
                 var newSerializedCache = JsonSerializer.Serialize(userSearchCache);
                 var newCacheOptions = new DistributedCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromMinutes(cacheDurationMinutes));
-                    
+
                 await _distributedCache.SetAsync(
-                    searchesMapKey, 
-                    Encoding.UTF8.GetBytes(newSerializedCache), 
+                    searchesMapKey,
+                    Encoding.UTF8.GetBytes(newSerializedCache),
                     newCacheOptions);
-                
+
                 // Map results to DTOs using AutoMapper
                 var categoryDtos = results
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .Select(c => _mapper.Map<CategoryDto>(c))
                     .ToList();
-                
-                return Ok(new CategorySearchResponse 
+
+                return Ok(new CategorySearchResponse
                 {
                     Items = categoryDtos,
                     TotalCount = totalCount,
@@ -240,15 +284,15 @@ namespace CoreAPI.Controllers
                     page: page,
                     pageSize: pageSize
                 );
-                
+
                 // Map results to DTOs using AutoMapper
                 var categoryDtos = results
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .Select(c => _mapper.Map<CategoryDto>(c))
                     .ToList();
-                
-                var response = new CategorySearchResponse 
+
+                var response = new CategorySearchResponse
                 {
                     Items = categoryDtos,
                     TotalCount = totalCount,
@@ -257,7 +301,7 @@ namespace CoreAPI.Controllers
                     Pages = (int)Math.Ceiling((double)totalCount / pageSize),
                     FromCache = false
                 };
-                
+
                 return Ok(response);
             }
         }
@@ -267,17 +311,17 @@ namespace CoreAPI.Controllers
         {
             if (cache.Count <= maxSize)
                 return;
-                
+
             // Calculate how many items to remove
             int itemsToRemove = cache.Count - maxSize;
-            
+
             // Get the oldest entries based on timestamp
             var oldestEntries = cache
                 .OrderBy(kv => kv.Value.Timestamp)
                 .Take(itemsToRemove)
                 .Select(kv => kv.Key)
                 .ToList();
-                
+
             // Remove the oldest entries
             foreach (var key in oldestEntries)
             {
@@ -308,26 +352,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-                
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             var category = await _categoryRepository.GetByIdAsync(id, groupId);
@@ -361,25 +389,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403 ,"You do not have permission to access this resource.");
-                }
-
-                // Get the group ID from the linked user service
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Check if the category already exists
@@ -415,15 +428,16 @@ namespace CoreAPI.Controllers
         /// 
         /// Only categories within the user's group can be updated.
         /// </remarks>
+        /// <param name="id">Category ID to update</param>
         /// <param name="model">Category update model with all fields to update</param>
         /// <response code="200">Updated category details</response>
         /// <response code="400">Validation errors or category not found in user's group</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions</response>
         /// <response code="404">Category not found</response>
-        [HttpPut]
+        [HttpPut("{id}")]
         [Authorize]
-        public async Task<ActionResult> UpdateCategoryAsync([FromBody] CategoryUpdateModel model)
+        public async Task<ActionResult> UpdateCategoryAsync(string id, CategoryUpdateModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -433,32 +447,16 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Verify if category exists and belongs to the group
-            if (!string.IsNullOrEmpty(model.Id))
+            if (!string.IsNullOrEmpty(id))
             {
-                var existingCategory = await _categoryRepository.GetByIdAsync(model.Id, groupId);
+                var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
                 if (existingCategory == null)
                 {
                     return BadRequest("The specified category does not exist or does not belong to your group.");
@@ -471,10 +469,9 @@ namespace CoreAPI.Controllers
 
             // Update the product using individual fields
             var category = await _categoryRepository.UpdateCategoryAsync(
-                id: model.Id,
+                id: id,
                 name: model.Name,
-                description: model.Description,
-                active: model.Active);
+                description: model.Description);
 
             if (category == null)
             {
@@ -513,26 +510,10 @@ namespace CoreAPI.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
             if (currentUser == null) return Unauthorized();
 
-            string groupId;
-
-            if (await _linkedUserService.IsLinkedUserAsync(currentUser.Id))
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
             {
-                bool permission = await _linkedUserService.HasPermissionAsync(currentUser.Id, LinkedUserPermissionsEnum.Product);
-
-                if (!permission)
-                {
-                    return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
-                }
-
-                // Get the group ID from the linked user
-                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = linkedUser?.GroupId ?? string.Empty;
-
-            }
-            else
-            {
-                var group = await _userGroupRepository.GetByUserIdAsync(currentUser.Id);
-                groupId = group?.GroupId ?? string.Empty;
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
 
             // Check if the category exists and belongs to the group
@@ -540,7 +521,7 @@ namespace CoreAPI.Controllers
             if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
 
             bool hasProducts = await _productRepository.HasProductsInCategoryAsync(id, groupId);
-            if(hasProducts)
+            if (hasProducts)
             {
                 return BadRequest("Cannot delete category with existing products.");
             }
@@ -553,6 +534,131 @@ namespace CoreAPI.Controllers
             return NoContent();
         }
 
-       
+        /// <summary>
+        /// Activates a category
+        /// </summary>
+        /// <remarks>
+        /// This endpoint activates a category with the following validations:
+        /// - Verifies the category exists and belongs to the user's group
+        /// - Sets the category status to active
+        /// 
+        /// Only categories within the user's group can be activated.
+        /// </remarks>
+        /// <param name="id">Category ID to activate</param>
+        /// <response code="200">Category successfully activated</response>
+        /// <response code="400">Invalid ID or validation errors</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Category not found</response>
+        [HttpPost("{id}/Activate")]
+        [Authorize]
+        public async Task<ActionResult> ActivateCategoryAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return BadRequest("Category ID is required");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Check if the category exists and belongs to the group
+            var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
+            if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
+            
+            // Check if the category is already active
+            if (existingCategory.Active)
+            {
+                return BadRequest("Category is already active.");
+            }
+
+            // Activate the category
+            var activatedCategory = await _categoryRepository.ActivateAsync(id, groupId);
+            if (activatedCategory == null) return NotFound();
+
+            _logger.LogInformation($"Category activated: ID={activatedCategory.Id}, GroupID={activatedCategory.GroupId}");
+            var categoryDto = _mapper.Map<CategoryDto>(activatedCategory);
+            return Ok(categoryDto);
+        }
+
+        /// <summary>
+        /// Deactivates a category
+        /// </summary>
+        /// <remarks>
+        /// This endpoint deactivates a category with the following validations:
+        /// - Verifies the category exists and belongs to the user's group
+        /// - Sets the category status to inactive
+        /// 
+        /// Only categories within the user's group can be deactivated.
+        /// </remarks>
+        /// <param name="id">Category ID to deactivate</param>
+        /// <response code="200">Category successfully deactivated</response>
+        /// <response code="400">Invalid ID or validation errors</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        /// <response code="404">Category not found</response>
+        [HttpPost("{id}/Deactivate")]
+        [Authorize]
+        public async Task<ActionResult> DeactivateCategoryAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return BadRequest("Category ID is required");
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckCategoryPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            // Check if the category exists and belongs to the group
+            var existingCategory = await _categoryRepository.GetByIdAsync(id, groupId);
+            if (existingCategory == null) return NotFound("Category not found or does not belong to your group.");
+            
+            // Check if the category is already inactive
+            if (!existingCategory.Active)
+            {
+                return BadRequest("Category is already inactive.");
+            }
+
+            // Deactivate the category
+            var deactivatedCategory = await _categoryRepository.DeactivateAsync(id, groupId);
+            if (deactivatedCategory == null) return NotFound();
+
+            _logger.LogInformation($"Category deactivated: ID={deactivatedCategory.Id}, GroupID={deactivatedCategory.GroupId}");
+            var categoryDto = _mapper.Map<CategoryDto>(deactivatedCategory);
+            return Ok(categoryDto);
+        }
+
+        private async Task<(bool hasPermission, string groupId)> CheckCategoryPermissionAsync(string userId)
+        {
+            string groupId;
+
+            if (await _linkedUserService.IsLinkedUserAsync(userId))
+            {
+                bool permission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
+
+                if (!permission)
+                {
+                    return (false, string.Empty);
+                }
+
+                // Get the group ID from the linked user
+                var linkedUser = await _linkedUserRepository.GetByUserIdAsync(userId);
+                groupId = linkedUser?.GroupId ?? string.Empty;
+
+            }
+            else
+            {
+                var group = await _userGroupRepository.GetByUserIdAsync(userId);
+                groupId = group?.GroupId ?? string.Empty;
+            }
+
+            return (true, groupId);
+        }
     }
 }

@@ -1,7 +1,5 @@
-using System.ComponentModel.DataAnnotations;
-using System;
-using System.Collections.Generic;
 using Business.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace CoreAPI.Models
 {
@@ -14,7 +12,7 @@ namespace CoreAPI.Models
         [Required]
         [StringLength(50, MinimumLength = 3)]
         public string Name { get; set; } = string.Empty;
-        
+
         [Required]
         [StringLength(50)]
         public string SKU { get; set; } = string.Empty;
@@ -34,13 +32,13 @@ namespace CoreAPI.Models
         public decimal Cost { get; set; }
 
         public bool Active { get; set; } = true;
+
+        [Range(0, double.MaxValue)]
+        public decimal InitialStock { get; set; } = 0;
     }
 
     public class ProductUpdateModel
     {
-        [Required]
-        public string Id { get; set; } = string.Empty;
-
         [Required]
         [StringLength(36)]
         public string CategoryId { get; set; } = string.Empty;
@@ -61,13 +59,7 @@ namespace CoreAPI.Models
 
         [Required]
         [Range(0.01, 1000000)]
-        public decimal Price { get; set; }
-
-        [Required]
-        [Range(0.01, 1000000)]
         public decimal Cost { get; set; }
-
-        public bool Active { get; set; } = true;
     }
 
     public class ProductSearchResponse
@@ -99,5 +91,15 @@ namespace CoreAPI.Models
     {
         public List<ProductBusinessModel> Products { get; set; } = new List<ProductBusinessModel>();
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    }
+
+    public class ProductPriceUpdateModel
+    {
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
+        public required decimal NewPrice { get; set; }
+
+        [StringLength(200)]
+        public string? Reason { get; set; }
     }
 }

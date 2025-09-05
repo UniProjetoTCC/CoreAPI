@@ -1,13 +1,11 @@
-using System; 
-using System.Collections.Generic; 
-using System.ComponentModel.DataAnnotations; 
-using System.ComponentModel.DataAnnotations.Schema; 
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
     [Table("LoyaltyPrograms")]
-    public class LoyaltyProgramModel 
-    { 
+    public class LoyaltyProgramModel
+    {
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -18,8 +16,8 @@ namespace Data.Models
         public required string GroupId { get; set; }
 
         [Required]
-        [StringLength(50)] 
-        public required string Name { get; set; } 
+        [StringLength(50)]
+        public required string Name { get; set; }
 
         [StringLength(500)]
         public required string Description { get; set; }
@@ -27,15 +25,12 @@ namespace Data.Models
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         [Range(0, double.MaxValue)]
-        public required decimal PointsPerCurrency { get; set; }
+        public required decimal CentsToPoints { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         [Range(0, double.MaxValue)]
-        public required decimal RedemptionRate { get; set; }
-
-        [Range(0, int.MaxValue)] 
-        public int Points { get; set; } 
+        public required decimal PointsToCents { get; set; }
 
         [Range(0, 100)]
         public decimal DiscountPercentage { get; set; }

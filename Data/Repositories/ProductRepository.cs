@@ -1,16 +1,10 @@
 using AutoMapper;
 using Business.DataRepositories;
 using Business.Models;
+using Business.Utils;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Business.Utils;
 
 namespace Data.Repositories
 {
@@ -35,27 +29,30 @@ namespace Data.Repositories
         }
 
         public async Task<(List<ProductBusinessModel> Items, int TotalCount)> SearchByNameAsync(
-            string name, 
-            string groupId, 
-            int page = 1, 
+            string name,
+            string groupId,
+            int page = 1,
             int pageSize = 20)
         {
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
-            {
+            // Only bail out if missing groupId; empty name will match all products
+            if (string.IsNullOrEmpty(groupId))
                 return (new List<ProductBusinessModel>(), 0);
-            }
 
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            // Use case-insensitive search with ILIKE for database-level filtering
-            // This is already built into PostgreSQL
-            var query = _context.Products
-                .Where(p => p.GroupId == groupId)
-                .Where(p => 
-                    EF.Functions.ILike(p.Name, $"%{name}%") || 
-                    (p.Description != null && EF.Functions.ILike(p.Description, $"%{name}%"))
+            // Normalize input; empty name becomes empty string
+            string normalizedName = StringUtils.RemoveDiacritics(name ?? "");
+
+            // Build query: filter by group; optionally filter by name if provided
+            var query = _context.Products.Where(p => p.GroupId == groupId);
+            if (!string.IsNullOrWhiteSpace(normalizedName))
+            {
+                query = query.Where(p =>
+                    EF.Functions.ILike(p.Name, $"%{normalizedName}%") ||
+                    (p.Description != null && EF.Functions.ILike(p.Description, $"%{normalizedName}%"))
                 );
+            }
 
             // Get total count for pagination
             var totalCount = await query.CountAsync();
@@ -119,9 +116,8 @@ namespace Data.Repositories
             string sku,
             string barCode,
             string? description,
-            decimal price,
-            decimal cost,
-            bool active)
+            decimal cost
+        )
         {
             if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(categoryId) || string.IsNullOrEmpty(groupId))
             {
@@ -145,9 +141,7 @@ namespace Data.Repositories
             product.SKU = sku;
             product.BarCode = barCode;
             product.Description = normalizedDescription; // Store normalized description
-            product.Price = price;
             product.Cost = cost;
-            product.Active = active;
             product.UpdatedAt = DateTime.UtcNow;
 
             _context.Products.Update(product);
@@ -225,8 +219,8 @@ namespace Data.Repositories
 
             // Single query using OR condition for both barcode and SKU
             var products = await _context.Products
-                .Where(p => p.GroupId == groupId && 
-                          ((!string.IsNullOrEmpty(barCode) && p.BarCode == barCode) || 
+                .Where(p => p.GroupId == groupId &&
+                          ((!string.IsNullOrEmpty(barCode) && p.BarCode == barCode) ||
                            (!string.IsNullOrEmpty(sku) && p.SKU == sku)))
                 .ToListAsync();
 
@@ -241,6 +235,120 @@ namespace Data.Repositories
 
             // Return the first matching product
             return (isBarcodeDuplicate, isSKUDuplicate, _mapper.Map<ProductBusinessModel>(products.First()));
+        }
+
+        public async Task<ProductBusinessModel?> UpdateProductPriceAsync(
+            string id,
+            string groupId,
+            decimal newPrice,
+            string userId,
+            string? reason = null)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId) || string.IsNullOrEmpty(userId))
+            {
+                return null;
+            }
+
+            // Use a transaction to ensure both the product update and price history creation are atomic
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Get the product
+                var product = await _context.Products
+                    .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+                if (product == null)
+                {
+                    return null;
+                }
+
+                // Store the old price for history
+                decimal oldPrice = product.Price;
+
+                // Create a price history record
+                var priceHistory = new PriceHistoryModel
+                {
+                    ProductId = id,
+                    GroupId = groupId,
+                    ChangedByUserId = userId,
+                    OldPrice = oldPrice,
+                    NewPrice = newPrice,
+                    ChangeDate = DateTime.UtcNow,
+                    Reason = reason,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                // Update the product price
+                product.Price = newPrice;
+                product.UpdatedAt = DateTime.UtcNow;
+
+                // Save both changes
+                await _context.PriceHistories.AddAsync(priceHistory);
+                _context.Products.Update(product);
+                await _context.SaveChangesAsync();
+
+                // Commit the transaction
+                await transaction.CommitAsync();
+
+                return _mapper.Map<ProductBusinessModel>(product);
+            }
+            catch (Exception)
+            {
+                // Rollback the transaction if any error occurs
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<ProductBusinessModel?> ActivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+            if (product == null)
+            {
+                return null;
+            }
+
+            // Set product as active
+            product.Active = true;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ProductBusinessModel>(product);
+        }
+
+        public async Task<ProductBusinessModel?> DeactivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Id == id && p.GroupId == groupId);
+
+            if (product == null)
+            {
+                return null;
+            }
+
+            // Set product as inactive
+            product.Active = false;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ProductBusinessModel>(product);
         }
     }
 }

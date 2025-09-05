@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -57,7 +55,6 @@ namespace Data.Models
         public virtual UserGroupModel? UserGroup { get; set; }
         public virtual ICollection<StockModel>? Stock { get; set; } = new List<StockModel>();
         public virtual ICollection<PriceHistoryModel>? PriceHistories { get; set; } = new List<PriceHistoryModel>();
-        public virtual ICollection<ProductTaxModel>? ProductTaxes { get; set; } = new List<ProductTaxModel>();
         public virtual ICollection<SaleItemModel>? SaleItems { get; set; } = new List<SaleItemModel>();
         public virtual ICollection<SupplierPriceModel>? SupplierPrices { get; set; } = new List<SupplierPriceModel>();
         public virtual ICollection<ProductExpirationModel>? ProductExpirations { get; set; } = new List<ProductExpirationModel>();

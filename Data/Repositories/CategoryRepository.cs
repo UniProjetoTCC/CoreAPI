@@ -1,14 +1,10 @@
 using AutoMapper;
 using Business.DataRepositories;
 using Business.Models;
+using Business.Utils;
 using Data.Context;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Business.Utils;
 
 namespace Data.Repositories
 {
@@ -94,11 +90,11 @@ namespace Data.Repositories
             return _mapper.Map<CategoryBusinessModel>(newCategory);
         }
 
-        public async Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string? name = null, string? description = null, bool? active = null)
+        public async Task<CategoryBusinessModel?> UpdateCategoryAsync(string id, string? name = null, string? description = null)
         {
             if (string.IsNullOrEmpty(id))
             {
-                return null; 
+                return null;
             }
 
             var category = await _context.Categories
@@ -106,7 +102,7 @@ namespace Data.Repositories
 
             if (category == null)
             {
-                throw new Exception("Category not found"); 
+                throw new Exception("Category not found");
             }
 
             // Atualizar apenas os campos fornecidos
@@ -122,11 +118,6 @@ namespace Data.Repositories
                 // Normalize category description to remove accents
                 string normalizedDescription = StringUtils.RemoveDiacritics(description);
                 category.Description = normalizedDescription;
-            }
-
-            if (active.HasValue)
-            {
-                category.Active = active.Value;
             }
 
             category.UpdatedAt = DateTime.UtcNow;
@@ -167,29 +158,30 @@ namespace Data.Repositories
         }
 
         public async Task<(List<CategoryBusinessModel> Items, int TotalCount)> SearchByNameAsync(
-            string name, 
-            string groupId, 
-            int page = 1, 
+            string name,
+            string groupId,
+            int page = 1,
             int pageSize = 20)
         {
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(groupId))
-            {
+
+            if (string.IsNullOrEmpty(groupId))
                 return (new List<CategoryBusinessModel>(), 0);
-            }
 
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            // Normalize the input for searching
-            string normalizedName = StringUtils.RemoveDiacritics(name);
+            // Normalize the input; empty name becomes empty string
+            string normalizedName = StringUtils.RemoveDiacritics(name ?? "");
 
-            // Use case-insensitive search with ILIKE for database-level filtering
-            var query = _context.Categories
-                .Where(c => c.GroupId == groupId)
-                .Where(c => 
-                    EF.Functions.ILike(c.Name, $"%{normalizedName}%") || 
+            // Build query: filter by group; optionally filter by name if provided
+            var query = _context.Categories.Where(c => c.GroupId == groupId);
+            if (!string.IsNullOrWhiteSpace(normalizedName))
+            {
+                query = query.Where(c =>
+                    EF.Functions.ILike(c.Name, $"%{normalizedName}%") ||
                     (c.Description != null && EF.Functions.ILike(c.Description, $"%{normalizedName}%"))
                 );
+            }
 
             // Get total count for pagination
             var totalCount = await query.CountAsync();
@@ -202,6 +194,56 @@ namespace Data.Repositories
                 .ToListAsync();
 
             return (_mapper.Map<List<CategoryBusinessModel>>(categories), totalCount);
+        }
+
+        public async Task<CategoryBusinessModel?> ActivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
+
+            if (category == null)
+            {
+                return null;
+            }
+
+            // Set category as active
+            category.Active = true;
+            category.UpdatedAt = DateTime.UtcNow;
+
+            _context.Categories.Update(category);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(category);
+        }
+
+        public async Task<CategoryBusinessModel?> DeactivateAsync(string id, string groupId)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(groupId))
+            {
+                return null;
+            }
+
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id && c.GroupId == groupId);
+
+            if (category == null)
+            {
+                return null;
+            }
+
+            // Set category as inactive
+            category.Active = false;
+            category.UpdatedAt = DateTime.UtcNow;
+
+            _context.Categories.Update(category);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<CategoryBusinessModel>(category);
         }
     }
 }

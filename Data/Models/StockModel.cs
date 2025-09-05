@@ -1,21 +1,19 @@
-using System; 
-using System.Collections.Generic; 
-using System.ComponentModel.DataAnnotations; 
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
     [Table("Stock")]
     public class StockModel
-    { 
-        [Key] 
+    {
+        [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [ForeignKey("Product")]
         [StringLength(36)]
-        public required string ProductId { get; set; } 
+        public required string ProductId { get; set; }
 
         [Required]
         [ForeignKey("UserGroup")]
@@ -24,7 +22,7 @@ namespace Data.Models
 
         [Required]
         [Range(0, int.MaxValue)]
-        public required decimal Quantity { get; set; } 
+        public required int Quantity { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -35,5 +33,5 @@ namespace Data.Models
         public virtual UserGroupModel? UserGroup { get; set; }
         public virtual ICollection<StockMovementModel>? StockMovements { get; set; } = new List<StockMovementModel>();
         public virtual ICollection<ProductExpirationModel>? ProductExpirations { get; set; } = new List<ProductExpirationModel>();
-    } 
+    }
 }

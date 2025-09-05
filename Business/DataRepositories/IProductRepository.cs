@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Business.Models;
 
 namespace Business.DataRepositories
@@ -37,9 +33,7 @@ namespace Business.DataRepositories
             string sku,
             string barCode,
             string? description,
-            decimal price,
-            decimal cost,
-            bool active
+            decimal cost
         );
 
         Task<ProductBusinessModel?> DeleteProductAsync(
@@ -65,6 +59,24 @@ namespace Business.DataRepositories
         Task<(bool IsBarcodeDuplicate, bool IsSKUDuplicate, ProductBusinessModel? Product)> CheckDuplicateProductAsync(
             string barCode,
             string sku,
+            string groupId
+        );
+
+        Task<ProductBusinessModel?> UpdateProductPriceAsync(
+            string id,
+            string groupId,
+            decimal newPrice,
+            string userId,
+            string? reason = null
+        );
+
+        Task<ProductBusinessModel?> ActivateAsync(
+            string id,
+            string groupId
+        );
+
+        Task<ProductBusinessModel?> DeactivateAsync(
+            string id,
             string groupId
         );
     }

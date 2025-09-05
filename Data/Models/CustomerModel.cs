@@ -1,13 +1,11 @@
-using System; 
-using System.ComponentModel.DataAnnotations; 
-using System.ComponentModel.DataAnnotations.Schema; 
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Data.Models
 {
     [Table("Customers")]
     public class CustomerModel
-    { 
+    {
         [Key]
         [StringLength(36)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -37,6 +35,9 @@ namespace Data.Models
         [ForeignKey("LoyaltyProgram")]
         [StringLength(36)]
         public string? LoyaltyProgramId { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int LoyaltyPoints { get; set; } = 0;
 
         [Required]
         public required bool IsActive { get; set; } = true;
