@@ -698,10 +698,24 @@ namespace Data.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
+                    b.Property<string>("Observation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("ProductId")
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
+
+                    b.Property<decimal?>("PromotionDiscountPercentage")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PromotionId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PromotionName")
+                        .HasColumnType("text");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");

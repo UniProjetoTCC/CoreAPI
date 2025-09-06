@@ -14,6 +14,7 @@ namespace Business.Extensions
             services.AddScoped<IBackgroundJobService, BackgroundJobService>();
             services.AddScoped<ILinkedUserService, LinkedUserService>();
             services.AddScoped<ILoyaltyPointsService, LoyaltyPointsService>();
+            services.AddScoped<ISaleService, SaleService>();
 
             return services;
         }

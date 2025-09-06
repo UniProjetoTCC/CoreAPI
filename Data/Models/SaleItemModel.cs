@@ -45,11 +45,15 @@ namespace Data.Models
         public required decimal TotalAmount { get; set; }
 
         [StringLength(500)]
-        public required decimal Observation { get; set; }
+        public required string Observation { get; set; }
 
         [Required]
         public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+
+        public string? PromotionId { get; set; }
+        public string? PromotionName { get; set; }
+        public decimal? PromotionDiscountPercentage { get; set; }   
 
         public virtual SaleModel? Sale { get; set; }
         public virtual ProductModel? Product { get; set; }

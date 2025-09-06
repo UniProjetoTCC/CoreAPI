@@ -833,8 +833,12 @@ namespace Data.Migrations
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     DiscountAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     TotalAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    Observation = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    PromotionId = table.Column<string>(type: "text", nullable: true),
+                    PromotionName = table.Column<string>(type: "text", nullable: true),
+                    PromotionDiscountPercentage = table.Column<decimal>(type: "numeric", nullable: true)
                 },
                 constraints: table =>
                 {

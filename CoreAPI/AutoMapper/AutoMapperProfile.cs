@@ -97,6 +97,16 @@ namespace CoreAPI.AutoMapper
                 .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
                 .ForMember(dest => dest.Promotion, opt => opt.MapFrom(src => src.Promotion))
                 .ReverseMap();
+
+            // Sale mappings
+            CreateMap<SaleItemModel, SaleItemBusinessModel>().ReverseMap();
+            CreateMap<SaleModel, SaleBusinessModel>()
+                .ForMember(dest => dest.SaleItems, opt => opt.MapFrom(src => src.SaleItems)); // Garante o mapeamento da coleção
+
+            // Mapeamento da Camada de Negócio -> DTO (API)
+            CreateMap<SaleItemBusinessModel, SaleItemDto>();
+            CreateMap<SaleBusinessModel, SaleDto>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.SaleItems)); // Mapeia a propriedade SaleItems para Items
         }
     }
 }
