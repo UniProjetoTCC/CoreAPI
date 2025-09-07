@@ -28,6 +28,15 @@ namespace Data.Repositories
             return product != null ? _mapper.Map<ProductBusinessModel>(product) : null;
         }
 
+        public async Task<List<ProductBusinessModel>> GetByIdsAsync(IEnumerable<string> ids, string groupId)
+        {
+            var products = await _context.Products
+                .Where(p => ids.Contains(p.Id) && p.GroupId == groupId)
+                .ToListAsync();
+
+            return _mapper.Map<List<ProductBusinessModel>>(products);
+        }
+
         public async Task<(List<ProductBusinessModel> Items, int TotalCount)> SearchByNameAsync(
             string name,
             string groupId,

@@ -26,6 +26,15 @@ namespace Data.Repositories
             return promotion == null ? null : _mapper.Map<PromotionBusinessModel>(promotion);
         }
 
+        public async Task<List<PromotionBusinessModel>> GetByIdsAsync(IEnumerable<string> ids, string groupId)
+        {
+            var promotions = await _context.Promotions
+                .Where(p => ids.Contains(p.Id) && p.GroupId == groupId)
+                .ToListAsync();
+
+            return _mapper.Map<List<PromotionBusinessModel>>(promotions);
+        }
+
         public async Task<(List<PromotionBusinessModel> items, int totalCount)> SearchByNameAsync(string name, string groupId, int page, int pageSize)
         {
             var query = _context.Promotions

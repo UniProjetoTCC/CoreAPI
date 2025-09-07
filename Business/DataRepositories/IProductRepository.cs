@@ -6,6 +6,8 @@ namespace Business.DataRepositories
     {
         Task<ProductBusinessModel?> GetById(string id, string groupId);
 
+        Task<List<ProductBusinessModel>> GetByIdsAsync(IEnumerable<string> ids, string groupId);
+
         Task<(List<ProductBusinessModel> Items, int TotalCount)> SearchByNameAsync(
             string name,
             string groupId,

@@ -26,6 +26,15 @@ namespace Data.Repositories
             return _mapper.Map<StockBusinessModel>(stockModel);
         }
 
+        public async Task<List<StockBusinessModel>> GetByIdsAsync(IEnumerable<string> ids, string groupId)
+        {
+            var stocks = await _context.Stocks
+                .Where(s => ids.Contains(s.Id) && s.GroupId == groupId)
+                .ToListAsync();
+
+            return _mapper.Map<List<StockBusinessModel>>(stocks);
+        }
+
         public async Task<StockBusinessModel?> AddStockAsync(string productId, string groupId, int quantity, string userId, string? reason = null)
         {
             if (quantity <= 0)

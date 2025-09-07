@@ -11,5 +11,6 @@ namespace Business.DataRepositories
         Task<StockBusinessModel?> DeductStockAsync(string productId, string groupId, int quantity, string userId, string? reason = null);
         Task<int> GetTotalStockAsync(string productId, string groupId);
         Task<List<StockBusinessModel>> GetLowStockProductsAsync(string groupId, int threshold);
+        Task<List<StockBusinessModel>> GetByIdsAsync(IEnumerable<string> ids, string groupId);
     }
 }
