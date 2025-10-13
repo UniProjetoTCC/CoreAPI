@@ -423,11 +423,10 @@ jobs:
             echo "Coverage reports extracted and index created"
           else
             echo "No coverage reports found"
-            cat > _site/index.html << 'EOF'
-            <html><body><h1>No coverage reports available</h1></body></html>
-            EOF
-          fi
-
+            cat > _site/index.html << EOF
+          <html><body><h1>No coverage reports available</h1></body></html>
+          EOF
+          
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
 
