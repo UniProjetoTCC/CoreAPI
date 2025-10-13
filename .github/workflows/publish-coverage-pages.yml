@@ -399,26 +399,14 @@ jobs:
             </html>
             EOF
             
-            # Create report index JSON
-            echo "[" > _site/report-index.json
-            FIRST=true
-            
-            find temp_coverage -name "metadata.json" | while read -r metadata_file; do
-              DIR_PATH=$(dirname "$metadata_file")
-              HTML_PATH="${DIR_PATH}/html"
-              REL_PATH=$(echo "$HTML_PATH" | sed 's|temp_coverage/||')
-              
-              if [ "$FIRST" = false ]; then
-                echo "," >> _site/report-index.json
-              else
-                FIRST=false
-              fi
-              
-              # Extract data from metadata.json and add path
-              jq ". + {\"path\": \"${REL_PATH}/index.html\"}" "$metadata_file" >> _site/report-index.json
-            done
-            
-            echo "]" >> _site/report-index.json
+            # Create report index JSON in a more robust way
+            find temp_coverage -name "metadata.json" -print0 | \
+              xargs -0 -I {} \
+              jq -c ". + {path: \"\(./{} | sub(\"temp_coverage/\"; \"\") | sub(\"metadata.json\"; \"html/index.html\"))\"}" {} | \
+              jq -s . > _site/report-index.json
+
+            echo "Generated report-index.json content:"
+            cat _site/report-index.json
             
             echo "Coverage reports extracted and index created"
           else
