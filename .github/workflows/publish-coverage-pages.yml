@@ -427,21 +427,21 @@ jobs:
             echo "Coverage reports extracted and index created"
           else
             echo "No coverage reports found"
-              cat > _site/index.html << EOF
-              <html>
-              <head>
+            cat <<-'EOF' > _site/index.html
+            <html>
+            <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">
               <title>CoreAPI - Relatórios de Cobertura de Código</title>
               <link rel="stylesheet" href="./styles.css">
-              </head>
-              <body>
+            </head>
+            <body>
               <div class="header">
-                  <h1>CoreAPI - Relatórios de Cobertura de Código</h1>
-                  <p>Nenhum relatório de cobertura disponível</p>
+                <h1>CoreAPI - Relatórios de Cobertura de Código</h1>
+                <p>Nenhum relatório de cobertura disponível</p>
               </div>
-              </body>
-              </html>
+            </body>
+            </html>
             EOF
           fi
 
