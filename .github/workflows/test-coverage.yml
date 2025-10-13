@@ -19,18 +19,20 @@ jobs:
         dotnet-version: 8.0.x
     
     - name: Restore dependencies
-      run: dotnet restore
+      run: |
+        dotnet restore
+        dotnet restore ./Tests/CoreAPI.UnitTests/CoreAPI.UnitTests.csproj
     
     - name: Build
       run: dotnet build --no-restore
       
     - name: Build test project
-      run: dotnet build ./Tests/CoreAPI.UnitTests/CoreAPI.UnitTests.csproj --no-restore -p:BuildProjectReferences=true
+      run: dotnet build ./Tests/CoreAPI.UnitTests/CoreAPI.UnitTests.csproj -p:BuildProjectReferences=true
     
     - name: Test with coverage
       run: |
         mkdir -p ./TestResults
-        dotnet test ./Tests/CoreAPI.UnitTests/CoreAPI.UnitTests.csproj --no-build --verbosity normal \
+        dotnet test ./Tests/CoreAPI.UnitTests/CoreAPI.UnitTests.csproj --verbosity normal \
           /p:CollectCoverage=true \
           /p:CoverletOutputFormat=cobertura \
           /p:CoverletOutput="./TestResults/coverage.cobertura.xml" \
