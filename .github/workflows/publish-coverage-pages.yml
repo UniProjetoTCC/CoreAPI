@@ -87,7 +87,7 @@ jobs:
             # Create main index.html that redirects to latest report
             LATEST_PATH=$(echo $LATEST_DIR | sed 's|temp_coverage/||')
             
-            cat > _site/index.html << EOF
+            cat > _site/index.html << 'EOF'
             <!DOCTYPE html>
             <html>
             <head>
@@ -423,7 +423,9 @@ jobs:
             echo "Coverage reports extracted and index created"
           else
             echo "No coverage reports found"
-            echo "<html><body><h1>No coverage reports available</h1></body></html>" > _site/index.html
+            cat > _site/index.html << 'EOF'
+            <html><body><h1>No coverage reports available</h1></body></html>
+            EOF
           fi
 
       - name: Upload Pages artifact
