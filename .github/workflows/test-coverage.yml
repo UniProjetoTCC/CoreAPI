@@ -27,17 +27,45 @@ jobs:
     - name: Test with coverage
       run: |
         dotnet test --no-build --verbosity normal \
-          /p:CollectCoverage=true \
-          /p:CoverletOutputFormat="cobertura,opencover,json" \
-          /p:CoverletOutput="./TestResults/coverage"
+          --collect:"XPlat Code Coverage" \
+          --results-directory:"./TestResults/"
+        
+    - name: List coverage files
+      run: |
+        echo "Checking for coverage files..."
+        find ./TestResults -type f | sort
+        
+        # Verificar se existem arquivos de cobertura
+        if [ -z "$(find ./TestResults -name "*.xml" -o -name "*.json")" ]; then
+          echo "Warning: No coverage files found. Check test configuration."
+        else
+          echo "Coverage files found successfully."
+        fi
     
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
     
     - name: Generate HTML coverage report
       run: |
+        # Encontrar todos os arquivos de cobertura XML
+        COVERAGE_FILES=$(find ./TestResults -name "*.cobertura.xml" -o -name "coverage.xml" -o -name "*.opencover.xml")
+        
+        if [ -z "$COVERAGE_FILES" ]; then
+          echo "Warning: No coverage XML files found. Will try with a broader search pattern."
+          COVERAGE_FILES=$(find ./TestResults -name "*.xml")
+        fi
+        
+        if [ -z "$COVERAGE_FILES" ]; then
+          echo "Error: No coverage XML files found at all. Cannot generate report."
+          exit 1
+        fi
+        
+        echo "Found coverage files: $COVERAGE_FILES"
+        
+        # Gerar relatório HTML
+        echo "$COVERAGE_FILES" > coverage_files_list.txt
         reportgenerator \
-          -reports:"**/TestResults/coverage.cobertura.xml" \
+          -reports:@coverage_files_list.txt \
           -targetdir:"./TestResults/CoverageReport" \
           -reporttypes:"Html;HtmlSummary;Cobertura"
     
@@ -65,8 +93,15 @@ jobs:
         mkdir -p "$REPORT_DIR"
         
         # Copiar relatórios para a estrutura organizada
-        cp -r ./TestResults/coverage.* "$REPORT_DIR/"
-        cp -r ./TestResults/CoverageReport/* "$REPORT_DIR/"
+        echo "Copying coverage files to $REPORT_DIR"
+        find ./TestResults -name "*.xml" -o -name "*.json" | xargs -I{} cp {} "$REPORT_DIR/" 2>/dev/null || true
+        
+        # Copiar relatórios HTML
+        if [ -d "./TestResults/CoverageReport" ]; then
+          echo "Copying HTML reports to $REPORT_DIR/html"
+          mkdir -p "$REPORT_DIR/html"
+          cp -r ./TestResults/CoverageReport/* "$REPORT_DIR/html/"
+        fi
         
         # Criar arquivo de índice com metadados
         echo "{
@@ -76,22 +111,13 @@ jobs:
         \"workflow_run\": \"$GITHUB_RUN_ID\"
         }" > "$REPORT_DIR/metadata.json"
         
+        # Listar os arquivos organizados
         echo "Reports organized at: $REPORT_DIR"
+        find "$REPORT_DIR" -type f | sort
     
-    - name: Archive organized test results
+    - name: Archive coverage reports
       uses: actions/upload-artifact@v4
       with:
-        name: test-reports-organized
+        name: coverage-reports
         path: ./Reports
-        retention-days: 90
-    
-    - name: Store raw coverage reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-reports-raw
-        path: |
-          **/TestResults/coverage.cobertura.xml
-          **/TestResults/coverage.opencover.xml
-          **/TestResults/coverage.json
-          **/TestResults/CoverageReport/**
         retention-days: 90
