@@ -426,7 +426,8 @@ jobs:
             cat > _site/index.html << EOF
           <html><body><h1>No coverage reports available</h1></body></html>
           EOF
-          
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
 
