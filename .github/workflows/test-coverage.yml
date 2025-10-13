@@ -45,7 +45,6 @@ jobs:
         mkdir -p ./TestResults
         find ./TestResults -type f | sort
         
-        # Verificar se existem arquivos de cobertura
         if [ -z "$(find ./TestResults -name "*.xml" -o -name "*.json" 2>/dev/null)" ]; then
           echo "Warning: No coverage files found. Check test configuration."
         else
@@ -59,7 +58,6 @@ jobs:
       run: |
         mkdir -p ./TestResults
         
-        # Encontrar todos os arquivos de cobertura XML
         COVERAGE_FILES=$(find ./TestResults -name "*.cobertura.xml" -o -name "coverage.xml" -o -name "*.opencover.xml" 2>/dev/null)
         
         if [ -z "$COVERAGE_FILES" ]; then
@@ -74,17 +72,14 @@ jobs:
         else
           echo "Found coverage files: $COVERAGE_FILES"
           
-          # Gerar relatório HTML
-          echo "$COVERAGE_FILES" > coverage_files_list.txt
           reportgenerator \
-            -reports:@coverage_files_list.txt \
+            -reports:"$COVERAGE_FILES" \
             -targetdir:"./TestResults/CoverageReport" \
             -reporttypes:"Html;HtmlSummary;Cobertura"
         fi
     
     - name: Organize reports by date
       run: |
-        # Obter data atual no formato ano/mês/dia
         YEAR=$(date +"%Y")
         MONTH=$(date +"%m")
         DAY=$(date +"%d")
@@ -93,23 +88,18 @@ jobs:
           BRANCH_NAME="pr-${GITHUB_HEAD_REF}"
         fi
         
-        # Criar diretório de destino com estrutura ano/mês/dia
         REPORT_DIR="./Reports/$BRANCH_NAME/$YEAR/$MONTH/$DAY"
         
-        # Remover diretório se já existir (substituir relatórios do mesmo dia)
         if [ -d "$REPORT_DIR" ]; then
           echo "Removing existing reports for $YEAR/$MONTH/$DAY"
           rm -rf "$REPORT_DIR"
         fi
         
-        # Criar estrutura de diretórios
         mkdir -p "$REPORT_DIR"
         
-        # Copiar relatórios para a estrutura organizada
         echo "Copying coverage files to $REPORT_DIR"
         find ./TestResults -name "*.xml" -o -name "*.json" 2>/dev/null | xargs -I{} cp {} "$REPORT_DIR/" 2>/dev/null || true
         
-        # Copiar relatórios HTML ou criar arquivo indicando sem cobertura
         if [ -d "./TestResults/CoverageReport" ]; then
           echo "Copying HTML reports to $REPORT_DIR/html"
           mkdir -p "$REPORT_DIR/html"
@@ -119,7 +109,6 @@ jobs:
           echo "No coverage data available" > "$REPORT_DIR/html/no-coverage.txt"
         fi
         
-        # Criar arquivo de índice com metadados
         echo "{
         \"branch\": \"$BRANCH_NAME\",
         \"date\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",
@@ -127,7 +116,6 @@ jobs:
         \"workflow_run\": \"$GITHUB_RUN_ID\"
         }" > "$REPORT_DIR/metadata.json"
         
-        # Listar os arquivos organizados
         echo "Reports organized at: $REPORT_DIR"
         find "$REPORT_DIR" -type f | sort 2>/dev/null || echo "No files found in $REPORT_DIR"
     
