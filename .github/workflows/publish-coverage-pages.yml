@@ -1,3 +1,4 @@
+# This workflow publishes the coverage reports to GitHub Pages.
 name: Publish Coverage Reports to GitHub Pages
 
 on:
@@ -194,14 +195,14 @@ jobs:
           document.addEventListener('DOMContentLoaded', () => {
             if (reportsData.length > 0) {
               const latest = reportsData[0];
-              document.getElementById('latest-info').innerHTML = `<p><strong>Branch:</strong> ${latest.branch}</p><p><strong>Data:</strong> ${formatDate(latest.date)}</p><p><strong>Commit:</strong> ${latest.commit.substring(0, 7)}</p>`;
+              document.getElementById('latest-info').innerHTML = '<p><strong>Branch:</strong> ' + latest.branch + '</p><p><strong>Data:</strong> ' + formatDate(latest.date) + '</p><p><strong>Commit:</strong> ' + latest.commit.substring(0, 7) + '</p>';
               document.getElementById('latest-html-link').href = latest.htmlPath;
               document.getElementById('latest-xml-link').href = latest.xmlPath;
               const reportsListElement = document.getElementById('reports-list');
               reportsData.forEach(report => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.innerHTML = `<div class="card-body"><h3 class="card-title">Branch: ${report.branch}</h3><p><strong>Data:</strong> ${formatDate(report.date)}</p><p><strong>Commit:</strong> ${report.commit.substring(0, 7)}</p><div class="buttons"><a href="${report.htmlPath}" class="btn btn-primary">Ver Relatório HTML</a><a href="${report.xmlPath}" class="btn btn-outline-secondary">Ver XML</a></div></div>`;
+                card.innerHTML = '<div class="card-body"><h3 class="card-title">Branch: ' + report.branch + '</h3><p><strong>Data:</strong> ' + formatDate(report.date) + '</p><p><strong>Commit:</strong> ' + report.commit.substring(0, 7) + '</p><div class="buttons"><a href="' + report.htmlPath + '" class="btn btn-primary">Ver Relatório HTML</a><a href="' + report.xmlPath + '" class="btn btn-outline-secondary">Ver XML</a></div></div>';
                 reportsListElement.appendChild(card);
               });
             }
