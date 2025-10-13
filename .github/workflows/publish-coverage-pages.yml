@@ -11,7 +11,6 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -25,10 +24,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
       
       - name: Download coverage artifact
@@ -50,8 +49,8 @@ jobs:
             );
             
             if (!coverageArtifact) {
-              console.log("Could not find coverage-reports artifact");
-              process.exit(1);
+              core.setFailed("Could not find 'coverage-reports' artifact. Please ensure the 'Test Coverage Report' workflow is producing it.");
+              return;
             }
             
             const download = await github.rest.actions.downloadArtifact({
@@ -62,9 +61,9 @@ jobs:
             });
             
             fs.writeFileSync('coverage-reports.zip', Buffer.from(download.data));
-            console.log('Coverage artifact downloaded');
+            console.log('Coverage artifact downloaded successfully.');
       
-      - name: Setup static files
+      - name: Setup static files directory
         run: |
           mkdir -p _site
           touch _site/.nojekyll
@@ -166,20 +165,27 @@ jobs:
             cat > _site/reports-data.js << EOF
           const reportsData = [
           EOF
+            FIRST_RUN=true
             find temp_coverage -name "metadata.json" | sort -r | while read -r metadata_file; do
+              if ! $FIRST_RUN; then
+                echo "," >> _site/reports-data.js
+              fi
+              FIRST_RUN=false
               DIR_PATH=$(dirname "$metadata_file")
               REL_PATH=$(echo "$DIR_PATH" | sed 's|temp_coverage/||')
               BRANCH=$(jq -r '.branch' "$metadata_file")
               DATE=$(jq -r '.date' "$metadata_file")
               COMMIT=$(jq -r '.commit' "$metadata_file")
-              echo "  {" >> _site/reports-data.js
-              echo "    branch: \"$BRANCH\"," >> _site/reports-data.js
-              echo "    date: \"$DATE\"," >> _site/reports-data.js
-              echo "    commit: \"$COMMIT\"," >> _site/reports-data.js
-              echo "    htmlPath: \"$REL_PATH/html/index.html\"," >> _site/reports-data.js
-              echo "    xmlPath: \"$REL_PATH/coverage.cobertura.xml\"" >> _site/reports-data.js
-              echo "  }," >> _site/reports-data.js
+              # Use printf for better control and to avoid trailing newlines inside the object
+              printf "  {\n" >> _site/reports-data.js
+              printf "    \"branch\": \"$BRANCH\",\n" >> _site/reports-data.js
+              printf "    \"date\": \"$DATE\",\n" >> _site/reports-data.js
+              printf "    \"commit\": \"$COMMIT\",\n" >> _site/reports-data.js
+              printf "    \"htmlPath\": \"$REL_PATH/html/index.html\",\n" >> _site/reports-data.js
+              printf "    \"xmlPath\": \"$REL_PATH/coverage.cobertura.xml\"\n" >> _site/reports-data.js
+              printf "  }" >> _site/reports-data.js
             done
+            echo "" >> _site/reports-data.js
             echo "];" >> _site/reports-data.js
             cat >> _site/reports-data.js << 'EOF'
           function formatDate(dateStr) {
@@ -188,14 +194,14 @@ jobs:
           document.addEventListener('DOMContentLoaded', () => {
             if (reportsData.length > 0) {
               const latest = reportsData[0];
-              document.getElementById('latest-info').innerHTML = \`<p><strong>Branch:</strong> \${latest.branch}</p><p><strong>Data:</strong> \${formatDate(latest.date)}</p><p><strong>Commit:</strong> \${latest.commit.substring(0, 7)}</p>\`;
+              document.getElementById('latest-info').innerHTML = `<p><strong>Branch:</strong> ${latest.branch}</p><p><strong>Data:</strong> ${formatDate(latest.date)}</p><p><strong>Commit:</strong> ${latest.commit.substring(0, 7)}</p>`;
               document.getElementById('latest-html-link').href = latest.htmlPath;
               document.getElementById('latest-xml-link').href = latest.xmlPath;
               const reportsListElement = document.getElementById('reports-list');
               reportsData.forEach(report => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.innerHTML = \`<div class="card-body"><h3 class="card-title">Branch: \${report.branch}</h3><p><strong>Data:</strong> \${formatDate(report.date)}</p><p><strong>Commit:</strong> \${report.commit.substring(0, 7)}</p><div class="buttons"><a href="\${report.htmlPath}" class="btn btn-primary">Ver Relatório HTML</a><a href="\${report.xmlPath}" class="btn btn-outline-secondary">Ver XML</a></div></div>\`;
+                card.innerHTML = `<div class="card-body"><h3 class="card-title">Branch: ${report.branch}</h3><p><strong>Data:</strong> ${formatDate(report.date)}</p><p><strong>Commit:</strong> ${report.commit.substring(0, 7)}</p><div class="buttons"><a href="${report.htmlPath}" class="btn btn-primary">Ver Relatório HTML</a><a href="${report.xmlPath}" class="btn btn-outline-secondary">Ver XML</a></div></div>`;
                 reportsListElement.appendChild(card);
               });
             }
