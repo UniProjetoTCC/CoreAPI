@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -75,6 +76,9 @@ namespace CoreAPI
                     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
                     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                 });
+                
+            // Add File Logger
+            builder.Logging.AddFile("Logging:File");
 
             // Set the connection string with .env variables
             var connectionString = builder.Configuration.GetConnectionString("SqlConnection") ??

@@ -1,0 +1,97 @@
+name: Test Coverage Report
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore
+    
+    - name: Test with coverage
+      run: |
+        dotnet test --no-build --verbosity normal \
+          /p:CollectCoverage=true \
+          /p:CoverletOutputFormat="cobertura,opencover,json" \
+          /p:CoverletOutput="./TestResults/coverage"
+    
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+    
+    - name: Generate HTML coverage report
+      run: |
+        reportgenerator \
+          -reports:"**/TestResults/coverage.cobertura.xml" \
+          -targetdir:"./TestResults/CoverageReport" \
+          -reporttypes:"Html;HtmlSummary;Cobertura"
+    
+    - name: Organize reports by date
+      run: |
+        # Obter data atual no formato ano/mês/dia
+        YEAR=$(date +"%Y")
+        MONTH=$(date +"%m")
+        DAY=$(date +"%d")
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+          BRANCH_NAME="pr-${GITHUB_HEAD_REF}"
+        fi
+        
+        # Criar diretório de destino com estrutura ano/mês/dia
+        REPORT_DIR="./Reports/$BRANCH_NAME/$YEAR/$MONTH/$DAY"
+        
+        # Remover diretório se já existir (substituir relatórios do mesmo dia)
+        if [ -d "$REPORT_DIR" ]; then
+          echo "Removing existing reports for $YEAR/$MONTH/$DAY"
+          rm -rf "$REPORT_DIR"
+        fi
+        
+        # Criar estrutura de diretórios
+        mkdir -p "$REPORT_DIR"
+        
+        # Copiar relatórios para a estrutura organizada
+        cp -r ./TestResults/coverage.* "$REPORT_DIR/"
+        cp -r ./TestResults/CoverageReport/* "$REPORT_DIR/"
+        
+        # Criar arquivo de índice com metadados
+        echo "{
+        \"branch\": \"$BRANCH_NAME\",
+        \"date\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",
+        \"commit\": \"$GITHUB_SHA\",
+        \"workflow_run\": \"$GITHUB_RUN_ID\"
+        }" > "$REPORT_DIR/metadata.json"
+        
+        echo "Reports organized at: $REPORT_DIR"
+    
+    - name: Archive organized test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-reports-organized
+        path: ./Reports
+        retention-days: 90
+    
+    - name: Store raw coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports-raw
+        path: |
+          **/TestResults/coverage.cobertura.xml
+          **/TestResults/coverage.opencover.xml
+          **/TestResults/coverage.json
+          **/TestResults/CoverageReport/**
+        retention-days: 90

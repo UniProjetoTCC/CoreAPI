@@ -47,3 +47,7 @@ obj/
 
 # Sensitive files
 .env
+
+# Logs
+Logs
+

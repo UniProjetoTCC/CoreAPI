@@ -11,6 +11,8 @@ services:
       - REDIS_CONNECTION=redis:6379
     env_file:
       - .env
+    volumes:
+      - ./Logs:/app/Logs
     depends_on:
       db:
         condition: service_healthy
