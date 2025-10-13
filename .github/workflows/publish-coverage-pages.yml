@@ -1,0 +1,434 @@
+name: Publish Coverage Reports to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: ["Test Coverage Report"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Download coverage artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            const { owner, repo } = context.repo;
+            const run_id = ${{ github.event.workflow_run.id }};
+            
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner,
+              repo,
+              run_id
+            });
+            
+            const coverageArtifact = artifacts.data.artifacts.find(
+              artifact => artifact.name === "coverage-reports"
+            );
+            
+            if (!coverageArtifact) {
+              console.log("Could not find coverage-reports artifact");
+              process.exit(1);
+            }
+            
+            const download = await github.rest.actions.downloadArtifact({
+              owner,
+              repo,
+              artifact_id: coverageArtifact.id,
+              archive_format: 'zip'
+            });
+            
+            fs.writeFileSync('coverage-reports.zip', Buffer.from(download.data));
+            
+            console.log('Coverage artifact downloaded');
+      
+      - name: Setup static files
+        run: |
+          mkdir -p _site
+          cp .github/workflows/coverage-styles.css _site/styles.css
+          touch _site/.nojekyll
+
+      - name: Extract coverage reports
+        run: |
+          unzip -o coverage-reports.zip -d temp_coverage
+          
+          # Create index page that redirects to latest report
+          LATEST_DIR=$(find temp_coverage -type d -path "*/html" | sort -r | head -n 1)
+          
+          if [ -n "$LATEST_DIR" ]; then
+            # Copy all reports to _site directory
+            cp -r temp_coverage/* _site/
+            
+            # Create main index.html that redirects to latest report
+            LATEST_PATH=$(echo $LATEST_DIR | sed 's|temp_coverage/||')
+            
+            cat > _site/index.html << EOF
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>CoreAPI - Relatórios de Cobertura de Código</title>
+              <link rel="stylesheet" href="./styles.css">
+            </head>
+            <body>
+              <div class="header">
+                <h1>CoreAPI - Relatórios de Cobertura de Código</h1>
+                <p>Visualize e acompanhe a cobertura de testes do projeto CoreAPI</p>
+              </div>
+              
+              <div class="tabs">
+                <button class="tab-button active" onclick="openTab(event, 'latestTab')">Relatório Mais Recente</button>
+                <button class="tab-button" onclick="openTab(event, 'historyTab')">Histórico</button>
+                <button class="tab-button" onclick="openTab(event, 'coverageDataTab')">Dados de Cobertura</button>
+              </div>
+              
+              <div id="latestTab" class="tab-content active">
+                <div id="latest-report" class="card">
+                  <div class="card-body">
+                    <h2 class="card-title">Relatório Mais Recente</h2>
+                    <p class="card-text">Carregando...</p>
+                    <div class="coverage-summary">
+                      <h3>Resumo da Cobertura</h3>
+                      <div id="latest-coverage-summary">Carregando...</div>
+                    </div>
+                    <div class="buttons">
+                      <a id="latest-report-link" href="#" class="btn btn-primary">Ver Relatório HTML</a>
+                      <a id="latest-xml-link" href="#" class="btn btn-outline-secondary">Ver XML</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="historyTab" class="tab-content">
+                <h2>Histórico de Relatórios</h2>
+                <div id="reports"></div>
+              </div>
+              
+              <div id="coverageDataTab" class="tab-content">
+                <h2>Dados de Cobertura</h2>
+                <div class="coverage-filters">
+                  <select id="coverage-report-select">
+                    <option value="">Selecione um relatório...</option>
+                  </select>
+                </div>
+                <div id="coverage-details">
+                  <p>Selecione um relatório para ver os detalhes de cobertura.</p>
+                </div>
+              </div>
+              
+              <div class="footer">
+                <p>Gerado por GitHub Actions em <span id="current-date"></span></p>
+              </div>
+              
+              <script>
+                // Set current date
+                document.getElementById('current-date').textContent = new Date().toLocaleDateString('pt-BR', { 
+                  year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                });
+                
+                // Tab functionality
+                function openTab(evt, tabName) {
+                  const tabContents = document.getElementsByClassName("tab-content");
+                  for (let i = 0; i < tabContents.length; i++) {
+                    tabContents[i].classList.remove("active");
+                  }
+                  
+                  const tabButtons = document.getElementsByClassName("tab-button");
+                  for (let i = 0; i < tabButtons.length; i++) {
+                    tabButtons[i].classList.remove("active");
+                  }
+                  
+                  document.getElementById(tabName).classList.add("active");
+                  evt.currentTarget.classList.add("active");
+                }
+                
+                // Parse XML coverage data
+                function parseCoverageXml(xmlPath) {
+                  return fetch(xmlPath)
+                    .then(response => response.text())
+                    .then(xmlText => {
+                      const parser = new DOMParser();
+                      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                      
+                      const coverage = xmlDoc.documentElement;
+                      const lineRate = parseFloat(coverage.getAttribute("line-rate") || "0");
+                      const branchRate = parseFloat(coverage.getAttribute("branch-rate") || "0");
+                      
+                      const packages = Array.from(xmlDoc.getElementsByTagName("package"));
+                      const packageData = packages.map(pkg => {
+                        const name = pkg.getAttribute("name");
+                        const pkgLineRate = parseFloat(pkg.getAttribute("line-rate") || "0");
+                        const pkgBranchRate = parseFloat(pkg.getAttribute("branch-rate") || "0");
+                        
+                        return {
+                          name,
+                          lineRate: pkgLineRate,
+                          branchRate: pkgBranchRate
+                        };
+                      });
+                      
+                      return {
+                        lineRate,
+                        branchRate,
+                        packages: packageData
+                      };
+                    });
+                }
+                
+                // Format percentage
+                function formatPercentage(value) {
+                  return (value * 100).toFixed(2) + "%";
+                }
+                
+                // Create coverage summary HTML
+                function createCoverageSummaryHtml(coverageData) {
+                  const linePercentage = formatPercentage(coverageData.lineRate);
+                  const branchPercentage = formatPercentage(coverageData.branchRate);
+                  
+                  let html = `
+                    <div class="coverage-metric">
+                      <div class="coverage-label">Cobertura de Linhas:</div>
+                      <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: ${linePercentage}"></div>
+                      </div>
+                      <div class="coverage-value">${linePercentage}</div>
+                    </div>
+                    <div class="coverage-metric">
+                      <div class="coverage-label">Cobertura de Branches:</div>
+                      <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: ${branchPercentage}"></div>
+                      </div>
+                      <div class="coverage-value">${branchPercentage}</div>
+                    </div>
+                    <h4>Pacotes:</h4>
+                    <table class="coverage-table">
+                      <thead>
+                        <tr>
+                          <th>Pacote</th>
+                          <th>Cobertura de Linhas</th>
+                          <th>Cobertura de Branches</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                  `;
+                  
+                  coverageData.packages.forEach(pkg => {
+                    const pkgLinePercentage = formatPercentage(pkg.lineRate);
+                    const pkgBranchPercentage = formatPercentage(pkg.branchRate);
+                    
+                    html += `
+                      <tr>
+                        <td>${pkg.name}</td>
+                        <td>
+                          <div class="coverage-bar small">
+                            <div class="coverage-bar-fill" style="width: ${pkgLinePercentage}"></div>
+                          </div>
+                          ${pkgLinePercentage}
+                        </td>
+                        <td>
+                          <div class="coverage-bar small">
+                            <div class="coverage-bar-fill" style="width: ${pkgBranchPercentage}"></div>
+                          </div>
+                          ${pkgBranchPercentage}
+                        </td>
+                      </tr>
+                    `;
+                  });
+                  
+                  html += `
+                      </tbody>
+                    </table>
+                  `;
+                  
+                  return html;
+                }
+                
+                // Fetch report index
+                fetch('report-index.json')
+                  .then(response => response.json())
+                  .then(data => {
+                    const reportsDiv = document.getElementById('reports');
+                    const coverageSelect = document.getElementById('coverage-report-select');
+                    
+                    // Sort by date (newest first)
+                    data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    // Update latest report info
+                    if (data.length > 0) {
+                      const latest = data[0];
+                      const latestCard = document.querySelector('#latest-report .card-text');
+                      latestCard.innerHTML = \`
+                        <strong>Branch:</strong> \${latest.branch}<br>
+                        <strong>Data:</strong> \${new Date(latest.date).toLocaleDateString('pt-BR')}<br>
+                        <strong>Commit:</strong> \${latest.commit.substring(0, 7)}
+                      \`;
+                      
+                      // Set links
+                      document.getElementById('latest-report-link').href = latest.path;
+                      
+                      // Find XML file path
+                      const reportDir = latest.path.substring(0, latest.path.lastIndexOf('/'));
+                      const xmlPath = reportDir + '/../coverage.cobertura.xml';
+                      document.getElementById('latest-xml-link').href = xmlPath;
+                      
+                      // Load coverage data
+                      parseCoverageXml(xmlPath)
+                        .then(coverageData => {
+                          document.getElementById('latest-coverage-summary').innerHTML = 
+                            createCoverageSummaryHtml(coverageData);
+                        })
+                        .catch(error => {
+                          document.getElementById('latest-coverage-summary').innerHTML = 
+                            \`<p>Erro ao carregar dados de cobertura: \${error.message}</p>\`;
+                        });
+                    }
+                    
+                    // Display all reports
+                    data.forEach((report, index) => {
+                      // Add to dropdown
+                      const option = document.createElement('option');
+                      option.value = index;
+                      option.textContent = \`\${report.branch} - \${new Date(report.date).toLocaleDateString('pt-BR')}\`;
+                      coverageSelect.appendChild(option);
+                      
+                      // Create card
+                      const card = document.createElement('div');
+                      card.className = 'card';
+                      
+                      const cardBody = document.createElement('div');
+                      cardBody.className = 'card-body';
+                      
+                      const title = document.createElement('h3');
+                      title.className = 'card-title';
+                      title.textContent = \`\${report.branch}\`;
+                      
+                      const subtitle = document.createElement('h4');
+                      subtitle.className = 'card-subtitle';
+                      subtitle.textContent = new Date(report.date).toLocaleDateString('pt-BR', { 
+                        year: 'numeric', month: 'long', day: 'numeric' 
+                      });
+                      
+                      const commitInfo = document.createElement('p');
+                      commitInfo.className = 'card-text';
+                      commitInfo.innerHTML = \`<strong>Commit:</strong> \${report.commit.substring(0, 7)}\`;
+                      
+                      const buttonsDiv = document.createElement('div');
+                      buttonsDiv.className = 'buttons';
+                      
+                      const htmlLink = document.createElement('a');
+                      htmlLink.href = report.path;
+                      htmlLink.className = 'btn btn-primary';
+                      htmlLink.textContent = 'Ver Relatório HTML';
+                      
+                      const reportDir = report.path.substring(0, report.path.lastIndexOf('/'));
+                      const xmlPath = reportDir + '/../coverage.cobertura.xml';
+                      
+                      const xmlLink = document.createElement('a');
+                      xmlLink.href = xmlPath;
+                      xmlLink.className = 'btn btn-outline-secondary';
+                      xmlLink.textContent = 'Ver XML';
+                      
+                      buttonsDiv.appendChild(htmlLink);
+                      buttonsDiv.appendChild(xmlLink);
+                      
+                      cardBody.appendChild(title);
+                      cardBody.appendChild(subtitle);
+                      cardBody.appendChild(commitInfo);
+                      cardBody.appendChild(buttonsDiv);
+                      card.appendChild(cardBody);
+                      reportsDiv.appendChild(card);
+                    });
+                    
+                    // Handle coverage report selection
+                    coverageSelect.addEventListener('change', function() {
+                      const selectedIndex = this.value;
+                      if (!selectedIndex) {
+                        document.getElementById('coverage-details').innerHTML = 
+                          '<p>Selecione um relatório para ver os detalhes de cobertura.</p>';
+                        return;
+                      }
+                      
+                      const selectedReport = data[selectedIndex];
+                      const reportDir = selectedReport.path.substring(0, selectedReport.path.lastIndexOf('/'));
+                      const xmlPath = reportDir + '/../coverage.cobertura.xml';
+                      
+                      document.getElementById('coverage-details').innerHTML = '<p>Carregando dados de cobertura...</p>';
+                      
+                      parseCoverageXml(xmlPath)
+                        .then(coverageData => {
+                          document.getElementById('coverage-details').innerHTML = 
+                            createCoverageSummaryHtml(coverageData);
+                        })
+                        .catch(error => {
+                          document.getElementById('coverage-details').innerHTML = 
+                            \`<p>Erro ao carregar dados de cobertura: \${error.message}</p>\`;
+                        });
+                    });
+                  })
+                  .catch(error => {
+                    document.getElementById('reports').innerHTML = \`<p>Erro ao carregar relatórios: \${error.message}</p>\`;
+                  });
+              </script>
+            </body>
+            </html>
+            EOF
+            
+            # Create report index JSON
+            echo "[" > _site/report-index.json
+            FIRST=true
+            
+            find temp_coverage -name "metadata.json" | while read -r metadata_file; do
+              DIR_PATH=$(dirname "$metadata_file")
+              HTML_PATH="${DIR_PATH}/html"
+              REL_PATH=$(echo "$HTML_PATH" | sed 's|temp_coverage/||')
+              
+              if [ "$FIRST" = false ]; then
+                echo "," >> _site/report-index.json
+              else
+                FIRST=false
+              fi
+              
+              # Extract data from metadata.json and add path
+              jq ". + {\"path\": \"${REL_PATH}/index.html\"}" "$metadata_file" >> _site/report-index.json
+            done
+            
+            echo "]" >> _site/report-index.json
+            
+            echo "Coverage reports extracted and index created"
+          else
+            echo "No coverage reports found"
+            echo "<html><body><h1>No coverage reports available</h1></body></html>" > _site/index.html
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
