@@ -431,7 +431,7 @@ namespace CoreAPI.Controllers
                 }
 
                 // Extract the user claims from the token
-                var principal = GetPrincipalFromExpiredToken(tokenModel.AccessToken);
+                var principal = GetPrincipalFromExpiredToken(tokenModel.Token);
                 if (principal?.Identity?.Name == null)
                 {
                     return BadRequest("Invalid access token");
@@ -467,7 +467,7 @@ namespace CoreAPI.Controllers
 
                 return Ok(new RefreshTokenModel
                 {
-                    AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
+                    Token = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
                     RefreshToken = newRefreshToken,
                     Expiration = newAccessToken.ValidTo
                 });
@@ -606,7 +606,7 @@ namespace CoreAPI.Controllers
 
             return Ok(new TokenModel
             {
-                AccessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
                 RefreshToken = refreshToken,
                 RequiresTwoFactor = false
             });

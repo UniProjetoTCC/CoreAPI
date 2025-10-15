@@ -118,7 +118,7 @@ namespace CoreAPI.Models
 
     public class TokenModel
     {
-        public string AccessToken { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
         public bool RequiresTwoFactor { get; set; }
         public string? Email { get; set; }
@@ -127,7 +127,7 @@ namespace CoreAPI.Models
 
     public class RefreshTokenModel
     {
-        public string AccessToken { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
         public DateTime Expiration { get; set; }
     }
