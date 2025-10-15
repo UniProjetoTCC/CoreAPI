@@ -416,8 +416,12 @@ namespace CoreAPI.Controllers
         /// </summary>
         /// <param name="tokenModel">Model containing the current access and refresh tokens</param>
         /// <returns>IActionResult with new tokens or error</returns>
+        /// <remarks>
+        /// This endpoint does not require two-factor authentication to refresh tokens.
+        /// It only validates the refresh token itself.
+        /// </remarks>
         [HttpPost("RefreshToken")]
-        public async Task<IActionResult> RefreshToken([FromBody] TokenModel tokenModel)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenModel tokenModel)
         {
             try
             {
@@ -461,10 +465,11 @@ namespace CoreAPI.Controllers
                 var newAccessToken = GetToken(principal.Claims.ToList());
                 var newRefreshToken = await GenerateRefreshTokenAsync(user);
 
-                return Ok(new TokenModel
+                return Ok(new RefreshTokenModel
                 {
                     AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
-                    RefreshToken = newRefreshToken
+                    RefreshToken = newRefreshToken,
+                    Expiration = newAccessToken.ValidTo
                 });
             }
             catch (Exception ex)

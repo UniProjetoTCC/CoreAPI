@@ -122,5 +122,13 @@ namespace CoreAPI.Models
         public string RefreshToken { get; set; } = string.Empty;
         public bool RequiresTwoFactor { get; set; }
         public string? Email { get; set; }
+        public DateTime Expiration { get; set; }
+    }
+
+    public class RefreshTokenModel
+    {
+        public string AccessToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
+        public DateTime Expiration { get; set; }
     }
 }
