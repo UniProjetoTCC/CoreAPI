@@ -1,3 +1,7 @@
+using Business.DataRepositories;
+using Business.Services.Base;
+using Business.Models;
+using CoreAPI.Models;
 using Data.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,15 +19,18 @@ namespace CoreAPI.Controllers
         private readonly CoreAPIContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<HealthCheckController> _logger;
+        private readonly ILinkedUserRepository _linkedUserRepository;
 
         public HealthCheckController(
             CoreAPIContext context,
             UserManager<IdentityUser> userManager,
-            ILogger<HealthCheckController> logger)
+            ILogger<HealthCheckController> logger,
+            ILinkedUserRepository linkedUserRepository)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _linkedUserRepository = linkedUserRepository;
         }
 
         /// <summary>
@@ -38,7 +45,7 @@ namespace CoreAPI.Controllers
         [HttpGet]
         public IActionResult Get()
         {
-            return Ok(new { Status = "healthy", Timestamp = DateTime.UtcNow });
+            return Ok(new HealthCheckResponse());
         }
 
         /// <summary>
@@ -55,19 +62,14 @@ namespace CoreAPI.Controllers
             try
             {
                 await _context.Database.CanConnectAsync();
-                return Ok(new
-                {
-                    Status = "Database Connection Successful",
-                    Timestamp = DateTime.UtcNow
-                });
+                return Ok(new DatabaseHealthResponse());
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
+                return StatusCode(500, new ErrorResponse
                 {
                     Status = "Database Connection Failed",
-                    Message = ex.Message,
-                    Timestamp = DateTime.UtcNow
+                    Message = ex.Message
                 });
             }
         }
@@ -94,22 +96,58 @@ namespace CoreAPI.Controllers
                     : null;
 
                 if (currentUser == null)
-                    return NotFound(new { Status = "Error", Message = "User not found" });
+                    return NotFound(new ErrorResponse { Message = "User not found" });
 
-                return Ok(new
+                // Verificar se é um linkeduser
+                bool isLinkedUser = await _linkedUserRepository.IsLinkedUserAsync(currentUser.Id);
+                LinkedUser? linkedUserDetails = null;
+
+                // Se for um linkeduser, obter detalhes e permissões
+                if (isLinkedUser)
+                {
+                    linkedUserDetails = await _linkedUserRepository.GetByUserIdAsync(currentUser.Id);
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(currentUser);
+
+                var response = new HealthCheckUserResponse
                 {
                     Status = "Success",
-                    User = new
+                    User = new UserHealthInfo
                     {
                         Email = currentUser.Email,
                         Username = currentUser.UserName,
-                        Id = currentUser.Id
+                        Id = currentUser.Id,
+                        Roles = userRoles,
+                        IsLinkedUser = isLinkedUser
                     }
-                });
+                };
+
+                if (isLinkedUser && linkedUserDetails != null)
+                {
+                    response.User.LinkedUserDetails = new LinkedUserHealthInfo
+                    {
+                        Id = linkedUserDetails.Id,
+                        ParentUserId = linkedUserDetails.ParentUserId,
+                        GroupId = linkedUserDetails.GroupId,
+                        IsActive = linkedUserDetails.IsActive,
+                        Permissions = new LinkedUserPermissions
+                        {
+                            CanPerformTransactions = linkedUserDetails.CanPerformTransactions,
+                            CanGenerateReports = linkedUserDetails.CanGenerateReports,
+                            CanManageProducts = linkedUserDetails.CanManageProducts,
+                            CanAlterStock = linkedUserDetails.CanAlterStock,
+                            CanManagePromotions = linkedUserDetails.CanManagePromotions
+                        }
+                    };
+                }
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Status = "Error", Message = ex.Message });
+                _logger.LogError(ex, "Error in CheckUser: {Message}", ex.Message);
+                return StatusCode(500, new ErrorResponse { Message = ex.Message });
             }
         }
     }

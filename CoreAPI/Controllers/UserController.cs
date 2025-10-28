@@ -308,14 +308,15 @@ namespace CoreAPI.Controllers
                 });
             }
 
-            var token = await GenerateJwtToken(user);
+            var jwtToken = await GenerateJwtToken(user);
+            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
             var refreshToken = await GenerateRefreshTokenAsync(user);
 
             return Ok(new
             {
                 token,
                 refreshToken,
-                expiration = DateTime.Now.AddHours(3)
+                expiration = jwtToken.ValidTo
             });
         }
 
@@ -602,13 +603,14 @@ namespace CoreAPI.Controllers
             };
 
             var jwtToken = GetToken(userClaims);
+            var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
             var refreshToken = await GenerateRefreshTokenAsync(user);
 
-            return Ok(new TokenModel
+            return Ok(new
             {
-                Token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                RefreshToken = refreshToken,
-                RequiresTwoFactor = false
+                token,
+                refreshToken,
+                expiration = jwtToken.ValidTo
             });
         }
 
@@ -1130,7 +1132,7 @@ namespace CoreAPI.Controllers
             return token;
         }
 
-        private async Task<string> GenerateJwtToken(IdentityUser user)
+        private async Task<JwtSecurityToken> GenerateJwtToken(IdentityUser user)
         {
             var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ??
                 throw new InvalidOperationException("JWT_SECRET environment variable is not set!");
@@ -1161,7 +1163,7 @@ namespace CoreAPI.Controllers
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return token;
         }
     }
 }
