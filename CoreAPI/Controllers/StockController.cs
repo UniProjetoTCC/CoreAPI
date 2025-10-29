@@ -183,9 +183,9 @@ namespace CoreAPI.Controllers
         /// <response code="400">Invalid input or product not found</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions</response>
-        [HttpPost("Add")]
+        [HttpPost("Add/{productId}")]
         [Authorize]
-        public async Task<ActionResult> AddStock([FromBody] StockAdjustmentModel model)
+        public async Task<ActionResult> AddStock([FromBody] StockAdjustmentModel model, string productId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -203,12 +203,12 @@ namespace CoreAPI.Controllers
                 return BadRequest("User group not found");
 
             // Check if product exists and belongs to the user's group
-            var product = await _productRepository.GetById(model.ProductId, groupId);
+            var product = await _productRepository.GetById(productId, groupId);
             if (product == null)
                 return BadRequest("Product not found or does not belong to your group");
 
             // Add stock
-            var stock = await _stockRepository.AddStockAsync(model.ProductId, groupId, (int)model.Quantity, currentUser.Id, model.Reason);
+            var stock = await _stockRepository.AddStockAsync(productId, groupId, (int)model.Quantity, currentUser.Id, model.Reason);
             if (stock == null)
                 return BadRequest("Failed to add stock");
 
@@ -237,9 +237,9 @@ namespace CoreAPI.Controllers
         /// <response code="400">Invalid input, product not found, or insufficient stock</response>
         /// <response code="401">Unauthorized</response>
         /// <response code="403">Insufficient permissions</response>
-        [HttpPost("Deduct")]
+        [HttpPost("Deduct/{productId}")]
         [Authorize]
-        public async Task<ActionResult> DeductStock([FromBody] StockDeductionModel model)
+        public async Task<ActionResult> DeductStock([FromBody] StockDeductionModel model, string productId)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -257,17 +257,17 @@ namespace CoreAPI.Controllers
                 return BadRequest("User group not found");
 
             // Check if product exists and belongs to the user's group
-            var product = await _productRepository.GetById(model.ProductId, groupId);
+            var product = await _productRepository.GetById(productId, groupId);
             if (product == null)
                 return BadRequest("Product not found or does not belong to your group");
 
             // Check if there's enough stock
-            bool hasStock = await _stockRepository.HasStockAsync(model.ProductId, groupId, (int)model.Quantity);
+            bool hasStock = await _stockRepository.HasStockAsync(productId, groupId, (int)model.Quantity);
             if (!hasStock)
                 return BadRequest("Insufficient stock available");
 
             // Deduct stock
-            var stock = await _stockRepository.DeductStockAsync(model.ProductId, groupId, (int)model.Quantity, currentUser.Id, model.Reason);
+            var stock = await _stockRepository.DeductStockAsync(productId, groupId, (int)model.Quantity, currentUser.Id, model.Reason);
             if (stock == null)
                 return BadRequest("Failed to deduct stock");
 

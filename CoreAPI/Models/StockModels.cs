@@ -24,9 +24,6 @@ namespace CoreAPI.Models
     public class StockAdjustmentModel
     {
         [Required]
-        public string ProductId { get; set; } = string.Empty;
-
-        [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
         public int Quantity { get; set; }
 
@@ -35,9 +32,6 @@ namespace CoreAPI.Models
 
     public class StockDeductionModel
     {
-        [Required]
-        public string ProductId { get; set; } = string.Empty;
-
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
         public int Quantity { get; set; }
