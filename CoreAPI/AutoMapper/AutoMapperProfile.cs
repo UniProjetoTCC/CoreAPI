@@ -107,6 +107,26 @@ namespace CoreAPI.AutoMapper
             CreateMap<SaleItemBusinessModel, SaleItemDto>();
             CreateMap<SaleBusinessModel, SaleDto>()
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.SaleItems)); // Mapeia a propriedade SaleItems para Items
+
+            // Supplier mappings
+            CreateMap<SupplierModel, SupplierBusinessModel>().ReverseMap();
+            CreateMap<SupplierBusinessModel, SupplierDto>();
+            CreateMap<CreateSupplierRequest, SupplierBusinessModel>();
+            CreateMap<UpdateSupplierRequest, SupplierBusinessModel>();
+
+            // Supplier Price mappings
+            CreateMap<SupplierPriceModel, SupplierPriceBusinessModel>()
+                .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
+                .ForMember(dest => dest.Supplier, opt => opt.MapFrom(src => src.Supplier))
+                .ReverseMap();
+            
+
+            CreateMap<SupplierPriceBusinessModel, SupplierPriceDto>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty))
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier != null ? src.Supplier.Name : string.Empty));
+            
+            CreateMap<AddSupplierToProductRequest, SupplierPriceBusinessModel>();
+            CreateMap<UpdateSupplierPriceRequest, SupplierPriceBusinessModel>();
         }
     }
 }

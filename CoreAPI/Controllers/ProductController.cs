@@ -29,6 +29,8 @@ namespace CoreAPI.Controllers
         private readonly ILinkedUserRepository _linkedUserRepository;
         private readonly IStockRepository _stockRepository;
         private readonly IProductPromotionRepository _productPromotionRepository;
+        private readonly ISupplierRepository _supplierRepository;
+        private readonly ISupplierPriceRepository _supplierPriceRepository;
         private readonly IMapper _mapper;
         private readonly IDistributedCache _distributedCache;
         private readonly ILogger<ProductController> _logger;
@@ -42,6 +44,8 @@ namespace CoreAPI.Controllers
             ILinkedUserRepository linkedUserRepository,
             IStockRepository stockRepository,
             IProductPromotionRepository productPromotionRepository,
+            ISupplierRepository supplierRepository,
+            ISupplierPriceRepository supplierPriceRepository,
             IMapper mapper,
             IDistributedCache distributedCache,
             ILogger<ProductController> logger)
@@ -54,6 +58,8 @@ namespace CoreAPI.Controllers
             _linkedUserRepository = linkedUserRepository;
             _stockRepository = stockRepository;
             _productPromotionRepository = productPromotionRepository;
+            _supplierRepository = supplierRepository;
+            _supplierPriceRepository = supplierPriceRepository;
             _mapper = mapper;
             _distributedCache = distributedCache;
             _logger = logger;
@@ -929,7 +935,7 @@ namespace CoreAPI.Controllers
             {
                 bool hasProductPermission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Product);
                 bool hasPromotionPermission = await _linkedUserService.HasPermissionAsync(userId, LinkedUserPermissionsEnum.Promotion);
-                
+
                 if (!hasProductPermission)
                 {
                     return (false, string.Empty);
@@ -952,5 +958,77 @@ namespace CoreAPI.Controllers
 
             return (true, groupId);
         }
+        
+        [HttpPost("{productId}/AddSupplier")]
+        [Authorize]
+        [ProducesResponseType(typeof(SupplierPriceDto), 201)]
+        public async Task<ActionResult> AddSupplierToProduct(string productId, [FromBody] AddSupplierToProductRequest model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckProductPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to manage products. Talk to your access manager to get the necessary permissions.");
+            }
+
+            try
+            {
+                // 1. Validate the Product
+                var product = await _productRepository.GetById(productId, groupId);
+                if (product == null)
+                {
+                    return NotFound(new { Message = $"Product with ID '{productId}' not found in your group." });
+                }
+
+                // 2. Validate the Supplier
+                var supplier = await _supplierRepository.GetByIdAsync(model.SupplierId, groupId);
+                if (supplier == null)
+                {
+                    return NotFound(new { Message = $"Supplier with ID '{model.SupplierId}' not found in your group." });
+                }
+
+                // 3. Check for duplicates
+                bool isDuplicate = await _supplierPriceRepository.CheckDuplicateAsync(productId, model.SupplierId, model.SupplierSku, groupId);
+                if (isDuplicate)
+                {
+                    return Conflict(new { Message = $"A price entry for supplier '{supplier.Name}' and product '{product.Name}' with SKU '{model.SupplierSku}' already exists." });
+                }
+
+                // 4. Create the SupplierPrice
+                var priceBusinessModel = _mapper.Map<Business.Models.SupplierPriceBusinessModel>(model);
+                priceBusinessModel.ProductId = productId; // Set ProductId from route
+                priceBusinessModel.GroupId = groupId;
+                priceBusinessModel.ValidFrom = model.ValidFrom ?? DateTime.UtcNow;
+
+                var createdPrice = await _supplierPriceRepository.CreateAsync(priceBusinessModel);
+
+                // 5. Map to DTO for Response
+                var priceDto = _mapper.Map<SupplierPriceDto>(createdPrice);
+                // Enrich DTO with names for a better response
+                priceDto.ProductName = product.Name;
+                priceDto.SupplierName = supplier.Name;
+
+                // Return 201 Created, pointing to the new resource's location
+                // This assumes you have a 'GetSupplierPriceById' action on a 'SupplierPriceController'
+                return CreatedAtAction(
+                    "GetSupplierPriceById", // Action Name
+                    "SupplierPrice",        // Controller Name (without "Controller" suffix)
+                    new { id = priceDto.Id }, 
+                    priceDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding supplier to product {ProductId}", productId);
+                return StatusCode(500, new { Message = "An error occurred while linking the supplier to the product." });
+            }
+        }
+        
     }
 }
