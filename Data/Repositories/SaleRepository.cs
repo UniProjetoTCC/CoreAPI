@@ -137,12 +137,13 @@ namespace Data.Repositories
             int pageSize
         )
         {
+            var utcStartDate = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
             var endDateInclusive = endDate.Date.AddDays(1).AddTicks(-1);
 
             var query = _context.Sales
                 .AsNoTracking()
                 .Where(s => s.GroupId == groupId &&
-                        s.SaleDate >= startDate &&
+                        s.SaleDate >= utcStartDate &&
                         s.SaleDate <= endDateInclusive);
 
             if (!string.IsNullOrEmpty(customerId)) query = query.Where(s => s.CustomerId == customerId);

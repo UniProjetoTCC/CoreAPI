@@ -62,14 +62,14 @@ namespace CoreAPI.AutoMapper
                 .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Active))
                 .ReverseMap()
                 .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsActive));
-            
+
             CreateMap<PaymentMethodBusinessModel, PaymentMethodResponse>();
             CreateMap<PaymentMethodRequest, PaymentMethodBusinessModel>();
 
             // Loyalty Program mappings
             CreateMap<LoyaltyProgramModel, LoyaltyProgramBusinessModel>()
                 .ReverseMap();
-            
+
             CreateMap<LoyaltyProgramBusinessModel, LoyaltyProgramResponse>();
             CreateMap<LoyaltyProgramRequest, LoyaltyProgramBusinessModel>();
 
@@ -78,20 +78,20 @@ namespace CoreAPI.AutoMapper
                 .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsActive))
                 .ReverseMap()
                 .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Active));
-                
+
             // Customer DTO mappings
             CreateMap<CustomerBusinessModel, CustomerDto>();
             CreateMap<CustomerModel, CustomerDto>();
-            
+
             // Promotion mappings
             CreateMap<PromotionModel, PromotionBusinessModel>().ReverseMap();
             CreateMap<PromotionBusinessModel, PromotionDto>();
             CreateMap<PromotionModel, PromotionDto>();
-            
+
             // Product in Promotion mapping
             CreateMap<ProductBusinessModel, ProductInPromotionDto>()
                 .ForMember(dest => dest.PromotionalPrice, opt => opt.Ignore()); // Will be calculated in controller
-                
+
             // ProductPromotion mappings
             CreateMap<ProductPromotionModel, ProductPromotionBusinessModel>()
                 .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
@@ -119,14 +119,28 @@ namespace CoreAPI.AutoMapper
                 .ForMember(dest => dest.Product, opt => opt.MapFrom(src => src.Product))
                 .ForMember(dest => dest.Supplier, opt => opt.MapFrom(src => src.Supplier))
                 .ReverseMap();
-            
+
 
             CreateMap<SupplierPriceBusinessModel, SupplierPriceDto>()
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty))
                 .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier != null ? src.Supplier.Name : string.Empty));
-            
+
             CreateMap<AddSupplierToProductRequest, SupplierPriceBusinessModel>();
             CreateMap<UpdateSupplierPriceRequest, SupplierPriceBusinessModel>();
+
+            // Purchase Order mappings
+            CreateMap<PurchaseOrderModel, PurchaseOrderBusinessModel>().ReverseMap();
+            CreateMap<PurchaseOrderItemModel, PurchaseOrderItemBusinessModel>().ReverseMap();
+
+            CreateMap<PurchaseOrderBusinessModel, PurchaseOrderDto>()
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier != null ? src.Supplier.Name : string.Empty));
+
+            CreateMap<PurchaseOrderItemBusinessModel, PurchaseOrderItemDto>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty))
+                .ForMember(dest => dest.SKU, opt => opt.MapFrom(src => src.Product != null ? src.Product.SKU : string.Empty));
+
+            CreateMap<CreatePurchaseOrderRequest, PurchaseOrderBusinessModel>();
+            CreateMap<CreatePurchaseOrderItemRequest, PurchaseOrderItemBusinessModel>();
         }
     }
 }

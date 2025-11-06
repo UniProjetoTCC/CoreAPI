@@ -26,7 +26,9 @@ namespace CoreAPI.Controllers
         private readonly ISaleRepository _saleRepository;
         private readonly IStockRepository _stockRepository;
         private readonly IPromotionRepository _promotionRepository;
+        private readonly IPurchaseOrderRepository _purchaseOrderRepository;
         private readonly IStockMovementRepository _stockMovementRepository;
+
 
         public ReportController(
             UserManager<IdentityUser> userManager,
@@ -38,6 +40,7 @@ namespace CoreAPI.Controllers
             ISaleRepository saleRepository,
             IStockRepository stockRepository,
             IPromotionRepository promotionRepository,
+            IPurchaseOrderRepository purchaseOrderRepository,
             IStockMovementRepository stockMovementRepository)
         {
             _userManager = userManager;
@@ -49,6 +52,7 @@ namespace CoreAPI.Controllers
             _saleRepository = saleRepository;
             _stockRepository = stockRepository;
             _promotionRepository = promotionRepository;
+            _purchaseOrderRepository = purchaseOrderRepository;
             _stockMovementRepository = stockMovementRepository;
         }
 
@@ -71,13 +75,13 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
-            
+
             var utcStartDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
             var utcEndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
 
             var (sales, _, totalAmount) = await _saleRepository.SearchSalesAsync(
                 groupId, utcStartDate, utcEndDate, null, null, null, 1, int.MaxValue);
-            
+
             var saleItems = sales.SelectMany(s => s.SaleItems).ToList();
 
             var (allCategories, _) = await _categoryRepository.SearchByNameAsync("", groupId, 1, int.MaxValue);
@@ -92,22 +96,22 @@ namespace CoreAPI.Controllers
 
             var report = new SalesReportResponse
             {
-                GeneralInfo = new GeneralReportInfo { ReportName = "Sales Report", GeneratedAt = DateTime.UtcNow, ReportPeriod = new DateRange { StartDate = startDate, EndDate = endDate }},
+                GeneralInfo = new GeneralReportInfo { ReportName = "Sales Report", GeneratedAt = DateTime.UtcNow, ReportPeriod = new DateRange { StartDate = startDate, EndDate = endDate } },
                 SalesSummary = salesSummary,
                 TopSellingProducts = saleItems
                     .Where(si => si.Product != null)
-                    .GroupBy(si => si.Product!.Id) 
+                    .GroupBy(si => si.Product!.Id)
                     .Select(g => new ProductSalesInfo
                     {
                         ProductId = g.Key,
                         ProductName = g.First().Product!.Name,
                         UnitsSold = g.Sum(si => si.Quantity),
-                        Revenue = g.Sum(si => si.Quantity * si.UnitPrice) 
+                        Revenue = g.Sum(si => si.Quantity * si.UnitPrice)
                     })
                     .OrderByDescending(p => p.Revenue).Take(10).ToList(),
                 TopSellingCategories = saleItems
-                    .Where(si => si.Product != null) 
-                    .GroupBy(si => si.Product!.CategoryId) 
+                    .Where(si => si.Product != null)
+                    .GroupBy(si => si.Product!.CategoryId)
                     .Select(g => new CategorySalesInfo
                     {
                         CategoryId = g.Key,
@@ -140,9 +144,9 @@ namespace CoreAPI.Controllers
             {
                 return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
             }
-            
+
             var (allProducts, _) = await _productRepository.SearchByNameAsync("", groupId, 1, int.MaxValue);
-            
+
             var allStocks = new List<StockBusinessModel>();
             foreach (var product in allProducts)
             {
@@ -152,7 +156,7 @@ namespace CoreAPI.Controllers
                     allStocks.Add(stock);
                 }
             }
-            
+
             var validStocks = allStocks.Where(s => s.Product != null).ToList();
 
             var inventorySummary = new InventorySummary
@@ -175,7 +179,7 @@ namespace CoreAPI.Controllers
                     .Select(s => new ProductStockInfo { ProductId = s.Product!.Id, ProductName = s.Product.Name, SKU = s.Product.SKU, StockQuantity = s.Quantity, Cost = s.Product.Cost, Price = s.Product.Price })
                     .OrderByDescending(p => p.StockQuantity).ToList()
             };
-            
+
             return Ok(report);
         }
 
@@ -341,6 +345,69 @@ namespace CoreAPI.Controllers
             return Ok(report);
         }
 
+        /// <summary>
+        /// Generates a purchase order report for a given date range.
+        /// </summary>
+        /// <param name="startDate">Start date for the report (yyyy-mm-dd)</param>
+        /// <param name="endDate">End date for the report (yyyy-mm-dd)</param>
+        /// <param name="supplierId">Optional supplier ID to filter</param>
+        /// <param name="status">Optional status to filter (Pending, Completed, Cancelled)</param>
+        /// <response code="200">Purchase order report data</response>
+        /// <response code="401">Unauthorized</response>
+        /// <response code="403">Insufficient permissions</response>
+        [HttpGet("PurchaseOrders")]
+        public async Task<ActionResult<PurchaseOrderReportResponse>> GetPurchaseOrderReport(
+            DateTime startDate,
+            DateTime endDate,
+            [FromQuery] string? supplierId = null,
+            [FromQuery] string? status = null)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null) return Unauthorized();
+
+            var (hasPermission, groupId) = await CheckReportsPermissionAsync(currentUser.Id);
+            if (!hasPermission)
+            {
+                return StatusCode(403, "You don't have permission to access this resource. Talk to your access manager to get the necessary permissions.");
+            }
+
+            var utcStartDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+            var utcEndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+
+            var (orders, totalCount) = await _purchaseOrderRepository.SearchAsync(
+                groupId, utcStartDate, utcEndDate, supplierId, status, 1, int.MaxValue);
+
+            var report = new PurchaseOrderReportResponse
+            {
+                GeneralInfo = new GeneralReportInfo
+                {
+                    ReportName = "Purchase Order Report",
+                    GeneratedAt = DateTime.UtcNow,
+                    ReportPeriod = new DateRange { StartDate = startDate, EndDate = endDate }
+                },
+                PurchaseOrderSummary = new PurchaseOrderSummary
+                {
+                    TotalOrders = totalCount,
+                    TotalValue = orders.Sum(o => o.TotalAmount),
+                    PendingOrders = orders.Count(o => o.Status == "Pending"),
+                    CompletedOrders = orders.Count(o => o.Status == "Completed"),
+                    CancelledOrders = orders.Count(o => o.Status == "Cancelled")
+                },
+                PurchaseOrders = orders.Select(o => new PurchaseOrderInfo
+                {
+                    OrderId = o.Id,
+                    OrderNumber = o.OrderNumber,
+                    OrderDate = o.OrderDate,
+                    SupplierName = o.Supplier?.Name ?? "N/A",
+                    ItemCount = o.Items.Count,
+                    TotalAmount = o.TotalAmount,
+                    Status = o.Status ?? "N/A",
+                    DeliveryDate = o.DeliveryDate
+                }).ToList()
+            };
+
+            return Ok(report);
+        }
 
         private async Task<(bool hasPermission, string groupId)> CheckReportsPermissionAsync(string userId)
         {

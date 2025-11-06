@@ -130,4 +130,33 @@ namespace CoreAPI.Models
         public DetailedSalesSummary DetailedSalesSummary { get; set; } = new();
         public List<DetailedSaleInfo> Sales { get; set; } = new();
     }
+
+    // Purchase Order Report Models
+    public class PurchaseOrderReportResponse
+    {
+        public GeneralReportInfo GeneralInfo { get; set; } = new();
+        public PurchaseOrderSummary PurchaseOrderSummary { get; set; } = new();
+        public List<PurchaseOrderInfo> PurchaseOrders { get; set; } = new();
+    }
+
+    public class PurchaseOrderSummary
+    {
+        public int TotalOrders { get; set; }
+        public decimal TotalValue { get; set; }
+        public int PendingOrders { get; set; }
+        public int CompletedOrders { get; set; }
+        public int CancelledOrders { get; set; }
+    }
+
+    public class PurchaseOrderInfo
+    {
+        public string OrderId { get; set; } = string.Empty;
+        public string OrderNumber { get; set; } = string.Empty;
+        public DateTime OrderDate { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public int ItemCount { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime? DeliveryDate { get; set; }
+    }
 }

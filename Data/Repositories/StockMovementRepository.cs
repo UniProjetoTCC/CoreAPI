@@ -20,9 +20,11 @@ namespace Data.Repositories
 
         public async Task<List<StockMovementBusinessModel>> GetAllByDateRangeAndGroupIdAsync(DateTime startDate, DateTime endDate, string groupId)
         {
+            var utcStartDate = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
+
             var query = _context.StockMovements
                 .Include(m => m.Stock)
-                .Where(m => m.GroupId == groupId && m.MovementDate >= startDate && m.MovementDate <= endDate.AddDays(1).AddTicks(-1)) // Inclui o dia todo de endDate
+                .Where(m => m.GroupId == groupId && m.MovementDate >= utcStartDate && m.MovementDate <= endDate.AddDays(1).AddTicks(-1)) // Inclui o dia todo de endDate
                 .OrderByDescending(m => m.MovementDate);
 
             var dataModels = await query.ToListAsync();
