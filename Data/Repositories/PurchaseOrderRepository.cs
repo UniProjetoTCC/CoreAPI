@@ -32,12 +32,12 @@ namespace Data.Repositories
 
             return _mapper.Map<PurchaseOrderBusinessModel>(order);
         }
-        
+
         public async Task<PurchaseOrderBusinessModel?> GetByOrderNumberAsync(string orderNumber, string groupId)
         {
-             var order = await _context.PurchaseOrders
-                .AsNoTracking()
-                .FirstOrDefaultAsync(po => po.OrderNumber.ToLower() == orderNumber.ToLower() && po.GroupId == groupId);
+            var order = await _context.PurchaseOrders
+               .AsNoTracking()
+               .FirstOrDefaultAsync(po => po.OrderNumber.ToLower() == orderNumber.ToLower() && po.GroupId == groupId);
 
             return _mapper.Map<PurchaseOrderBusinessModel>(order);
         }
@@ -57,12 +57,12 @@ namespace Data.Repositories
 
             _context.PurchaseOrders.Add(order);
             await _context.SaveChangesAsync();
-            
+
             // Recarregar para incluir Supplier e Itens.Produto
             var createdOrder = await GetByIdAsync(order.Id, order.GroupId);
             return createdOrder!;
         }
-        
+
         public async Task<PurchaseOrderBusinessModel?> UpdateAsync(PurchaseOrderBusinessModel orderBusinessModel)
         {
             var order = await _context.PurchaseOrders
@@ -75,7 +75,7 @@ namespace Data.Repositories
             order.DeliveryDate = orderBusinessModel.DeliveryDate;
             order.TotalAmount = orderBusinessModel.TotalAmount; // Se o total puder ser recalculado
             order.UpdatedAt = DateTime.UtcNow;
-            
+
             // Lógica para atualizar itens (mais complexa, pode exigir remoção/adição)
             // ...
 
@@ -91,7 +91,7 @@ namespace Data.Repositories
                 .FirstOrDefaultAsync(po => po.Id == id && po.GroupId == groupId);
 
             if (order == null) return false;
-            
+
             // A deleção em cascata (configurada no Context) deve remover os Itens.
             _context.PurchaseOrders.Remove(order);
             await _context.SaveChangesAsync();
@@ -101,18 +101,26 @@ namespace Data.Repositories
         public async Task<(List<PurchaseOrderBusinessModel> Items, int TotalCount)> SearchAsync(
             string groupId, DateTime startDate, DateTime endDate, string? supplierId, string? status, int page, int pageSize)
         {
-            var utcStartDate = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
-            var endDateInclusive = endDate.Date.AddDays(1).AddTicks(-1);
+            DateTime ToUtcDateOnly(DateTime d)
+            {
+                var dateOnly = d.Date; 
+                
+                if (dateOnly.Kind == DateTimeKind.Unspecified)
+                    dateOnly = DateTime.SpecifyKind(dateOnly, DateTimeKind.Local);
+                return dateOnly.ToUniversalTime();
+            }
+
+            var utcStartDate = ToUtcDateOnly(startDate);
+            var utcEndDateInclusive = ToUtcDateOnly(endDate).AddDays(1).AddTicks(-1); 
 
             var query = _context.PurchaseOrders
                 .AsNoTracking()
                 .Where(po => po.GroupId == groupId &&
                              po.OrderDate >= utcStartDate &&
-                             po.OrderDate <= endDateInclusive);
-
+                             po.OrderDate <= utcEndDateInclusive);
             if (!string.IsNullOrEmpty(supplierId))
                 query = query.Where(po => po.SupplierId == supplierId);
-            
+
             if (!string.IsNullOrEmpty(status))
                 query = query.Where(po => po.Status == status);
 
